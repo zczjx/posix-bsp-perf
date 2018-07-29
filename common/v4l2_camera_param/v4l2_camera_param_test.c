@@ -5,6 +5,7 @@
 #include <sys/stat.h>
 #include <unistd.h>
 #include <fcntl.h>
+#include <math.h>
 #include <sys/ioctl.h>
 #include <linux/videodev2.h>
 
@@ -75,7 +76,28 @@ int main(int argc, char *argv[])
 	printf("[/dev/video0]: v4l2_fmt.fmt.pix.sizeimage: %d \n", v4l2_fmt.fmt.pix.sizeimage);
 	printf("[/dev/video0]: v4l2_fmt.fmt.pix.colorspace: %d \n", v4l2_fmt.fmt.pix.colorspace);
 
+	struct v4l2_streamparm streamparm;
+
+	streamparm.type = V4L2_BUF_TYPE_VIDEO_CAPTURE;
+    err = ioctl(fd, VIDIOC_G_PARM, &streamparm);
 	
+	if (err) 
+    {
+		printf("[/dev/video0]:VIDIOC_G_PARM failed \n");
+		return -1;          
+    }
+
+	printf("[/dev/video0]:streamparm.parm.capture.capability 0x%x \n", 
+			streamparm.parm.capture.capability);
+	printf("[/dev/video0]:streamparm.parm.capture.capturemode 0x%x \n", 
+			streamparm.parm.capture.capturemode);
+	printf("[/dev/video0]:streamparm.parm.capture.timeperframe.denominator: %d \n",
+			streamparm.parm.capture.timeperframe.denominator);
+	printf("[/dev/video0]:streamparm.parm.capture.timeperframe.numerator: %d \n",
+			streamparm.parm.capture.timeperframe.numerator);
+
+
+
 	/*v4l2_queryctrl test*/
 #define V4L2_MAX_CTRL (128)
 	int i = 0;
