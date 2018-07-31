@@ -1,4 +1,4 @@
-CROSS_COMPILE 	?= arm-linux-
+CROSS_COMPILE 	?=
 
 AS		= $(CROSS_COMPILE)as
 LD		= $(CROSS_COMPILE)ld
@@ -19,7 +19,11 @@ export BIN_DIR
 
 CFLAGS = -Wall  -g -fPIC  -rdynamic
 CFLAGS += -I $(shell pwd)/include
+<<<<<<< HEAD
 LDFLAGS ?= -lpthread
+=======
+LDFLAGS += -lm
+>>>>>>> e1a416b42c4ef5911efc03d0d7748dc10691b68c
 CFLAGS += -I ${TOPDIR}
 export CFLAGS LDFLAGS
 

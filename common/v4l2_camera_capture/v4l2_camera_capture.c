@@ -8,6 +8,7 @@
 #include <sys/ioctl.h>
 #include <linux/videodev2.h>
 #include <poll.h>
+#include<time.h>
 
 typedef struct cap_buf{
 	int bytes;
@@ -23,6 +24,10 @@ int main(int argc, char *argv[])
 	int fd;
 	int i = 0;
 	int pts = 0;
+	struct timespec tp;
+	long pre_time = 0;
+	long curr_time = 0;
+	int fps = 0;
 	
 	fd = open("/dev/video0", O_RDWR);
 	if (fd < 0)
@@ -59,8 +64,8 @@ int main(int argc, char *argv[])
 	memset(&v4l2_fmt, 0, sizeof(struct v4l2_format));
 	v4l2_fmt.type = fmt_dsc.type;
     v4l2_fmt.fmt.pix.pixelformat = fmt_dsc.pixelformat;
-    v4l2_fmt.fmt.pix.width       = 640;
-	v4l2_fmt.fmt.pix.height      = 480;
+    v4l2_fmt.fmt.pix.width       = 1920;
+	v4l2_fmt.fmt.pix.height      = 1080;
     v4l2_fmt.fmt.pix.field       = V4L2_FIELD_ANY;
 	err = ioctl(fd, VIDIOC_S_FMT, &v4l2_fmt); 
     if (err) 
@@ -84,12 +89,34 @@ int main(int argc, char *argv[])
 	printf("[/dev/video0]: v4l2_fmt.fmt.pix.sizeimage: %d \n", v4l2_fmt.fmt.pix.sizeimage);
 	printf("[/dev/video0]: v4l2_fmt.fmt.pix.colorspace: %d \n", v4l2_fmt.fmt.pix.colorspace);
 
+	
+	struct v4l2_streamparm streamparm;
+
+	streamparm.type = V4L2_BUF_TYPE_VIDEO_CAPTURE;
+	err = ioctl(fd, VIDIOC_G_PARM, &streamparm);
+		
+	if (err) 
+	{
+		printf("[/dev/video0]:VIDIOC_G_PARM failed \n");
+		return -1;			
+	}
+	
+	printf("[/dev/video0]:streamparm.parm.capture.capability 0x%x \n", 
+			streamparm.parm.capture.capability);
+	printf("[/dev/video0]:streamparm.parm.capture.capturemode 0x%x \n", 
+			streamparm.parm.capture.capturemode);
+	printf("[/dev/video0]:streamparm.parm.capture.timeperframe.denominator: %d \n",
+				streamparm.parm.capture.timeperframe.denominator);
+	printf("[/dev/video0]:streamparm.parm.capture.timeperframe.numerator: %d \n",
+				streamparm.parm.capture.timeperframe.numerator);
+	
+
 	/* init buf */
 	struct v4l2_buffer v4l2_buf_param;
 	struct v4l2_requestbuffers req_bufs;
 	
 	memset(&req_bufs, 0, sizeof(struct v4l2_requestbuffers));
-    req_bufs.count = 4;
+    req_bufs.count = 8;
     req_bufs.type = V4L2_BUF_TYPE_VIDEO_CAPTURE;
     req_bufs.memory = V4L2_MEMORY_MMAP;
     err = ioctl(fd, VIDIOC_REQBUFS, &req_bufs);
@@ -138,8 +165,18 @@ int main(int argc, char *argv[])
 		return -1;
     }
 
-	while(++pts <= 100)
+	while(++pts <= 50000)
 	{
+		clock_gettime(CLOCK_MONOTONIC, &tp);
+		curr_time = tp.tv_sec;
+		//pre_time = curr_time - 1;
+		fps++;
+		if((curr_time - pre_time) >= 1)
+		{
+			printf("current fps is %d \n", fps);
+			pre_time = curr_time;
+			fps = 0;
+		}
 	
 		fd_set[0].fd     = fd;
     	fd_set[0].events = POLLIN;
@@ -157,6 +194,7 @@ int main(int argc, char *argv[])
         }
 		
 		buf_idx = v4l2_buf_param.index;
+
 		printf("\n");
 		printf("---------------------------------------------------------\n");
 		printf("v4l2_buf_param.index : %d\n", v4l2_buf_param.index);
@@ -181,6 +219,8 @@ int main(int argc, char *argv[])
 		printf("v4l2_buf_param.length : %d\n", v4l2_buf_param.length);
 		printf("---------------------------------------------------------\n");
 		printf("\n");
+	
+
 
 		memset(&v4l2_buf_param, 0, sizeof(struct v4l2_buffer));
 		v4l2_buf_param.index  = buf_idx;
