@@ -19,21 +19,21 @@ export BIN_DIR
 
 CFLAGS = -Wall  -g -fPIC  -rdynamic
 CFLAGS += -I $(shell pwd)/include
-LDFLAGS = 
+LDFLAGS ?= -lpthread
 CFLAGS += -I ${TOPDIR}
 export CFLAGS LDFLAGS
 
 
-ARM_LINUX_BSP_TINY4412 ?=
-ARM_LINUX_BSP_RPI_3B ?=
+ARM_LINUX_BSP_EXYNOS_4412 ?= n
+ARM_LINUX_BSP_RPI ?= n
 
 obj-y += common/
-ifeq ($(ARM_LINUX_BSP_TINY4412),y)
-obj-y += tiny4412/
+ifeq ($(ARM_LINUX_BSP_EXYNOS_4412),y)
+obj-y += exynos-4412/
 endif
 
-ifeq ($(ARM_LINUX_BSP_RPI_3B),y)
-obj-y += rpi-3b/
+ifeq ($(ARM_LINUX_BSP_RPI),y)
+obj-y += rpi/
 endif
 
 
