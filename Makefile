@@ -19,11 +19,7 @@ export BIN_DIR
 
 CFLAGS = -Wall  -g -fPIC  -rdynamic
 CFLAGS += -I $(shell pwd)/include
-<<<<<<< HEAD
-LDFLAGS ?= -lpthread
-=======
-LDFLAGS += -lm
->>>>>>> e1a416b42c4ef5911efc03d0d7748dc10691b68c
+LDFLAGS += -lm -lpthread
 CFLAGS += -I ${TOPDIR}
 export CFLAGS LDFLAGS
 
