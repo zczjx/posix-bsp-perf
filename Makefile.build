@@ -1,10 +1,12 @@
 PHONY := __build
 __build:
 
+LOCAL_LDFLAGS :=
 
 obj-y :=
 test-bin :=
 subdir-y :=
+
 
 include Makefile
 
@@ -28,10 +30,11 @@ $(subdir-y):
 	make -C $@ -f $(TOPDIR)/Makefile.build
 	
 $(test-bin) : $(test-objs)
-	$(CC) $(LDFLAGS) -o $@ $^
+	$(CC) $(LDFLAGS) $(LOCAL_LDFLAGS) -o $@ $^
 	mv $@ $(BIN_DIR)
 
 %.o : %.c
 	$(CC)  -fPIC $(CFLAGS) -c -o $@ $<
 	
 .PHONY : $(PHONY)
+
