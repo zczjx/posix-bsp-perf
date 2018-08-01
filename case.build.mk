@@ -25,7 +25,7 @@ __build : $(subdir-y) $(test-bin)
 
 
 $(subdir-y):
-	make -C $@ -f $(TOPDIR)/Makefile.build
+	make -C $@ -f $(TOPDIR)/case.build.mk
 	
 $(test-bin) : $(test-objs)
 	$(CC) $(LDFLAGS) -o $@ $^
