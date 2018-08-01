@@ -1,1 +1,1 @@
-obj-y += rpi_hello_world/
+obj-y += jpeg_rpi_hw_dec/
