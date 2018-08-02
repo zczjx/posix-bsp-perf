@@ -39,6 +39,9 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #define MAX_HEIGHT  5000
 #define MAX_ENCODED (15*1024*1024)
 #define MAX_DECODED (MAX_WIDTH*MAX_HEIGHT*2)
+#define X_RESOLUTION 1280
+#define Y_RESOLUTION 720
+
 
 static uint8_t encodedInBuf[MAX_ENCODED];
 static uint8_t encodedOutBuf[MAX_ENCODED];
@@ -54,9 +57,7 @@ int main(int argc, char **argv)
     BRCMJPEG_STATUS_T status;
     BRCMJPEG_REQUEST_T dec_request;
     BRCMJPEG_T *dec = 0;
-    unsigned int count = 1, format = PIXEL_FORMAT_YUYV;
-    unsigned int handle = 0, vc_handle = 0;
-    int i, arg = 1, help = 0;
+    int i, xres, yres;
 	int err, vfd, pts = 0;
 	struct timespec tp;
 	long pre_time = 0;
@@ -64,14 +65,20 @@ int main(int argc, char **argv)
 	int fps = 0;
 	int buf_idx = 0;
 
+	xres = atoi(argv[1]);
+	yres = atoi(argv[2]);
+
     // Setup of the dec requests
     memset(&dec_request, 0, sizeof(dec_request));
     dec_request.input = encodedInBuf;
     dec_request.output = decodedBuf;
     dec_request.output_handle = 0;
     dec_request.output_alloc_size = MAX_DECODED;
-
+	dec_request.buffer_width = xres;
+	dec_request.buffer_height = yres;
+	dec_request.pixel_format = PIXEL_FORMAT_RGBA;
     status = brcmjpeg_create(BRCMJPEG_TYPE_DECODER, &dec);
+	
     if (status != BRCMJPEG_SUCCESS)
     {
         fprintf(stderr, "could not create decoder\n");
@@ -81,21 +88,23 @@ int main(int argc, char **argv)
 	vfd = bsp_v4l2_open_dev("/dev/video0");
 	v4l2_param.fps = 30;
 	v4l2_param.pixelformat = V4L2_PIX_FMT_MJPEG;
-	v4l2_param.xres = 1280;
-	v4l2_param.yres = 720;
+	v4l2_param.xres = xres;
+	v4l2_param.yres = yres;
 	bsp_v4l2_try_setup(vfd, &v4l2_param);
+	printf("v4l2_param.fps: %d \n", v4l2_param.fps);
+	printf("v4l2_param.pixelformat: 0x%x \n", v4l2_param.pixelformat);
+	printf("v4l2_param.xres: %d \n", v4l2_param.xres);
+	printf("v4l2_param.yres: %d \n", v4l2_param.yres);
 	bsp_v4l2_req_buf(vfd, v4l2_buf, V4L2_BUF_NR);
 	bsp_v4l2_stream_on(vfd);
-	
+
 	while(++pts <= 50000)
 	{
 		bsp_print_fps("mjpeg hw dec", &fps, &pre_time, &curr_time);
 		bsp_v4l2_get_frame(vfd, &buf_idx);
 		memcpy(encodedInBuf, v4l2_buf[buf_idx].addr, v4l2_buf[buf_idx].bytes);
-		dec_request.input_size = v4l2_buf[buf_idx].bytes;
-		dec_request.buffer_width = 1280;
-		dec_request.buffer_height = 720;
 		bsp_v4l2_put_frame_buf(vfd, buf_idx);
+		dec_request.input_size = v4l2_buf[buf_idx].bytes;
 		status = brcmjpeg_process(dec, &dec_request);
 
 		if (status != BRCMJPEG_SUCCESS) 
@@ -104,8 +113,7 @@ int main(int argc, char **argv)
 			break;
 		}
 		
-		printf("dec_request.output_size: %d \n", dec_request.output_size);
-    
+		// printf("dec_request.output_size: %d \n", dec_request.output_size);
 	}
 
     brcmjpeg_release(dec);
