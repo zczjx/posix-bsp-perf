@@ -1,2 +1,3 @@
-libobj-y += bsp_v4l2_cap.o
+libobj-y += bsp_v4l2_cap.o \
+			bsp_fb.o
 

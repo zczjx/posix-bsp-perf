@@ -17,15 +17,21 @@ int main(int argc, char *argv[])
 	struct fb_cmap color_space[16];
 
 	fd = open("/dev/fb0", O_RDWR);
+	
 	if (fd < 0)
     {
 		return -1;
 	}
+	
 	err = ioctl(fd, FBIOGET_VSCREENINFO, &fb_var_info);
+	
 	if (err < 0)
     {
 		return -1;
 	}
+
+	printf("------ variable info of fb -------------\n");
+	printf("\n");
 	printf("[/dev/fb0]: fb_var_info.xres: %d \n", fb_var_info.xres);
 	printf("[/dev/fb0]: fb_var_info.yres: %d \n", fb_var_info.yres);
 	printf("[/dev/fb0]: fb_var_info.xres_virtual: %d \n", fb_var_info.xres_virtual);
@@ -68,8 +74,10 @@ int main(int argc, char *argv[])
 	printf("[/dev/fb0]: fb_var_info.sync: %d \n", fb_var_info.sync);
 	printf("[/dev/fb0]: fb_var_info.vmode: %d \n", fb_var_info.vmode);
 	printf("[/dev/fb0]: fb_var_info.rotate: %d \n", fb_var_info.rotate);
+	printf("\n");
 
-
+	printf("------ fixed info of fb -------------\n");
+	printf("\n");
 	
 
 	err = ioctl(fd, FBIOGET_FSCREENINFO, &fb_fix_info);
@@ -94,6 +102,7 @@ int main(int argc, char *argv[])
 	printf("[/dev/fb0]: fb_fix_info.mmio_start: 0x%X \n", fb_fix_info.mmio_start);	
 	printf("[/dev/fb0]: fb_fix_info.mmio_len: %d \n", fb_fix_info.mmio_len);
 	printf("[/dev/fb0]: fb_fix_info.accel: %d \n", fb_fix_info.accel);	
+	printf("\n");
 
 	err = ioctl(fd, FBIOGETCMAP, color_space);
 	if (err < 0)
