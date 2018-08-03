@@ -1,1 +1,1 @@
-obj-y += jpeg_rpi_hw_dec/
+obj-y += mmal_mjpeg_hw_dec/
