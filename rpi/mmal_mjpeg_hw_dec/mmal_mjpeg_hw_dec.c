@@ -27,6 +27,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 #include "brcmjpeg.h"
 #include "bsp_v4l2_cap.h"
+#include "bsp_fb.h"
 
 #include <sys/time.h>
 #include <stdlib.h>
@@ -52,6 +53,13 @@ static char outFileName[2048];
 struct bsp_v4l2_cap_buf v4l2_buf[V4L2_BUF_NR];
 struct bsp_v4l2_param v4l2_param;
 
+static struct bsp_fb_var_attr fb_var_attr;
+static struct bsp_fb_fix_attr fb_fix_attr;
+static struct rgb_frame dsip_frame = {
+	.addr = NULL,
+};
+
+
 int main(int argc, char **argv)
 {
     BRCMJPEG_STATUS_T status;
@@ -64,9 +72,23 @@ int main(int argc, char **argv)
 	long curr_time = 0;
 	int fps = 0;
 	int buf_idx = 0;
+	int disp_fd = 0;
+	
 
 	xres = atoi(argv[1]);
 	yres = atoi(argv[2]);
+
+	disp_fd = bsp_fb_open_dev("/dev/fb0", &fb_var_attr, &fb_fix_attr);
+	fb_var_attr.red_offset = 0;
+	fb_var_attr.green_offset = 8;
+	fb_var_attr.blue_offset = 16;
+	fb_var_attr.transp_offset = 24;
+	err = bsp_fb_try_setup(disp_fd, &fb_var_attr);
+	
+	if(err < 0)
+	{
+		fprintf(stderr, "could not bsp_fb_try_setup\n");
+	}
 
     // Setup of the dec requests
     memset(&dec_request, 0, sizeof(dec_request));
@@ -105,6 +127,7 @@ int main(int argc, char **argv)
 		memcpy(encodedInBuf, v4l2_buf[buf_idx].addr, v4l2_buf[buf_idx].bytes);
 		bsp_v4l2_put_frame_buf(vfd, buf_idx);
 		dec_request.input_size = v4l2_buf[buf_idx].bytes;
+
 		status = brcmjpeg_process(dec, &dec_request);
 
 		if (status != BRCMJPEG_SUCCESS) 
@@ -112,6 +135,20 @@ int main(int argc, char **argv)
 			fprintf(stderr, "could not decode \n");
 			break;
 		}
+
+		dsip_frame.xres = xres;
+		dsip_frame.yres = yres;
+		dsip_frame.bytes_per_line = fb_fix_attr.bytes_per_line;
+		dsip_frame.bits_per_pixel = fb_var_attr.bits_per_pixel;
+		dsip_frame.bytes = dec_request.output_size;
+		
+		if(NULL == dsip_frame.addr)
+		{
+			dsip_frame.addr = malloc(dec_request.output_size);
+		}
+		
+		memcpy(dsip_frame.addr, decodedBuf, dsip_frame.bytes);
+		bsp_fb_flush(disp_fd, &fb_var_attr, &fb_fix_attr, &dsip_frame);
 		
 		// printf("dec_request.output_size: %d \n", dec_request.output_size);
 	}

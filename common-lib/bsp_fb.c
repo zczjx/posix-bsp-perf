@@ -90,6 +90,23 @@ int bsp_fb_try_setup(int fd, struct bsp_fb_var_attr *var_attr)
 		return -1;
 	}
 
+	var_attr->fb_var_info.xres = var_attr->xres;
+	var_attr->fb_var_info.yres = var_attr->yres;
+	var_attr->fb_var_info.bits_per_pixel = var_attr->bits_per_pixel;
+	var_attr->fb_var_info.red.offset = var_attr->red_offset;
+	var_attr->fb_var_info.green.offset = var_attr->green_offset;
+	var_attr->fb_var_info.blue.offset = var_attr->blue_offset;
+	var_attr->fb_var_info.transp.offset = var_attr->transp_offset;
+	var_attr->fb_var_info.transp.length = var_attr->color_bits_len;
+
+	err = ioctl(fd, FBIOPUT_VSCREENINFO, &var_attr->fb_var_info);
+	
+	if (err < 0)
+    {
+    	printf("[/dev/fb0]: FBIOPUT_VSCREENINFO fail \n");
+		return -1;
+	}
+
 	return err;
 }
 

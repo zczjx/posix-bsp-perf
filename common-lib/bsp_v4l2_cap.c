@@ -125,7 +125,8 @@ int bsp_v4l2_try_setup(int fd, struct bsp_v4l2_param *val)
 	val->pixelformat = v4l2_fmt.fmt.pix.pixelformat;
 	val->xres = v4l2_fmt.fmt.pix.width;
 	val->yres = v4l2_fmt.fmt.pix.height;
-	val->fps = streamparm.parm.capture.timeperframe.denominator;
+	val->fps = (__u32) (streamparm.parm.capture.timeperframe.denominator
+				/ streamparm.parm.capture.timeperframe.numerator);
 
 	return 0;
 	
