@@ -40,7 +40,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #define MAX_HEIGHT  5000
 #define MAX_ENCODED (15*1024*1024)
 #define MAX_DECODED (MAX_WIDTH*MAX_HEIGHT*2)
-#define X_RESOLUTION 1280
+#define X_RESOLUTION 480
 #define Y_RESOLUTION 720
 
 
@@ -138,8 +138,8 @@ int main(int argc, char **argv)
 
 		dsip_frame.xres = xres;
 		dsip_frame.yres = yres;
-		dsip_frame.bytes_per_line = fb_fix_attr.bytes_per_line;
 		dsip_frame.bits_per_pixel = fb_var_attr.bits_per_pixel;
+		dsip_frame.bytes_per_line = xres * (dsip_frame.bits_per_pixel >> 3);
 		dsip_frame.bytes = dec_request.output_size;
 		
 		if(NULL == dsip_frame.addr)
@@ -149,8 +149,7 @@ int main(int argc, char **argv)
 		
 		memcpy(dsip_frame.addr, decodedBuf, dsip_frame.bytes);
 		bsp_fb_flush(disp_fd, &fb_var_attr, &fb_fix_attr, &dsip_frame);
-		
-		// printf("dec_request.output_size: %d \n", dec_request.output_size);
+
 	}
 
     brcmjpeg_release(dec);

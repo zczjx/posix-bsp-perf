@@ -133,8 +133,7 @@ int bsp_fb_flush(int fd,
 	flush_xres = (var_attr->xres > frame->xres) ? frame->xres : var_attr->xres;
 	flush_yres = (var_attr->yres > frame->yres) ? frame->yres : var_attr->yres;
 	flush_bytes_per_line = (fix_attr->bytes_per_line > frame->bytes_per_line) ? 
-				fix_attr->bytes_per_line : frame->bytes_per_line;
-
+				frame->bytes_per_line : fix_attr->bytes_per_line;
 	fb_pos = var_attr->fbmem;
 	image_pos = frame->addr;
 
