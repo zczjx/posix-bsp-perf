@@ -1,1 +1,2 @@
-obj-y += mmal_mjpeg_hw_dec/
+obj-y += rpi_mmal_mjpeg_hw_dec_show/
+obj-y += rpi_mjpeg_mmal_dec_fps/
