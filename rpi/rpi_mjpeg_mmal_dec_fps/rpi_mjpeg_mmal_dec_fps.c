@@ -33,9 +33,7 @@ static char outFileName[2048];
 
 static int xres, yres;
 static int v4l2_run = 0;
-
-GQueue *image_que = NULL;
-GMutex que_lock;
+// GMutex que_lock;
 
 static gpointer *v4l2_cap_task(gpointer data);
 
@@ -45,14 +43,14 @@ int main(int argc, char **argv)
     BRCMJPEG_REQUEST_T dec_request;
     BRCMJPEG_T *dec = 0;
 	struct rpi_image *tmp_img = NULL;
-    int i;
-	int err, vfd, pts = 0;
+	int i, err, vfd, pts = 0;
 	struct timespec tp;
 	long pre_time = 0;
 	long curr_time = 0;
 	int fps = 0;
 	GThread *v4l2_task = NULL;
 	char *out_fmt = NULL;
+	GAsyncQueue *image_que = NULL;
 
 	if(argc < 4)
 	{
@@ -63,10 +61,8 @@ int main(int argc, char **argv)
 	xres = atoi(argv[1]);
 	yres = atoi(argv[2]);
 	out_fmt = argv[3];
-	g_mutex_init(&que_lock);
-	image_que = g_queue_new();
-	// g_queue_clear(image_que);
-	printf("new image queue len: %lu\n", g_queue_get_length(image_que));
+	image_que = g_async_queue_new();
+	g_async_queue_ref(image_que);
 	
     // Setup of the dec requests
     memset(&dec_request, 0, sizeof(dec_request));
@@ -113,20 +109,12 @@ int main(int argc, char **argv)
     }
 
 	v4l2_run = 1;
-	v4l2_task = g_thread_new("v4l2_task", v4l2_cap_task, NULL);
+	v4l2_task = g_thread_new("v4l2_cap_task", v4l2_cap_task, image_que);
 
 	while(1)
 	{
-
-		g_mutex_lock(&que_lock);
-		if(g_queue_get_length(image_que) < 1)
-		{
-			g_mutex_unlock(&que_lock);
-			continue;
-		}
-		tmp_img = g_queue_pop_head(image_que);
-		g_mutex_unlock(&que_lock);
-		
+	
+		tmp_img = g_async_queue_pop(image_que);
 		memcpy(encodedInBuf, tmp_img->addr, tmp_img->bytes);
 		dec_request.input_size = tmp_img->bytes;
 		g_free(tmp_img->addr);
@@ -145,7 +133,7 @@ int main(int argc, char **argv)
 	}
 
     brcmjpeg_release(dec);
-	g_queue_free(image_que);
+	g_async_queue_unref(image_que);
 
     return 0;
 }
@@ -157,6 +145,7 @@ static gpointer *v4l2_cap_task(gpointer data)
 	struct rpi_image *tmp_img = NULL;
 	struct bsp_v4l2_cap_buf v4l2_buf[V4L2_BUF_NR];
 	struct bsp_v4l2_param v4l2_param;
+	GAsyncQueue *image_que = (GAsyncQueue *) data;
 
 	printf("start v4l2_cap_task!\n");
 	vfd = bsp_v4l2_open_dev("/dev/video0");
@@ -171,27 +160,25 @@ static gpointer *v4l2_cap_task(gpointer data)
 	printf("v4l2_param.yres: %d \n", v4l2_param.yres);
 	bsp_v4l2_req_buf(vfd, v4l2_buf, V4L2_BUF_NR);
 	bsp_v4l2_stream_on(vfd);
+	g_async_queue_ref(image_que);
 
 	while(v4l2_run)
 	{
 		bsp_v4l2_get_frame(vfd, &buf_idx);
 		
-		g_mutex_lock(&que_lock);
-		
-		if(g_queue_get_length(image_que) < WATER_MASK)
+		if(g_async_queue_length(image_que) < WATER_MASK)
 		{
 			tmp_img = g_new(struct rpi_image, 1);
 			tmp_img->bytes = v4l2_buf[buf_idx].bytes;
 			tmp_img->addr = g_malloc(tmp_img->bytes);
 			memcpy(tmp_img->addr, v4l2_buf[buf_idx].addr, v4l2_buf[buf_idx].bytes);
-			g_queue_push_tail(image_que, tmp_img);
+			g_async_queue_push(image_que, tmp_img);
 		}
-
-		g_mutex_unlock(&que_lock);
 
 		bsp_v4l2_put_frame_buf(vfd, buf_idx);
 	}
-
+	
+	g_async_queue_unref(image_que);
 	g_thread_yield ();
 
 }
