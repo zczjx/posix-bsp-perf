@@ -74,7 +74,6 @@ int main(int argc, char **argv)
 		
 		if (err < 0)
 		{
-			printf("[%s] VIDIOC_ENUM_FMT failed \n", dev_path);
     		break;
 		}
 		
