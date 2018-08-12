@@ -90,7 +90,6 @@ int bsp_v4l2_try_setup(int fd, struct bsp_v4l2_param *val)
 		return -1;
 	}
 
-	
 	memset(&v4l2_fmt, 0, sizeof(struct v4l2_format));
 	v4l2_fmt.type = fmt_dsc.type;
 	v4l2_fmt.fmt.pix.pixelformat = val->pixelformat;
