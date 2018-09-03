@@ -73,6 +73,7 @@ int main(int argc, char **argv)
 	int fps = 0;
 	int buf_idx = 0;
 	int disp_fd = 0;
+	struct v4l2_buffer vbuf_param;
 	
 
 	xres = atoi(argv[1]);
@@ -123,9 +124,9 @@ int main(int argc, char **argv)
 	while(++pts <= 50000)
 	{
 		bsp_print_fps("mjpeg hw dec", &fps, &pre_time, &curr_time);
-		bsp_v4l2_get_frame(vfd, &buf_idx);
-		memcpy(encodedInBuf, v4l2_buf[buf_idx].addr, v4l2_buf[buf_idx].bytes);
-		bsp_v4l2_put_frame_buf(vfd, buf_idx);
+		bsp_v4l2_get_frame(vfd, &vbuf_param);
+		memcpy(encodedInBuf, v4l2_buf[vbuf_param.index].addr, v4l2_buf[vbuf_param.index].bytes);
+		bsp_v4l2_put_frame_buf(vfd, &vbuf_param);
 		dec_request.input_size = v4l2_buf[buf_idx].bytes;
 
 		status = brcmjpeg_process(dec, &dec_request);

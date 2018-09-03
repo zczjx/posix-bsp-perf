@@ -42,7 +42,7 @@ int main(int argc, char **argv)
 	long pre_time = 0;
 	long curr_time = 0;
 	int fps = 0;
-	int buf_idx = 0;
+	struct v4l2_buffer vbuf_param;
 	char pixformat[32];
 	char *dev_path = NULL;
 	char *ret;
@@ -117,9 +117,33 @@ renter:
 
 	while(++pts <= 50000)
 	{
-		bsp_v4l2_get_frame(vfd, &buf_idx);
-		bsp_v4l2_put_frame_buf(vfd, buf_idx);
+		bsp_v4l2_get_frame(vfd, &vbuf_param);
+		bsp_v4l2_put_frame_buf(vfd, &vbuf_param);
 		bsp_print_fps("bsp_v4l2_fps: ", &fps, &pre_time, &curr_time);
+		printf("\n");
+		printf("--------------------v4l2 frame param-------------------------------------\n");
+		printf("v4l2_buf_param.index : %d\n", vbuf_param.index);
+		printf("v4l2_buf_param.type : %d\n", vbuf_param.type);
+		printf("v4l2_buf_param.bytesused : %d\n", vbuf_param.bytesused);
+		printf("v4l2_buf_param.flags : 0x%x\n", vbuf_param.flags);
+		printf("v4l2_buf_param.field : %d\n", vbuf_param.field);
+		printf("v4l2_buf_param.timestamp.tv_sec : %lld\n", vbuf_param.timestamp.tv_sec);
+		printf("v4l2_buf_param.timestamp.tv_sec : %lld\n", vbuf_param.timestamp.tv_sec);
+		printf("v4l2_buf_param.timecode.type : %d\n", vbuf_param.timecode.type);
+		printf("v4l2_buf_param.timecode.flags : %d\n", vbuf_param.timecode.flags);
+		printf("v4l2_buf_param.timecode.frames : %d\n", vbuf_param.timecode.frames);
+		printf("v4l2_buf_param.timecode.seconds : %d\n", vbuf_param.timecode.seconds);
+		printf("v4l2_buf_param.timecode.minutes : %d\n", vbuf_param.timecode.minutes);
+		printf("v4l2_buf_param.timecode.hours : %d\n", vbuf_param.timecode.hours);
+		printf("v4l2_buf_param.timecode.userbits[0] : %d\n", vbuf_param.timecode.userbits[0]);
+		printf("v4l2_buf_param.timecode.userbits[1] : %d\n", vbuf_param.timecode.userbits[1]);
+		printf("v4l2_buf_param.timecode.userbits[2] : %d\n", vbuf_param.timecode.userbits[2]);
+		printf("v4l2_buf_param.timecode.userbits[3] : %d\n", vbuf_param.timecode.userbits[3]);
+		printf("v4l2_buf_param.sequence : %d\n", vbuf_param.sequence);
+		printf("v4l2_buf_param.memory : %d\n", vbuf_param.memory);
+		printf("v4l2_buf_param.length : %d\n", vbuf_param.length);
+		printf("---------------------------------------------------------\n");
+		printf("\n");
 		
 	}
 	

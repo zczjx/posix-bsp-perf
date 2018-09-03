@@ -141,7 +141,7 @@ int main(int argc, char **argv)
 static gpointer *v4l2_cap_task(gpointer data)
 {
 	int vfd;
-	int buf_idx = 0;
+	struct v4l2_buffer vbuf_param;
 	struct rpi_image *tmp_img = NULL;
 	struct bsp_v4l2_cap_buf v4l2_buf[V4L2_BUF_NR];
 	struct bsp_v4l2_param v4l2_param;
@@ -164,18 +164,18 @@ static gpointer *v4l2_cap_task(gpointer data)
 
 	while(v4l2_run)
 	{
-		bsp_v4l2_get_frame(vfd, &buf_idx);
+		bsp_v4l2_get_frame(vfd, &vbuf_param);
 		
 		if(g_async_queue_length(image_que) < WATER_MASK)
 		{
 			tmp_img = g_new(struct rpi_image, 1);
-			tmp_img->bytes = v4l2_buf[buf_idx].bytes;
+			tmp_img->bytes = v4l2_buf[vbuf_param.index].bytes;
 			tmp_img->addr = g_malloc(tmp_img->bytes);
-			memcpy(tmp_img->addr, v4l2_buf[buf_idx].addr, v4l2_buf[buf_idx].bytes);
+			memcpy(tmp_img->addr, v4l2_buf[vbuf_param.index].addr, v4l2_buf[vbuf_param.index].bytes);
 			g_async_queue_push(image_que, tmp_img);
 		}
 
-		bsp_v4l2_put_frame_buf(vfd, buf_idx);
+		bsp_v4l2_put_frame_buf(vfd, &vbuf_param);
 	}
 	
 	g_async_queue_unref(image_que);

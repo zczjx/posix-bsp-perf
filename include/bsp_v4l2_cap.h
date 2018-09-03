@@ -53,9 +53,9 @@ extern int bsp_v4l2_try_setup(int fd, struct bsp_v4l2_param *val);
 extern int bsp_v4l2_req_buf(int fd, struct bsp_v4l2_cap_buf buf_arr[], 
 									 int buf_count);
 
-extern int bsp_v4l2_get_frame(int fd, int *buf_idx);
+extern int bsp_v4l2_get_frame(int fd, struct v4l2_buffer *buf_param);
 
-extern int bsp_v4l2_put_frame_buf(int fd, int buf_idx);
+extern int bsp_v4l2_put_frame_buf(int fd, struct v4l2_buffer *buf_param);
 
 extern int bsp_v4l2_stream_on(int fd);
 

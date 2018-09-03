@@ -190,42 +190,48 @@ int bsp_v4l2_req_buf(int fd, struct bsp_v4l2_cap_buf buf_arr[],
 
 }
 
-int bsp_v4l2_get_frame(int fd, int *buf_idx)
+int bsp_v4l2_get_frame(int fd, struct v4l2_buffer *buf_param)
 {
 	struct pollfd fd_set[1];
-	struct v4l2_buffer v4l2_buf_param;
 	int err = 0;
+
+	if(NULL == buf_param)
+	{
+		printf("buf_param is NULL %s:%d \n", __FUNCTION__, __LINE__);
+		return -1;
+	
+	}
 
 	fd_set[0].fd     = fd;
     fd_set[0].events = POLLIN;
     err = poll(fd_set, 1, -1);
 
-	memset(&v4l2_buf_param, 0, sizeof(struct v4l2_buffer));
-    v4l2_buf_param.type = V4L2_BUF_TYPE_VIDEO_CAPTURE;
-    v4l2_buf_param.memory = V4L2_MEMORY_MMAP;
-    err = ioctl(fd, VIDIOC_DQBUF, &v4l2_buf_param);
+	memset(buf_param, 0, sizeof(struct v4l2_buffer));
+    buf_param->type = V4L2_BUF_TYPE_VIDEO_CAPTURE;
+    buf_param->memory = V4L2_MEMORY_MMAP;
+    err = ioctl(fd, VIDIOC_DQBUF, buf_param);
 		
 	if (err < 0) 
 	{
 		printf("cannot VIDIOC_DQBUF \n");
 		return -1;
     }
-		
-	*buf_idx = v4l2_buf_param.index;
 	
 	return 0;
 }
 
-int bsp_v4l2_put_frame_buf(int fd, int buf_idx)
+int bsp_v4l2_put_frame_buf(int fd, struct v4l2_buffer *buf_param)
 {
-	struct v4l2_buffer v4l2_buf_param;
 	int err = 0;
+
+	if(NULL == buf_param)
+	{
+		printf("buf_param is NULL %s:%d \n", __FUNCTION__, __LINE__);
+		return -1;
 	
-	memset(&v4l2_buf_param, 0, sizeof(struct v4l2_buffer));
-	v4l2_buf_param.index  = buf_idx;
-	v4l2_buf_param.type   = V4L2_BUF_TYPE_VIDEO_CAPTURE;
-	v4l2_buf_param.memory = V4L2_MEMORY_MMAP;	
-	err = ioctl(fd, VIDIOC_QBUF, &v4l2_buf_param);
+	}
+		
+	err = ioctl(fd, VIDIOC_QBUF, buf_param);
 	
 	if (err < 0) 
 	{
