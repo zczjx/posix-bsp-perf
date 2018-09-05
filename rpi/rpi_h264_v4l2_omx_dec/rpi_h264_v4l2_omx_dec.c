@@ -1,6 +1,4 @@
 #include "bsp_v4l2_cap.h"
-#include "bsp_fb.h"
-
 #include "ilclient.h"
 #include <bcm_host.h>
 
@@ -18,7 +16,7 @@
 #define Y_RESOLUTION 720
 #define V4L2_BUF_NR (4)
 #define WATER_MASK (8)
-#define DEFAULT_FRAMES (600)
+#define DEFAULT_DEC_FRAMES (600)
 #define ENCODE_FRAME_TYPE_MASK (V4L2_BUF_FLAG_KEYFRAME | V4L2_BUF_FLAG_PFRAME | \
 								V4L2_BUF_FLAG_BFRAME)
 								
@@ -42,18 +40,13 @@ typedef struct omx_h264_ctx {
 	COMPONENT_T *list[5];
 	int list_cnt;
 	struct omx_com_dsc vdec;
-	struct omx_com_dsc resize;
+	struct omx_com_dsc vrender;
 	OMX_BUFFERHEADERTYPE *in_buf;
 	OMX_BUFFERHEADERTYPE *out_buf;
 } omx_h264_ctx;
 
 static int xres, yres;
 static int v4l2_run = 0;
-static struct bsp_fb_var_attr fb_var_attr;
-static struct bsp_fb_fix_attr fb_fix_attr;
-static struct rgb_frame dsip_frame = {
-	.addr = NULL,
-};
 
 // GMutex que_lock;
 
@@ -79,7 +72,6 @@ int main(int argc, char **argv)
 	GAsyncQueue *image_que = NULL;
 	struct omx_h264_ctx dec_ctx;
 	int framenumber = 0;
-	int disp_fd = 0;
 
 	if(argc < 3)
 	{
@@ -101,48 +93,29 @@ int main(int argc, char **argv)
 		perror("init_omx_h264_dec \n");
 		return -1;
     }
-
-	disp_fd = bsp_fb_open_dev("/dev/fb0", &fb_var_attr, &fb_fix_attr);
-	fb_var_attr.red_offset = 24;
-	fb_var_attr.green_offset = 16;
-	fb_var_attr.blue_offset = 8;
-	fb_var_attr.transp_offset = 0;
-	err = bsp_fb_try_setup(disp_fd, &fb_var_attr);
-	
-	if(err < 0)
-	{
-		fprintf(stderr, "could not bsp_fb_try_setup\n");
-	}
 	
 	v4l2_run = 1;
 	v4l2_task = g_thread_new("v4l2_cap_task", v4l2_cap_task, image_que);
 
-	while(framenumber < DEFAULT_FRAMES)
+	while(framenumber < DEFAULT_DEC_FRAMES)
 	{
-	
 		tmp_img = g_async_queue_pop(image_que);
 		err = omx_h264_decode(&dec_ctx, tmp_img);
 		framenumber++;
 		g_free(tmp_img->addr);
 		g_free(tmp_img);
 		tmp_img = NULL;
-
-		if(NULL != dec_ctx.out_buf)
-		{
-			dsip_frame.xres = xres;
-			dsip_frame.yres = yres;
-			dsip_frame.bits_per_pixel = fb_var_attr.bits_per_pixel;
-			dsip_frame.bytes_per_line = xres * (dsip_frame.bits_per_pixel >> 3);
-			dsip_frame.bytes = dec_ctx.out_buf->nFilledLen;
-			dsip_frame.addr = dec_ctx.out_buf->pBuffer;
-			bsp_fb_flush(disp_fd, &fb_var_attr, &fb_fix_attr, &dsip_frame);
-
-		}
-		
-		
 		bsp_print_fps("omx h264 hw dec", &fps, &pre_time, &curr_time);		
 	}
-	
+
+	dec_ctx.in_buf->nFilledLen = 0;
+	dec_ctx.in_buf->nFlags = OMX_BUFFERFLAG_TIME_UNKNOWN | OMX_BUFFERFLAG_EOS;
+	OMX_EmptyThisBuffer(ILC_GET_HANDLE(dec_ctx.vdec.component), 
+							dec_ctx.in_buf);
+	// need to flush the renderer to allow video_decode to disable its input port
+	ilclient_flush_tunnels(dec_ctx.tunnel, 0);
+
+	printf("finish dec %d frames\n", framenumber);
 	g_async_queue_unref(image_que);
 	deinit_omx_h264_dec(&dec_ctx);
 
@@ -283,11 +256,9 @@ static int init_omx_h264_dec(struct omx_h264_ctx *dec_ctx)
 	dec_ctx->list[dec_ctx->list_cnt] = dec_ctx->vdec.component;
 	dec_ctx->list_cnt++;
 
-	// create resize
-	err = ilclient_create_component(dec_ctx->client, &dec_ctx->resize.component, 
-						"resize", 
-						ILCLIENT_DISABLE_ALL_PORTS
-						| ILCLIENT_ENABLE_OUTPUT_BUFFERS);
+	// create video_render
+	err = ilclient_create_component(dec_ctx->client, &dec_ctx->vrender.component, 
+						"video_render", ILCLIENT_DISABLE_ALL_PORTS);
 	
 	if (err != 0) 
 	{
@@ -295,11 +266,11 @@ static int init_omx_h264_dec(struct omx_h264_ctx *dec_ctx)
 		exit(1);
 	}
 
-	dec_ctx->list[dec_ctx->list_cnt] = dec_ctx->vdec.component;
+	dec_ctx->list[dec_ctx->list_cnt] = dec_ctx->vrender.component;
 	dec_ctx->list_cnt++;
 
 	// setup video_decode and input port
-
+	memset(&port, 0, sizeof(OMX_PORT_PARAM_TYPE));
 	port.nSize = sizeof(OMX_PORT_PARAM_TYPE);
     port.nVersion.nVersion = OMX_VERSION;
     OMX_GetParameter(ILC_GET_HANDLE(dec_ctx->vdec.component), OMX_IndexParamVideoInit, &port);
@@ -382,76 +353,17 @@ static int init_omx_h264_dec(struct omx_h264_ctx *dec_ctx)
 	printf("dec_ctx->vdec.out_port: \n");
 	print_def(def);
 
-	// setup resize and output port
-
-	dec_ctx->resize.in_port = 60;
-	dec_ctx->resize.out_port = 61;
-	def.nSize = sizeof(OMX_PARAM_PORTDEFINITIONTYPE);
-	def.nVersion.nVersion = OMX_VERSION;
-	def.nPortIndex = dec_ctx->resize.in_port;
-	err = OMX_SetParameter(ILC_GET_HANDLE(dec_ctx->resize.component),
-						OMX_IndexParamPortDefinition, &def);
-	
-	if (err != OMX_ErrorNone) 
-	{
-		printf("%s:%d: OMX_SetParameter() dec_ctx->vdec.in_port: %d failed\n",
-		 __FUNCTION__, __LINE__, def.nPortIndex);
-		exit(1);
-	}
-	
-	err = OMX_GetParameter(ILC_GET_HANDLE(dec_ctx->resize.component), 
-						OMX_IndexParamPortDefinition, &def);
-	printf("dec_ctx->resize.in_port: \n");
-	print_image_def(def);
-
-	memset(&def, 0, sizeof(OMX_PARAM_PORTDEFINITIONTYPE));
-	def.nSize = sizeof(OMX_PARAM_PORTDEFINITIONTYPE);
-	def.nVersion.nVersion = OMX_VERSION;
-	def.nPortIndex = dec_ctx->resize.out_port;
-	err = OMX_GetParameter(ILC_GET_HANDLE(dec_ctx->resize.component), 
-						OMX_IndexParamPortDefinition, &def); 
-	
-	if(err != OMX_ErrorNone) 
-	{
-		 printf("%s:%d: OMX_GetParameter() failed!\n",
-			__FUNCTION__, __LINE__);
-		 exit(1);
-	}
-
-	def.format.image.nFrameWidth = xres;
-	def.format.image.nFrameHeight = yres;
-	def.format.image.nSliceHeight = 0;
-	def.format.image.nStride = 0;
-	def.format.image.eCompressionFormat = OMX_IMAGE_CodingUnused;
-	def.format.image.eColorFormat = OMX_COLOR_Format32bitABGR8888;
-	def.format.image.bFlagErrorConcealment = OMX_FALSE;
-	// def.nBufferSize = xres * yres * 2;
-	err = OMX_SetParameter(ILC_GET_HANDLE(dec_ctx->resize.component),
-						OMX_IndexParamPortDefinition, &def);
-	
-	if (err != OMX_ErrorNone) 
-	{
-		printf("%s:%d: OMX_SetParameter() dec_ctx->vdec.in_port: %d failed\n",
-		 __FUNCTION__, __LINE__, def.nPortIndex);
-		exit(1);
-	}
-
-	err = OMX_GetParameter(ILC_GET_HANDLE(dec_ctx->resize.component), 
-							OMX_IndexParamPortDefinition, &def); 
-		
-	if(err != OMX_ErrorNone) 
-	{
-		printf("%s:%d: OMX_GetParameter() failed!\n",
-				__FUNCTION__, __LINE__);
-		exit(1);
-	}
-
-	printf("dec_ctx->resize.out_port : \n");
-	print_image_def(def);
+	// setup video_render and output port
+	memset(&port, 0, sizeof(OMX_PORT_PARAM_TYPE));
+	port.nSize = sizeof(OMX_PORT_PARAM_TYPE);
+    port.nVersion.nVersion = OMX_VERSION;
+    OMX_GetParameter(ILC_GET_HANDLE(dec_ctx->vrender.component), OMX_IndexParamVideoInit, &port);
+	dec_ctx->vrender.in_port = port.nStartPortNumber;
+	printf("dec_ctx->vrender.in_port: %d\n", dec_ctx->vrender.in_port);
 
 	//setup tunnel
 	set_tunnel(&dec_ctx->tunnel[0], dec_ctx->vdec.component, dec_ctx->vdec.out_port, 
-				dec_ctx->resize.component, dec_ctx->resize.in_port);
+				dec_ctx->vrender.component, dec_ctx->vrender.in_port);
 
 	err = ilclient_setup_tunnel(&dec_ctx->tunnel[0], 0, 0);
 	
@@ -461,8 +373,8 @@ static int init_omx_h264_dec(struct omx_h264_ctx *dec_ctx)
 			__FUNCTION__, __LINE__);
 		exit(1);
 	}
-
-	err = ilclient_change_component_state(dec_ctx->resize.component, OMX_StateIdle);
+	
+	err = ilclient_change_component_state(dec_ctx->vrender.component, OMX_StateIdle);
 
 	if(err != 0)
 	{
@@ -470,16 +382,7 @@ static int init_omx_h264_dec(struct omx_h264_ctx *dec_ctx)
 				__FUNCTION__, __LINE__);
 	}
 
-	err = ilclient_enable_port_buffers(dec_ctx->resize.component, 
-							dec_ctx->resize.out_port, NULL, NULL, NULL);
-
-	if (err != 0) 
-	{
-		printf("%s:%d: ilclient_enable_port_buffers failed \n", __FUNCTION__, __LINE__);
-		exit(1);
-	}
-	
-	err = ilclient_change_component_state(dec_ctx->resize.component, OMX_StateExecuting);
+	err = ilclient_change_component_state(dec_ctx->vrender.component, OMX_StateExecuting);
 
 	if(err != 0)
 	{
@@ -570,24 +473,6 @@ static int omx_h264_decode(struct omx_h264_ctx *dec_ctx,
 	if (err != OMX_ErrorNone)
 	{
 	    printf("%s:%d: OMX_EmptyThisBuffer failed!\n", __FUNCTION__, __LINE__);
-	}
-
-	dec_ctx->out_buf = NULL;
-	dec_ctx->out_buf = ilclient_get_output_buffer(dec_ctx->resize.component, 
-								dec_ctx->resize.out_port, 0);
-
-	if (dec_ctx->out_buf == NULL) 
-	{
-		printf("%s:%d: ilclient_get_output_buffer failed \n", __FUNCTION__, __LINE__);
-		return -1;
-	}
-	
-	err = OMX_FillThisBuffer(ILC_GET_HANDLE(dec_ctx->resize.component), 
-								dec_ctx->out_buf);
-	
-	if (err != OMX_ErrorNone) 
-	{
-		printf("%s:%d: OMX_FillThisBuffer failed!\n", __FUNCTION__, __LINE__);
 	}
 
     return 0;
