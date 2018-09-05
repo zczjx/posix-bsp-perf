@@ -97,7 +97,8 @@ int main(int argc, char **argv)
 	v4l2_run = 1;
 	v4l2_task = g_thread_new("v4l2_cap_task", v4l2_cap_task, image_que);
 
-	while(framenumber < DEFAULT_DEC_FRAMES)
+	// while(framenumber < DEFAULT_DEC_FRAMES)
+	while(1)
 	{
 		tmp_img = g_async_queue_pop(image_que);
 		err = omx_h264_decode(&dec_ctx, tmp_img);
@@ -353,13 +354,44 @@ static int init_omx_h264_dec(struct omx_h264_ctx *dec_ctx)
 	printf("dec_ctx->vdec.out_port: \n");
 	print_def(def);
 
-	// setup video_render and output port
+	// setup video_render and port
 	memset(&port, 0, sizeof(OMX_PORT_PARAM_TYPE));
 	port.nSize = sizeof(OMX_PORT_PARAM_TYPE);
     port.nVersion.nVersion = OMX_VERSION;
     OMX_GetParameter(ILC_GET_HANDLE(dec_ctx->vrender.component), OMX_IndexParamVideoInit, &port);
 	dec_ctx->vrender.in_port = port.nStartPortNumber;
-	printf("dec_ctx->vrender.in_port: %d\n", dec_ctx->vrender.in_port);
+	printf("dec_ctx->vrender.in_port: %d\n", dec_ctx->vrender.in_port);	
+
+	memset(&format, 0, sizeof(OMX_VIDEO_PARAM_PORTFORMATTYPE));
+	format.nSize = sizeof(OMX_VIDEO_PARAM_PORTFORMATTYPE);
+	format.nVersion.nVersion = OMX_VERSION;
+	format.nPortIndex = dec_ctx->vrender.in_port;
+	format.eColorFormat = OMX_COLOR_Format24bitBGR888;
+	err = OMX_SetParameter(ILC_GET_HANDLE(dec_ctx->vrender.component), 
+						OMX_IndexParamVideoPortFormat, &format);
+
+	if (err != 0) 
+	{
+		printf("%s:%d: OMX_SetParameter failed \n", __FUNCTION__, __LINE__);
+		exit(1);
+	}
+
+	memset(&def, 0, sizeof(OMX_PARAM_PORTDEFINITIONTYPE));
+	def.nSize = sizeof(OMX_PARAM_PORTDEFINITIONTYPE);
+	def.nVersion.nVersion = OMX_VERSION;
+	def.nPortIndex = dec_ctx->vrender.in_port;
+	err = OMX_GetParameter(ILC_GET_HANDLE(dec_ctx->vrender.component), 
+						OMX_IndexParamPortDefinition, &def); 
+	
+	if(err != OMX_ErrorNone) 
+	{
+		 printf("%s:%d: OMX_GetParameter() failed!\n",
+			__FUNCTION__, __LINE__);
+		 exit(1);
+	} 
+
+	printf("dec_ctx->vrender.in_port: \n");
+	print_def(def);
 
 	//setup tunnel
 	set_tunnel(&dec_ctx->tunnel[0], dec_ctx->vdec.component, dec_ctx->vdec.out_port, 
