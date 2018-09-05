@@ -97,8 +97,7 @@ int main(int argc, char **argv)
 	v4l2_run = 1;
 	v4l2_task = g_thread_new("v4l2_cap_task", v4l2_cap_task, image_que);
 
-	// while(framenumber < DEFAULT_DEC_FRAMES)
-	while(1)
+	while(framenumber < DEFAULT_DEC_FRAMES)
 	{
 		tmp_img = g_async_queue_pop(image_que);
 		err = omx_h264_decode(&dec_ctx, tmp_img);
@@ -187,27 +186,6 @@ static void print_def(OMX_PARAM_PORTDEFINITIONTYPE def)
 	  def.format.video.nSliceHeight,
 	  def.format.video.xFramerate, def.format.video.eColorFormat);
 }
-
-static void print_image_def(OMX_PARAM_PORTDEFINITIONTYPE def)
-{
-   printf("Port %u: %s %u/%u %u %u %s,%s,%s %ux%u %ux%u  %u\n",
-	  def.nPortIndex,
-	  def.eDir == OMX_DirInput ? "in" : "out",
-	  def.nBufferCountActual,
-	  def.nBufferCountMin,
-	  def.nBufferSize,
-	  def.nBufferAlignment,
-	  def.bEnabled ? "enabled" : "disabled",
-	  def.bPopulated ? "populated" : "not pop.",
-	  def.bBuffersContiguous ? "contig." : "not cont.",
-	  def.format.image.nFrameWidth,
-	  def.format.image.nFrameHeight,
-	  def.format.image.nStride,
-	  def.format.image.nSliceHeight,
-	  def.format.image.eColorFormat);
-}
-
-
 
 static int init_omx_h264_dec(struct omx_h264_ctx *dec_ctx)
 {
@@ -376,6 +354,7 @@ static int init_omx_h264_dec(struct omx_h264_ctx *dec_ctx)
 		exit(1);
 	}
 
+
 	memset(&def, 0, sizeof(OMX_PARAM_PORTDEFINITIONTYPE));
 	def.nSize = sizeof(OMX_PARAM_PORTDEFINITIONTYPE);
 	def.nVersion.nVersion = OMX_VERSION;
@@ -396,7 +375,6 @@ static int init_omx_h264_dec(struct omx_h264_ctx *dec_ctx)
 	//setup tunnel
 	set_tunnel(&dec_ctx->tunnel[0], dec_ctx->vdec.component, dec_ctx->vdec.out_port, 
 				dec_ctx->vrender.component, dec_ctx->vrender.in_port);
-
 	err = ilclient_setup_tunnel(&dec_ctx->tunnel[0], 0, 0);
 	
 	if(err != OMX_ErrorNone) 
