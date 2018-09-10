@@ -59,6 +59,7 @@ int main(int argc, char *argv[])
 	phy_bw = calculate_sdram_phy_bw(task_clk);
 	printf("SDRAM read vitual bandwidth: %0.2f MB/s\n", vitual_membw);
 	printf("SDRAM read phy bandwidth: %0.2f MB/s\n", phy_bw);
+	printf("\n");
 
 	printf("------------SDRAM write bandwidth test--------- \n");
 	gettimeofday(&time1, NULL);
@@ -78,6 +79,7 @@ int main(int argc, char *argv[])
 	phy_bw = calculate_sdram_phy_bw(task_clk);
 	printf("SDRAM write vitual bandwidth: %0.2f MB/s\n", vitual_membw);
 	printf("SDRAM write phy bandwidth: %0.2f MB/s\n", phy_bw);
+	printf("\n");
  
     return 0;
 }
