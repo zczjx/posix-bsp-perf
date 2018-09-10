@@ -40,9 +40,14 @@ extern "C"
 extern int perf_event_open(struct perf_event_attr *hw_event, pid_t pid, 
 									int cpu, int group_fd, unsigned long flags);
 
-extern int perf_cpu_cycles_start(int *fd);
+extern int perf_cpu_cycles_open_start();
 
-extern int perf_cpu_cycles_result(int fd, unsigned long long *cpu_cycles);
+extern int perf_cpu_cycles_stop_result(int fd, unsigned long long *cpu_cycles);
+
+extern int perf_task_clk_open_start();
+	
+extern int perf_task_clk_stop_result(int fd, unsigned long long *task_clk);
+
 
 
 #ifdef __cplusplus

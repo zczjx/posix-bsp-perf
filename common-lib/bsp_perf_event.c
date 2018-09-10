@@ -34,65 +34,63 @@ int perf_event_open(struct perf_event_attr *hw_event, pid_t pid,
 	return ret;
 }
 
-static int perf_cpu_cycles_open(int *fd)
+static int perf_type_config_open(__u32 type, __u64 config)
 {
 	struct perf_event_attr attr;
-	int pfd = 0;
+	int fd = 0;
 
 	memset(&attr, 0, sizeof(struct perf_event_attr));
-	attr.type = PERF_TYPE_HARDWARE;
+	attr.type = type;
 	attr.size = sizeof(struct perf_event_attr);
-	attr.config = PERF_COUNT_HW_CPU_CYCLES;
+	attr.config = config;
 	attr.read_format = (PERF_FORMAT_TOTAL_TIME_ENABLED | 
 						PERF_FORMAT_TOTAL_TIME_RUNNING);
 						
-	pfd = perf_event_open(&attr, 0, -1, -1, 0);
+	fd = perf_event_open(&attr, 0, -1, -1, 0);
 	
-	if (fd == -1) 
+	if (fd < 0) 
 	{
-		fprintf(stderr, "Error opening leader %llx\n", attr.config);
-		*fd = -1;
-		return -1;
+		fprintf(stderr, "Error opening config %llx\n", attr.config);
+
 	}
 
-	*fd = pfd;
-	
-	return 0;
+	return fd;
 
 }
 
 
-int perf_cpu_cycles_start(int *fd)
+int perf_cpu_cycles_open_start()
 {
 	int err = 0;
+	int fd;
 	
-	if(NULL == fd)
-	{
-		printf("NULL pointer in %s:%d \n", __FUNCTION__, __LINE__);
-		return -1;
-	}
+	fd = perf_type_config_open(PERF_TYPE_HARDWARE, PERF_COUNT_HW_CPU_CYCLES);
 
-	err = perf_cpu_cycles_open(fd);
-	err = ioctl(*fd, PERF_EVENT_IOC_RESET);
+	if(fd < 0)
+	{
+		return fd;
+	}
+	
+	err = ioctl(fd, PERF_EVENT_IOC_RESET);
 
 	if(err < 0)
 	{
 		printf("PERF_EVENT_IOC_RESET failed !\n");
 	}
 
-	err = ioctl(*fd, PERF_EVENT_IOC_ENABLE, 0);
+	err = ioctl(fd, PERF_EVENT_IOC_ENABLE, 0);
 
 	if(err < 0)
 	{
 		printf("PERF_EVENT_IOC_ENABLE failed !\n");
 	}
 
-	return err;
+	return fd;
 
 
 }
 
-int perf_cpu_cycles_result(int fd, unsigned long long *cpu_cycles)
+int perf_cpu_cycles_stop_result(int fd, unsigned long long *cpu_cycles)
 {
 	int err = 0;
 	unsigned long long cnts[3];
@@ -114,4 +112,60 @@ int perf_cpu_cycles_result(int fd, unsigned long long *cpu_cycles)
 
 	return err;
 }
+
+int perf_task_clk_open_start()
+{
+	int err = 0;
+	int fd;
+	
+	fd = perf_type_config_open(PERF_TYPE_SOFTWARE, PERF_COUNT_SW_TASK_CLOCK);
+
+	if(fd < 0)
+	{
+		return fd;
+	}
+	
+	err = ioctl(fd, PERF_EVENT_IOC_RESET);
+
+	if(err < 0)
+	{
+		printf("PERF_EVENT_IOC_RESET failed !\n");
+	}
+
+	err = ioctl(fd, PERF_EVENT_IOC_ENABLE, 0);
+
+	if(err < 0)
+	{
+		printf("PERF_EVENT_IOC_ENABLE failed !\n");
+	}
+
+	return fd;
+
+
+}
+
+int perf_task_clk_stop_result(int fd, unsigned long long *task_clk)
+{
+	int err = 0;
+	unsigned long long cnts[3];
+	unsigned long long ret = 0;
+
+	ioctl(fd, PERF_EVENT_IOC_DISABLE, 0);
+	err = read(fd, cnts, sizeof(cnts));
+
+	if(err < 0)
+	{
+		printf("read cpu_cycles failed!\n");
+	}
+
+	close(fd);
+
+	ret = (unsigned long long) (float) cnts[0] * (float) cnts[1] 
+		/ (float) cnts[2];
+	*task_clk = ret;
+
+	return err;
+
+}
+
 
