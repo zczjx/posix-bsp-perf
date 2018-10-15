@@ -33,7 +33,7 @@ int main(int argc, char *argv[])
 		}
 
 		distance = (time_gap_us * SPEED_OF_SONIC) * 0.5;
-		printf("distance: %f mm\n", distance);
+		printf("distance: %.2f mm\n", distance);
 	}
 
 	close(fd);
