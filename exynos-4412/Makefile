@@ -1,2 +1,2 @@
 obj-y += exynos_hello_world/
-obj-y += hc-sr04/
+obj-y += hc_sr04/
