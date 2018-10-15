@@ -33,6 +33,13 @@ int main(int argc, char *argv[])
 		}
 
 		distance = (time_gap_us * SPEED_OF_SONIC) * 0.5;
+		
+		if(distance > 4500)
+		{
+			/*max distance is 4500 mm*/
+			distance = 4500;
+		}
+		
 		printf("distance: %.2f mm\n", distance);
 	}
 
