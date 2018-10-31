@@ -115,7 +115,7 @@ renter:
 	bsp_v4l2_req_buf(vfd, v4l2_buf, V4L2_BUF_NR);
 	bsp_v4l2_stream_on(vfd);
 
-	while(++pts <= 50000)
+	while(++pts <= 1000)
 	{
 		bsp_v4l2_get_frame(vfd, &vbuf_param);
 		bsp_v4l2_put_frame_buf(vfd, &vbuf_param);
