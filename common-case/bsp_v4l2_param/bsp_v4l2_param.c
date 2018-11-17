@@ -30,6 +30,7 @@ int main(int argc, char *argv[])
 
 	if (fd < 0)
     {
+    	printf("usage: bsp_v4l2_param open dev failed fd: %d\n", fd);
 		return -1;
 	}
 	
@@ -39,6 +40,7 @@ int main(int argc, char *argv[])
 	err = ioctl(fd, VIDIOC_QUERYCAP, &v4l2_cap);
 	if (err < 0)
     {
+		printf("usage: bsp_v4l2_param VIDIOC_QUERYCAP failed err: %d\n", err);
 		return -1;
 	}
 	
@@ -59,7 +61,10 @@ int main(int argc, char *argv[])
 		err = ioctl(fd, VIDIOC_ENUM_FMT, &fmt_dsc);
 		
 		if (err < 0)
-    		break;
+		{
+			printf("VIDIOC_ENUM_FMT failed err:%d\n", err);
+			break;
+		}
 
 		printf("\n");
 		printf("[%s]: fmt_dsc.index: %d \n", dev_path, fmt_dsc.index);
@@ -74,23 +79,22 @@ int main(int argc, char *argv[])
 	memset(&v4l2_fmt, 0, sizeof(struct v4l2_format));
 	v4l2_fmt.type = V4L2_BUF_TYPE_VIDEO_CAPTURE;
     v4l2_fmt.fmt.pix.pixelformat = V4L2_PIX_FMT_YUYV;
-    v4l2_fmt.fmt.pix.width       = 1000;
-	v4l2_fmt.fmt.pix.height      = 1000;
-    v4l2_fmt.fmt.pix.field       = V4L2_FIELD_ANY;
+    v4l2_fmt.fmt.pix.width       = 1280;
+	v4l2_fmt.fmt.pix.height      = 720;
+    v4l2_fmt.fmt.pix.field       = V4L2_FIELD_NONE;
 	err = ioctl(fd, VIDIOC_S_FMT, &v4l2_fmt); 
 	
     if (err) 
     {
-		printf("[%s]:VIDIOC_S_FMT fail \n");
-		return -1;      
+		printf("VIDIOC_S_FMT fail err: %d\n", err);      
     }
-	
+
+	memset(&v4l2_fmt, 0, sizeof(struct v4l2_format));
 	err = ioctl(fd, VIDIOC_G_FMT, &v4l2_fmt);
 	
 	if (err < 0)
     {
-    	printf("[%s]:VIDIOC_G_FMT fail \n");
-		return -1;
+    	printf("VIDIOC_G_FMT fail err: %d\n", err);
 	}
 
 	printf("\n");
@@ -106,13 +110,13 @@ int main(int argc, char *argv[])
 
 	struct v4l2_streamparm streamparm;
 
+	memset(&streamparm, 0, sizeof(struct v4l2_streamparm));
 	streamparm.type = V4L2_BUF_TYPE_VIDEO_CAPTURE;
     err = ioctl(fd, VIDIOC_G_PARM, &streamparm);
 	
 	if (err) 
     {
-		printf("[%s]:VIDIOC_G_PARM failed \n");
-		return -1;          
+		printf("VIDIOC_G_PARM failed err: %d\n", err);       
     }
 
 	printf("[%s]:streamparm.parm.capture.capability 0x%x \n", 
