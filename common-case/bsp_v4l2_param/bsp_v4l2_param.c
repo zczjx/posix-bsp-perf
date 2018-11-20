@@ -18,6 +18,7 @@ int main(int argc, char *argv[])
 	int fd;
 	int i = 0;
 	char *dev_path = NULL;
+	int buf_mp_flag = 0;
 
 	if(argc < 2)
 	{
@@ -50,6 +51,14 @@ int main(int argc, char *argv[])
 	printf("[%s]: v4l2_cap.version: 0x%x \n", dev_path, v4l2_cap.version);
 	printf("[%s]: v4l2_cap.capabilities: 0x%x \n", dev_path, v4l2_cap.capabilities);
 
+	if(v4l2_cap.capabilities & 
+	(V4L2_CAP_VIDEO_CAPTURE_MPLANE | V4L2_CAP_VIDEO_OUTPUT_MPLANE
+	| V4L2_CAP_VIDEO_M2M_MPLANE))
+	{
+		buf_mp_flag = 1;
+	}
+
+
 	/*frame format test*/
 	struct v4l2_fmtdesc fmt_dsc;
 	memset(&fmt_dsc, 0, sizeof(struct v4l2_fmtdesc));
@@ -57,12 +66,16 @@ int main(int argc, char *argv[])
 	for(i = 0; i < V4L2_MAX_FMT; i++)
 	{
 		fmt_dsc.index = i;
-		fmt_dsc.type = V4L2_BUF_TYPE_VIDEO_CAPTURE;
+		fmt_dsc.type = (buf_mp_flag ? 
+			V4L2_BUF_TYPE_VIDEO_CAPTURE_MPLANE : V4L2_BUF_TYPE_VIDEO_CAPTURE);
 		err = ioctl(fd, VIDIOC_ENUM_FMT, &fmt_dsc);
 		
 		if (err < 0)
 		{
-			printf("VIDIOC_ENUM_FMT failed err:%d\n", err);
+			if(i <= 0)
+			{
+				printf("VIDIOC_ENUM_FMT failed err:%d\n", err);
+			}
 			break;
 		}
 
@@ -77,7 +90,8 @@ int main(int argc, char *argv[])
 	
 	struct v4l2_format  v4l2_fmt;
 	memset(&v4l2_fmt, 0, sizeof(struct v4l2_format));
-	v4l2_fmt.type = V4L2_BUF_TYPE_VIDEO_CAPTURE;
+	v4l2_fmt.type = (buf_mp_flag ? 
+		V4L2_BUF_TYPE_VIDEO_CAPTURE_MPLANE : V4L2_BUF_TYPE_VIDEO_CAPTURE);
     v4l2_fmt.fmt.pix.pixelformat = V4L2_PIX_FMT_YUYV;
     v4l2_fmt.fmt.pix.width       = 1280;
 	v4l2_fmt.fmt.pix.height      = 720;
@@ -90,6 +104,8 @@ int main(int argc, char *argv[])
     }
 
 	memset(&v4l2_fmt, 0, sizeof(struct v4l2_format));
+	v4l2_fmt.type = (buf_mp_flag ? 
+		V4L2_BUF_TYPE_VIDEO_CAPTURE_MPLANE : V4L2_BUF_TYPE_VIDEO_CAPTURE);
 	err = ioctl(fd, VIDIOC_G_FMT, &v4l2_fmt);
 	
 	if (err < 0)
@@ -97,21 +113,38 @@ int main(int argc, char *argv[])
     	printf("VIDIOC_G_FMT fail err: %d\n", err);
 	}
 
-	printf("\n");
-	printf("[%s]: v4l2_fmt.type: %d \n", dev_path, v4l2_fmt.type);
-	printf("[%s]: v4l2_fmt.fmt.pix.width: %d \n", dev_path, v4l2_fmt.fmt.pix.width);
-	printf("[%s]: v4l2_fmt.fmt.pix.height: %d \n", dev_path, v4l2_fmt.fmt.pix.height);
-	printf("[%s]: v4l2_fmt.fmt.pix.pixelformat: 0x%x \n", dev_path, v4l2_fmt.fmt.pix.pixelformat);
-	printf("[%s]: v4l2_fmt.fmt.pix.field: %d \n", dev_path, v4l2_fmt.fmt.pix.field);
-	printf("[%s]: v4l2_fmt.fmt.pix.bytesperline: %d \n", dev_path, v4l2_fmt.fmt.pix.bytesperline);
-	printf("[%s]: v4l2_fmt.fmt.pix.sizeimage: %d \n", dev_path, v4l2_fmt.fmt.pix.sizeimage);
-	printf("[%s]: v4l2_fmt.fmt.pix.colorspace: %d \n", dev_path, v4l2_fmt.fmt.pix.colorspace);
-	printf("\n");
+	if(1 == buf_mp_flag)
+	{
+		printf("\n");
+		printf("[%s]: v4l2_fmt.type: %d \n", dev_path, v4l2_fmt.type);
+		printf("[%s]: v4l2_fmt.fmt.pix_mp.width: %d \n", dev_path, v4l2_fmt.fmt.pix_mp.width);
+		printf("[%s]: v4l2_fmt.fmt.pix_mp.height: %d \n", dev_path, v4l2_fmt.fmt.pix_mp.height);
+		printf("[%s]: v4l2_fmt.fmt.pix_mp.pixelformat: 0x%x \n", dev_path, v4l2_fmt.fmt.pix_mp.pixelformat);
+		printf("[%s]: v4l2_fmt.fmt.pix_mp.field: %d \n", dev_path, v4l2_fmt.fmt.pix_mp.field);
+		printf("[%s]: v4l2_fmt.fmt.pix_mp.num_planes: %d \n", dev_path, v4l2_fmt.fmt.pix_mp.num_planes);
+		printf("[%s]: v4l2_fmt.fmt.pix_mp.flags: 0x%x \n", dev_path, v4l2_fmt.fmt.pix_mp.flags);
+		printf("[%s]: v4l2_fmt.fmt.pix_mp.colorspace: %d \n", dev_path, v4l2_fmt.fmt.pix_mp.colorspace);
+
+	}
+	else
+	{
+		printf("\n");
+		printf("[%s]: v4l2_fmt.type: %d \n", dev_path, v4l2_fmt.type);
+		printf("[%s]: v4l2_fmt.fmt.pix.width: %d \n", dev_path, v4l2_fmt.fmt.pix.width);
+		printf("[%s]: v4l2_fmt.fmt.pix.height: %d \n", dev_path, v4l2_fmt.fmt.pix.height);
+		printf("[%s]: v4l2_fmt.fmt.pix.pixelformat: 0x%x \n", dev_path, v4l2_fmt.fmt.pix.pixelformat);
+		printf("[%s]: v4l2_fmt.fmt.pix.field: %d \n", dev_path, v4l2_fmt.fmt.pix.field);
+		printf("[%s]: v4l2_fmt.fmt.pix.bytesperline: %d \n", dev_path, v4l2_fmt.fmt.pix.bytesperline);
+		printf("[%s]: v4l2_fmt.fmt.pix.sizeimage: %d \n", dev_path, v4l2_fmt.fmt.pix.sizeimage);
+		printf("[%s]: v4l2_fmt.fmt.pix.colorspace: %d \n", dev_path, v4l2_fmt.fmt.pix.colorspace);
+		printf("\n");
+	}
 
 	struct v4l2_streamparm streamparm;
 
 	memset(&streamparm, 0, sizeof(struct v4l2_streamparm));
-	streamparm.type = V4L2_BUF_TYPE_VIDEO_CAPTURE;
+	streamparm.type = (buf_mp_flag ? 
+		V4L2_BUF_TYPE_VIDEO_CAPTURE_MPLANE : V4L2_BUF_TYPE_VIDEO_CAPTURE);
     err = ioctl(fd, VIDIOC_G_PARM, &streamparm);
 	
 	if (err) 
@@ -127,7 +160,6 @@ int main(int argc, char *argv[])
 			dev_path, streamparm.parm.capture.timeperframe.denominator);
 	printf("[%s]:streamparm.parm.capture.timeperframe.numerator: %d \n",
 			dev_path, streamparm.parm.capture.timeperframe.numerator);
-
 
 
 	/* v4l2_queryctrl test */

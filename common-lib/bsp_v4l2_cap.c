@@ -55,9 +55,10 @@ int bsp_v4l2_open_dev(const char *dev_path)
 		return -1;
 	}
 
+	printf("[%s]: v4l2_cap.capabilities: 0x%x\n", dev_path, v4l2_cap.capabilities);
 	if(!(v4l2_cap.capabilities & V4L2_CAP_VIDEO_CAPTURE))
 	{
-		fprintf(stderr, "/dev/video0 is not V4L2_CAP_VIDEO_CAPTURE \n");
+		fprintf(stderr, "[%s]is not V4L2_CAP_VIDEO_CAPTURE\n", dev_path);
 		return -1;
 	}
 
