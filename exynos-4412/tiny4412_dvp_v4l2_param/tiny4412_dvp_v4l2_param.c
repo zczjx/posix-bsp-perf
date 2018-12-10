@@ -10,7 +10,7 @@
 #include <linux/videodev2.h>
 
 #define V4L2_MAX_CTRL (128)
-#define V4L2_MAX_FMT (128)
+#define V4L2_MAX_FMT (16)
 
 int main(int argc, char *argv[])
 {
@@ -34,7 +34,8 @@ int main(int argc, char *argv[])
     	printf("usage: bsp_v4l2_param open dev failed fd: %d\n", fd);
 		return -1;
 	}
-	
+
+	sleep(1);
 	/*capability test*/
 	struct v4l2_capability v4l2_cap;
 	memset(&v4l2_cap, 0, sizeof(struct v4l2_capability));
@@ -51,6 +52,7 @@ int main(int argc, char *argv[])
 	printf("[%s]: v4l2_cap.version: 0x%x \n", dev_path, v4l2_cap.version);
 	printf("[%s]: v4l2_cap.capabilities: 0x%x \n", dev_path, v4l2_cap.capabilities);
 
+	sleep(1);
 	if(v4l2_cap.capabilities & 
 	(V4L2_CAP_VIDEO_CAPTURE_MPLANE | V4L2_CAP_VIDEO_OUTPUT_MPLANE
 	| V4L2_CAP_VIDEO_M2M_MPLANE))
@@ -87,6 +89,35 @@ int main(int argc, char *argv[])
 		printf("[%s]: fmt_dsc.pixelformat: 0x%x \n", dev_path, fmt_dsc.pixelformat);
 		printf("\n");
 	}
+
+	sleep(1);
+	struct v4l2_input input;
+
+	input.index = 0;	
+	if (ioctl(fd, VIDIOC_ENUMINPUT, &input) < 0) {
+        printf("VIDIOC_ENUMINPUT failed err\n");
+    }
+
+	printf("\n");
+	printf("[%s]: input.index: %d \n", dev_path, input.index);
+	printf("[%s]: input.name: %s\n", dev_path, input.name);
+	printf("[%s]: input.type: 0x%x \n", dev_path, input.type);
+	printf("[%s]: input.audioset: 0x%x \n", dev_path, input.audioset);
+	printf("[%s]: input.tuner: %d \n", dev_path, input.tuner);
+	printf("[%s]: input.std: 0x%x \n", dev_path, input.std);
+	printf("[%s]: input.status: 0x%x \n", dev_path, input.status);
+	printf("[%s]: input.capabilities: 0x%x \n", dev_path, input.capabilities);
+	printf("\n");
+	
+	sleep(1);
+	input.index = 0;
+	err = ioctl(fd, VIDIOC_S_INPUT, &input);
+	if (err < 0) {
+        printf("VIDIOC_S_INPUT failed err: %d\n", err);
+ 
+    }
+
+	sleep(1);
 	
 	struct v4l2_format  v4l2_fmt;
 	memset(&v4l2_fmt, 0, sizeof(struct v4l2_format));
@@ -96,15 +127,15 @@ int main(int argc, char *argv[])
 	if(1 == buf_mp_flag)
 	{
 		v4l2_fmt.fmt.pix_mp.pixelformat = V4L2_PIX_FMT_YUYV;
-    	v4l2_fmt.fmt.pix_mp.width       = 1280;
-		v4l2_fmt.fmt.pix_mp.height      = 720;
+    	v4l2_fmt.fmt.pix_mp.width       = 640;
+		v4l2_fmt.fmt.pix_mp.height      = 480;
     	v4l2_fmt.fmt.pix_mp.field       = V4L2_FIELD_NONE;
 	}
 	else
 	{
 		v4l2_fmt.fmt.pix.pixelformat = V4L2_PIX_FMT_YUYV;
-    	v4l2_fmt.fmt.pix.width       = 1280;
-		v4l2_fmt.fmt.pix.height      = 720;
+    	v4l2_fmt.fmt.pix.width       = 640;
+		v4l2_fmt.fmt.pix.height      = 480;
     	v4l2_fmt.fmt.pix.field       = V4L2_FIELD_NONE;
 	}
 
@@ -115,6 +146,7 @@ int main(int argc, char *argv[])
 		printf("VIDIOC_S_FMT fail err: %d\n", err);      
     }
 
+	sleep(1);
 	memset(&v4l2_fmt, 0, sizeof(struct v4l2_format));
 	v4l2_fmt.type = (buf_mp_flag ? 
 		V4L2_BUF_TYPE_VIDEO_CAPTURE_MPLANE : V4L2_BUF_TYPE_VIDEO_CAPTURE);
@@ -152,70 +184,6 @@ int main(int argc, char *argv[])
 		printf("\n");
 	}
 
-	struct v4l2_streamparm streamparm;
-
-	memset(&streamparm, 0, sizeof(struct v4l2_streamparm));
-	streamparm.type = (buf_mp_flag ? 
-		V4L2_BUF_TYPE_VIDEO_CAPTURE_MPLANE : V4L2_BUF_TYPE_VIDEO_CAPTURE);
-    err = ioctl(fd, VIDIOC_G_PARM, &streamparm);
-	
-	if (err) 
-    {
-		printf("VIDIOC_G_PARM failed err: %d\n", err);       
-    }
-
-	printf("[%s]:streamparm.parm.capture.capability 0x%x \n", 
-			dev_path, streamparm.parm.capture.capability);
-	printf("[%s]:streamparm.parm.capture.capturemode 0x%x \n", 
-			dev_path, streamparm.parm.capture.capturemode);
-	printf("[%s]:streamparm.parm.capture.timeperframe.denominator: %d \n",
-			dev_path, streamparm.parm.capture.timeperframe.denominator);
-	printf("[%s]:streamparm.parm.capture.timeperframe.numerator: %d \n",
-			dev_path, streamparm.parm.capture.timeperframe.numerator);
-
-	struct v4l2_selection selection;
-
-	selection.type = (buf_mp_flag ? 
-		V4L2_BUF_TYPE_VIDEO_CAPTURE_MPLANE : V4L2_BUF_TYPE_VIDEO_CAPTURE);
-	selection.target = V4L2_SEL_TGT_COMPOSE;
-
-	err = ioctl(fd, VIDIOC_G_SELECTION, &selection);
-	
-	if (err) 
-    {
-	    printf("VIDIOC_G_SELECTION failed err: %d\n", err);  
-    }
-
-	printf("selection.r.left: %d, selection.r.top: %d\n", 
-			selection.r.left, selection.r.top);
-	printf("selection.r.width: %d, selection.r.height: %d\n", 
-			selection.r.width, selection.r.height);
-
-	/* v4l2_queryctrl test */
-
-	struct v4l2_queryctrl qctrl;
-	memset(&qctrl, 0, sizeof(struct v4l2_queryctrl));
-	for(i = 0; i < V4L2_MAX_CTRL; i++)
-	{
-		qctrl.id = V4L2_CID_BASE + i;
-		err = ioctl(fd, VIDIOC_QUERYCTRL, &qctrl);
-		
-		if(0 == err)
-		{
-			printf("\n");
-			printf("[%s]: qctrl.id: 0x%x \n", dev_path, qctrl.id);
-			printf("[%s]: qctrl.type: %d \n", dev_path, qctrl.type);
-			printf("[%s]: qctrl.name: %s \n", dev_path, qctrl.name);
-			printf("[%s]: qctrl.minimum: %d \n", dev_path, qctrl.minimum);
-			printf("[%s]: qctrl.maximum: %d \n", dev_path, qctrl.maximum);
-			printf("[%s]: qctrl.step: %d \n", dev_path, qctrl.step);
-			printf("[%s]: qctrl.default_value: %d \n", dev_path, qctrl.default_value);
-			printf("[%s]: qctrl.flags: 0x%x \n", dev_path, qctrl.flags);
-			printf("\n");
-		}
-		
-	}
-	
 	return 0;
 }
 

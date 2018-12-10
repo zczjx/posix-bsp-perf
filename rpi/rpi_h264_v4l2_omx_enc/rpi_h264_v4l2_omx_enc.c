@@ -136,26 +136,27 @@ static gpointer *v4l2_cap_task(gpointer data)
 	struct rpi_image *tmp_img = NULL;
 	struct bsp_v4l2_cap_buf v4l2_buf[V4L2_BUF_NR];
 	struct bsp_v4l2_param v4l2_param;
+	int mp_buf_flag;
 	GAsyncQueue *image_que = (GAsyncQueue *) data;
 
 	printf("start v4l2_cap_task!\n");
-	vfd = bsp_v4l2_open_dev("/dev/video0");
+	vfd = bsp_v4l2_open_dev("/dev/video0", &mp_buf_flag);
 	v4l2_param.fps = 30;
 	v4l2_param.pixelformat = V4L2_PIX_FMT_YUV420;
 	v4l2_param.xres = xres;
 	v4l2_param.yres = yres;
-	bsp_v4l2_try_setup(vfd, &v4l2_param);
+	bsp_v4l2_try_setup(vfd, &v4l2_param, mp_buf_flag);
 	printf("v4l2_param.fps: %d \n", v4l2_param.fps);
 	printf("v4l2_param.pixelformat: 0x%x \n", v4l2_param.pixelformat);
 	printf("v4l2_param.xres: %d \n", v4l2_param.xres);
 	printf("v4l2_param.yres: %d \n", v4l2_param.yres);
-	bsp_v4l2_req_buf(vfd, v4l2_buf, V4L2_BUF_NR);
-	bsp_v4l2_stream_on(vfd);
+	bsp_v4l2_req_buf(vfd, v4l2_buf, V4L2_BUF_NR, mp_buf_flag);
+	bsp_v4l2_stream_on(vfd, mp_buf_flag);
 	g_async_queue_ref(image_que);
 
 	while(v4l2_run)
 	{
-		bsp_v4l2_get_frame(vfd, &vbuf_param);
+		bsp_v4l2_get_frame(vfd, &vbuf_param, mp_buf_flag);
 
 		if(g_async_queue_length(image_que) < WATER_MASK)
 		{

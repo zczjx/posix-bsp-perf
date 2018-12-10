@@ -22,7 +22,7 @@
 #include <gmodule.h>
 
 #define V4L2_BUF_NR (4)
-#define V4L2_MAX_FMT (128)
+#define V4L2_MAX_FMT (16)
 
 static void init_v4l2_name_fmt_set(GData **name_to_fmt_set, 
 	GTree *fmt_to_name_set);
@@ -36,7 +36,7 @@ int main(int argc, char **argv)
 	struct v4l2_capability v4l2_cap;
 	struct bsp_v4l2_cap_buf v4l2_buf[V4L2_BUF_NR];
 	struct bsp_v4l2_param v4l2_param;
-	struct v4l2_selection selection;
+	struct v4l2_input input;
 	GData *name_to_fmt_set = NULL;
 	GTree *fmt_to_name_set = NULL;
 	int i, xres, yres;
@@ -67,6 +67,13 @@ int main(int argc, char **argv)
     // Setup of the dec requests
 	vfd = bsp_v4l2_open_dev(dev_path, &buf_mp_flag);
 	v4l2_param.fps = 30;
+	input.index = 0;
+	err = ioctl(vfd, VIDIOC_S_INPUT, &input);
+	
+	if (err < 0) {
+        printf("VIDIOC_S_INPUT failed err: %d\n", err);
+ 
+    }
 	memset(&fmt_dsc, 0, sizeof(struct v4l2_fmtdesc));
 
 	for(i = 0; i < V4L2_MAX_FMT; i++)
@@ -115,77 +122,18 @@ renter:
 	printf("v4l2_param.fps: %d \n", v4l2_param.fps);
 	printf("v4l2_param.pixelformat: 0x%x \n", v4l2_param.pixelformat);
 	printf("v4l2_param.xres: %d \n", v4l2_param.xres);
-	printf("v4l2_param.yres: %d \n", v4l2_param.yres);
+	printf("v4l2_param.yres: %d \n", v4l2_param.yres);	
 	bsp_v4l2_req_buf(vfd, v4l2_buf, V4L2_BUF_NR, buf_mp_flag);
-
-	selection.type = (buf_mp_flag ? 
-		V4L2_BUF_TYPE_VIDEO_CAPTURE_MPLANE : V4L2_BUF_TYPE_VIDEO_CAPTURE);
-	selection.target = V4L2_SEL_TGT_COMPOSE;
-
-	printf("before VIDIOC_G_SELECTION  V4L2_SEL_TGT_COMPOSE \n");
-	sleep(1);
-	err = ioctl(vfd, VIDIOC_G_SELECTION, &selection);
-	
-	if (err) 
-    {
-	    printf("VIDIOC_G_SELECTION failed err: %d\n", err);  
-    }
-	
-	sleep(1);
-
-	printf("V4L2_SEL_TGT_COMPOSE selection\n");
-	printf("selection.r.left: %d, selection.r.top: %d\n", 
-			selection.r.left, selection.r.top);
-	printf("selection.r.width: %d, selection.r.height: %d\n", 
-			selection.r.width, selection.r.height);
-
-	selection.type = (buf_mp_flag ? 
-		V4L2_BUF_TYPE_VIDEO_CAPTURE_MPLANE : V4L2_BUF_TYPE_VIDEO_CAPTURE);
-	selection.target = V4L2_SEL_TGT_CROP;
-	selection.r.top = 0;
-	selection.r.left = 0;
-	selection.r.width = xres;
-	selection.r.height = yres;
-	printf("before VIDIOC_S_SELECTION  V4L2_SEL_TGT_CROP \n");
-	err = ioctl(vfd, VIDIOC_S_SELECTION, &selection);
-	
-	if (err) 
-    {
-	    printf("VIDIOC_S_SELECTION failed err: %d\n", err);  
-    }
-	
-	printf("before VIDIOC_G_SELECTION  V4L2_SEL_TGT_CROP \n");
-	sleep(1);
-	err = ioctl(vfd, VIDIOC_G_SELECTION, &selection);
-	
-	if (err) 
-    {
-	    printf("VIDIOC_G_SELECTION failed err: %d\n", err);  
-    }
-	sleep(1);
-
-	printf("V4L2_SEL_TGT_CROP selection\n");
-	printf("selection.r.left: %d, selection.r.top: %d\n", 
-			selection.r.left, selection.r.top);
-	printf("selection.r.width: %d, selection.r.height: %d\n", 
-			selection.r.width, selection.r.height);
-	sleep(1);
 	bsp_v4l2_stream_on(vfd, buf_mp_flag);
 
 	while(++pts <= 1000)
 	{
 		err = bsp_v4l2_get_frame(vfd, &vbuf_param, buf_mp_flag);
-		
 		if(err < 0)
 			break;
-		
-		err = bsp_v4l2_put_frame_buf(vfd, &vbuf_param);
-		
-		if(err < 0)
-			break;
-		
+		err = bsp_v4l2_put_frame_buf(vfd, &vbuf_param);	
 		bsp_print_fps("bsp_v4l2_fps: ", &fps, &pre_time, &curr_time);
-		/***
+/**
 		printf("\n");
 		printf("--------------------v4l2 frame param-------------------------------------\n");
 		printf("v4l2_buf_param.index : %d\n", vbuf_param.index);
@@ -210,7 +158,8 @@ renter:
 		printf("v4l2_buf_param.length : %d\n", vbuf_param.length);
 		printf("---------------------------------------------------------\n");
 		printf("\n");
-		*/
+		*******/
+		
 	}
 	
     return 0;

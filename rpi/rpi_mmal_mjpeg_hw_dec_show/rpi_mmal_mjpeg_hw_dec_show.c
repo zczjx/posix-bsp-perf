@@ -74,8 +74,8 @@ int main(int argc, char **argv)
 	int buf_idx = 0;
 	int disp_fd = 0;
 	struct v4l2_buffer vbuf_param;
+	int mp_buf_flag;
 	
-
 	xres = atoi(argv[1]);
 	yres = atoi(argv[2]);
 
@@ -108,23 +108,23 @@ int main(int argc, char **argv)
         return -1;
     }
 
-	vfd = bsp_v4l2_open_dev("/dev/video0");
+	vfd = bsp_v4l2_open_dev("/dev/video0", &mp_buf_flag);
 	v4l2_param.fps = 30;
 	v4l2_param.pixelformat = V4L2_PIX_FMT_MJPEG;
 	v4l2_param.xres = xres;
 	v4l2_param.yres = yres;
-	bsp_v4l2_try_setup(vfd, &v4l2_param);
+	bsp_v4l2_try_setup(vfd, &v4l2_param, mp_buf_flag);
 	printf("v4l2_param.fps: %d \n", v4l2_param.fps);
 	printf("v4l2_param.pixelformat: 0x%x \n", v4l2_param.pixelformat);
 	printf("v4l2_param.xres: %d \n", v4l2_param.xres);
 	printf("v4l2_param.yres: %d \n", v4l2_param.yres);
-	bsp_v4l2_req_buf(vfd, v4l2_buf, V4L2_BUF_NR);
-	bsp_v4l2_stream_on(vfd);
+	bsp_v4l2_req_buf(vfd, v4l2_buf, V4L2_BUF_NR, mp_buf_flag);
+	bsp_v4l2_stream_on(vfd, mp_buf_flag);
 
 	while(++pts <= 50000)
 	{
 		bsp_print_fps("mjpeg hw dec", &fps, &pre_time, &curr_time);
-		bsp_v4l2_get_frame(vfd, &vbuf_param);
+		bsp_v4l2_get_frame(vfd, &vbuf_param, mp_buf_flag);
 		memcpy(encodedInBuf, v4l2_buf[vbuf_param.index].addr, v4l2_buf[vbuf_param.index].bytes);
 		bsp_v4l2_put_frame_buf(vfd, &vbuf_param);
 		dec_request.input_size = v4l2_buf[buf_idx].bytes;
