@@ -62,11 +62,12 @@ int main(int argc, char **argv)
 	char *ret;
 	int fd_src, fd_sink;
 	__u32 code;
+	char *print_frame_info = NULL;
 
-	if(argc < 6)
+	if(argc < 7)
 	{
 		printf("usage: tiny4412_dvp_v4l2_fps ");
-		printf("[dev_path] [src_subdev] [sink_subdev] [xres] [yres]\n");
+		printf("[dev_path] [src_subdev] [sink_subdev] [xres] [yres] [print_frame_info y|n]\n");
 		return -1;
 	}
 
@@ -77,6 +78,7 @@ int main(int argc, char **argv)
 	sink_subdev = argv[3];
 	xres = atoi(argv[4]);
 	yres = atoi(argv[5]);
+	print_frame_info = argv[6];
 	init_v4l2_name_fmt_set(&name_to_fmt_set, fmt_to_name_set);
 	
     // Setup of the dec requests
@@ -268,42 +270,59 @@ renter:
 	printf("[%s]: subdev_format.format.quantization: %d \n", 
 		sink_subdev, subdev_format.format.quantization);
 	
-	bsp_v4l2_req_buf(vfd, v4l2_buf, V4L2_BUF_NR, buf_mp_flag);
-	bsp_v4l2_stream_on(vfd, buf_mp_flag);
+	err = bsp_v4l2_req_buf(vfd, v4l2_buf, V4L2_BUF_NR, buf_mp_flag);
+
+	if(err < 0)
+	{
+		printf("bsp_v4l2_req_buf failed err: %d\n", err);
+		return -1;
+	}
+	
+	
+	err = bsp_v4l2_stream_on(vfd, buf_mp_flag);
+
+	if(err < 0)
+	{
+		printf("bsp_v4l2_stream_on failed err: %d\n", err);
+		return -1;
+
+	}
 
 	while(++pts <= 1000)
 	{
 		err = bsp_v4l2_get_frame(vfd, &vbuf_param, buf_mp_flag);
-		if(err < 0)
-			break;
 		err = bsp_v4l2_put_frame_buf(vfd, &vbuf_param);	
 		bsp_print_fps("bsp_v4l2_fps: ", &fps, &pre_time, &curr_time);
-/**
-		printf("\n");
-		printf("--------------------v4l2 frame param-------------------------------------\n");
-		printf("v4l2_buf_param.index : %d\n", vbuf_param.index);
-		printf("v4l2_buf_param.type : %d\n", vbuf_param.type);
-		printf("v4l2_buf_param.bytesused : %d\n", vbuf_param.bytesused);
-		printf("v4l2_buf_param.flags : 0x%x\n", vbuf_param.flags);
-		printf("v4l2_buf_param.field : %d\n", vbuf_param.field);
-		printf("v4l2_buf_param.timestamp.tv_sec : %lld\n", vbuf_param.timestamp.tv_sec);
-		printf("v4l2_buf_param.timestamp.tv_sec : %lld\n", vbuf_param.timestamp.tv_sec);
-		printf("v4l2_buf_param.timecode.type : %d\n", vbuf_param.timecode.type);
-		printf("v4l2_buf_param.timecode.flags : %d\n", vbuf_param.timecode.flags);
-		printf("v4l2_buf_param.timecode.frames : %d\n", vbuf_param.timecode.frames);
-		printf("v4l2_buf_param.timecode.seconds : %d\n", vbuf_param.timecode.seconds);
-		printf("v4l2_buf_param.timecode.minutes : %d\n", vbuf_param.timecode.minutes);
-		printf("v4l2_buf_param.timecode.hours : %d\n", vbuf_param.timecode.hours);
-		printf("v4l2_buf_param.timecode.userbits[0] : %d\n", vbuf_param.timecode.userbits[0]);
-		printf("v4l2_buf_param.timecode.userbits[1] : %d\n", vbuf_param.timecode.userbits[1]);
-		printf("v4l2_buf_param.timecode.userbits[2] : %d\n", vbuf_param.timecode.userbits[2]);
-		printf("v4l2_buf_param.timecode.userbits[3] : %d\n", vbuf_param.timecode.userbits[3]);
-		printf("v4l2_buf_param.sequence : %d\n", vbuf_param.sequence);
-		printf("v4l2_buf_param.memory : %d\n", vbuf_param.memory);
-		printf("v4l2_buf_param.length : %d\n", vbuf_param.length);
-		printf("---------------------------------------------------------\n");
-		printf("\n");
-		*******/
+		
+		if('y' == print_frame_info[0]
+		|| 'Y' == print_frame_info[0])
+		{
+			printf("\n");
+			printf("--------------------v4l2 frame param-------------------------------------\n");
+			printf("v4l2_buf_param.index : %d\n", vbuf_param.index);
+			printf("v4l2_buf_param.type : %d\n", vbuf_param.type);
+			printf("v4l2_buf_param.bytesused : %d\n", vbuf_param.bytesused);
+			printf("v4l2_buf_param.flags : 0x%x\n", vbuf_param.flags);
+			printf("v4l2_buf_param.field : %d\n", vbuf_param.field);
+			printf("v4l2_buf_param.timestamp.tv_sec : %lld\n", vbuf_param.timestamp.tv_sec);
+			printf("v4l2_buf_param.timestamp.tv_sec : %lld\n", vbuf_param.timestamp.tv_sec);
+			printf("v4l2_buf_param.timecode.type : %d\n", vbuf_param.timecode.type);
+			printf("v4l2_buf_param.timecode.flags : %d\n", vbuf_param.timecode.flags);
+			printf("v4l2_buf_param.timecode.frames : %d\n", vbuf_param.timecode.frames);
+			printf("v4l2_buf_param.timecode.seconds : %d\n", vbuf_param.timecode.seconds);
+			printf("v4l2_buf_param.timecode.minutes : %d\n", vbuf_param.timecode.minutes);
+			printf("v4l2_buf_param.timecode.hours : %d\n", vbuf_param.timecode.hours);
+			printf("v4l2_buf_param.timecode.userbits[0] : %d\n", vbuf_param.timecode.userbits[0]);
+			printf("v4l2_buf_param.timecode.userbits[1] : %d\n", vbuf_param.timecode.userbits[1]);
+			printf("v4l2_buf_param.timecode.userbits[2] : %d\n", vbuf_param.timecode.userbits[2]);
+			printf("v4l2_buf_param.timecode.userbits[3] : %d\n", vbuf_param.timecode.userbits[3]);
+			printf("v4l2_buf_param.sequence : %d\n", vbuf_param.sequence);
+			printf("v4l2_buf_param.memory : %d\n", vbuf_param.memory);
+			printf("v4l2_buf_param.length : %d\n", vbuf_param.length);
+			printf("---------------------------------------------------------\n");
+			printf("\n");
+
+		}
 		
 	}
 
