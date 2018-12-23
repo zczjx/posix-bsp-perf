@@ -257,10 +257,7 @@ int bsp_v4l2_req_buf(int fd, struct bsp_v4l2_cap_buf buf_arr[],
 								PROT_READ, MAP_SHARED, fd, 
 								v4l2_buf_param.m.offset);
 		}
-
-		printf("VIDIOC_QUERYBUF buf_arr[%d].bytes: %d\n", i, buf_arr[i].bytes);
-		printf("VIDIOC_QUERYBUF buf_arr[%d].addr: %p \n", i, buf_arr[i].addr);
-		printf("VIDIOC_QUERYBUF buf_arr[%d].addr: %d \n", i, buf_arr[i].addr);
+		
 		err = ioctl(fd, VIDIOC_QBUF, &v4l2_buf_param);
 			
 		if (err) 
@@ -345,10 +342,8 @@ int bsp_v4l2_stream_on(int fd, int mp_buf_flag)
 	int video_type = (mp_buf_flag ? 
 		V4L2_BUF_TYPE_VIDEO_CAPTURE_MPLANE : V4L2_BUF_TYPE_VIDEO_CAPTURE);
 	int err = 0;
-
-	printf("before VIDIOC_STREAMON\n");
+	
 	err = ioctl(fd, VIDIOC_STREAMON, &video_type);
-	printf("after VIDIOC_STREAMON ret err: %d\n", err);
 	
 	if (err < 0) 
     {

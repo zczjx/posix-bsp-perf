@@ -36,7 +36,6 @@ int main(int argc, char **argv)
 	struct v4l2_capability v4l2_cap;
 	struct bsp_v4l2_cap_buf v4l2_buf[V4L2_BUF_NR];
 	struct bsp_v4l2_param v4l2_param;
-	struct v4l2_selection selection;
 	GData *name_to_fmt_set = NULL;
 	GTree *fmt_to_name_set = NULL;
 	int i, xres, yres;
@@ -49,10 +48,11 @@ int main(int argc, char **argv)
 	char pixformat[32];
 	char *dev_path = NULL;
 	char *ret;
+	char *print_frame_info = NULL;
 
-	if(argc < 4)
+	if(argc < 5)
 	{
-		printf("usage: bsp_v4l2_fps [dev_path] [xres] [yres]\n");
+		printf("usage: bsp_v4l2_fps [dev_path] [xres] [yres] [print_frame_info y|n]\n");
 		return -1;
 
 	}
@@ -62,6 +62,7 @@ int main(int argc, char **argv)
 	dev_path = argv[1];
 	xres = atoi(argv[2]);
 	yres = atoi(argv[3]);
+	print_frame_info = argv[4];
 	init_v4l2_name_fmt_set(&name_to_fmt_set, fmt_to_name_set);
 	
     // Setup of the dec requests
@@ -117,100 +118,42 @@ renter:
 	printf("v4l2_param.xres: %d \n", v4l2_param.xres);
 	printf("v4l2_param.yres: %d \n", v4l2_param.yres);
 	bsp_v4l2_req_buf(vfd, v4l2_buf, V4L2_BUF_NR, buf_mp_flag);
-
-	selection.type = (buf_mp_flag ? 
-		V4L2_BUF_TYPE_VIDEO_CAPTURE_MPLANE : V4L2_BUF_TYPE_VIDEO_CAPTURE);
-	selection.target = V4L2_SEL_TGT_COMPOSE;
-
-	printf("before VIDIOC_G_SELECTION  V4L2_SEL_TGT_COMPOSE \n");
-	sleep(1);
-	err = ioctl(vfd, VIDIOC_G_SELECTION, &selection);
-	
-	if (err) 
-    {
-	    printf("VIDIOC_G_SELECTION failed err: %d\n", err);  
-    }
-	
-	sleep(1);
-
-	printf("V4L2_SEL_TGT_COMPOSE selection\n");
-	printf("selection.r.left: %d, selection.r.top: %d\n", 
-			selection.r.left, selection.r.top);
-	printf("selection.r.width: %d, selection.r.height: %d\n", 
-			selection.r.width, selection.r.height);
-
-	selection.type = (buf_mp_flag ? 
-		V4L2_BUF_TYPE_VIDEO_CAPTURE_MPLANE : V4L2_BUF_TYPE_VIDEO_CAPTURE);
-	selection.target = V4L2_SEL_TGT_CROP;
-	selection.r.top = 0;
-	selection.r.left = 0;
-	selection.r.width = xres;
-	selection.r.height = yres;
-	printf("before VIDIOC_S_SELECTION  V4L2_SEL_TGT_CROP \n");
-	err = ioctl(vfd, VIDIOC_S_SELECTION, &selection);
-	
-	if (err) 
-    {
-	    printf("VIDIOC_S_SELECTION failed err: %d\n", err);  
-    }
-	
-	printf("before VIDIOC_G_SELECTION  V4L2_SEL_TGT_CROP \n");
-	sleep(1);
-	err = ioctl(vfd, VIDIOC_G_SELECTION, &selection);
-	
-	if (err) 
-    {
-	    printf("VIDIOC_G_SELECTION failed err: %d\n", err);  
-    }
-	sleep(1);
-
-	printf("V4L2_SEL_TGT_CROP selection\n");
-	printf("selection.r.left: %d, selection.r.top: %d\n", 
-			selection.r.left, selection.r.top);
-	printf("selection.r.width: %d, selection.r.height: %d\n", 
-			selection.r.width, selection.r.height);
-	sleep(1);
 	bsp_v4l2_stream_on(vfd, buf_mp_flag);
 
 	while(++pts <= 1000)
 	{
 		err = bsp_v4l2_get_frame(vfd, &vbuf_param, buf_mp_flag);
-		
-		if(err < 0)
-			break;
-		
 		err = bsp_v4l2_put_frame_buf(vfd, &vbuf_param);
-		
-		if(err < 0)
-			break;
-		
 		bsp_print_fps("bsp_v4l2_fps: ", &fps, &pre_time, &curr_time);
-		/***
-		printf("\n");
-		printf("--------------------v4l2 frame param-------------------------------------\n");
-		printf("v4l2_buf_param.index : %d\n", vbuf_param.index);
-		printf("v4l2_buf_param.type : %d\n", vbuf_param.type);
-		printf("v4l2_buf_param.bytesused : %d\n", vbuf_param.bytesused);
-		printf("v4l2_buf_param.flags : 0x%x\n", vbuf_param.flags);
-		printf("v4l2_buf_param.field : %d\n", vbuf_param.field);
-		printf("v4l2_buf_param.timestamp.tv_sec : %lld\n", vbuf_param.timestamp.tv_sec);
-		printf("v4l2_buf_param.timestamp.tv_sec : %lld\n", vbuf_param.timestamp.tv_sec);
-		printf("v4l2_buf_param.timecode.type : %d\n", vbuf_param.timecode.type);
-		printf("v4l2_buf_param.timecode.flags : %d\n", vbuf_param.timecode.flags);
-		printf("v4l2_buf_param.timecode.frames : %d\n", vbuf_param.timecode.frames);
-		printf("v4l2_buf_param.timecode.seconds : %d\n", vbuf_param.timecode.seconds);
-		printf("v4l2_buf_param.timecode.minutes : %d\n", vbuf_param.timecode.minutes);
-		printf("v4l2_buf_param.timecode.hours : %d\n", vbuf_param.timecode.hours);
-		printf("v4l2_buf_param.timecode.userbits[0] : %d\n", vbuf_param.timecode.userbits[0]);
-		printf("v4l2_buf_param.timecode.userbits[1] : %d\n", vbuf_param.timecode.userbits[1]);
-		printf("v4l2_buf_param.timecode.userbits[2] : %d\n", vbuf_param.timecode.userbits[2]);
-		printf("v4l2_buf_param.timecode.userbits[3] : %d\n", vbuf_param.timecode.userbits[3]);
-		printf("v4l2_buf_param.sequence : %d\n", vbuf_param.sequence);
-		printf("v4l2_buf_param.memory : %d\n", vbuf_param.memory);
-		printf("v4l2_buf_param.length : %d\n", vbuf_param.length);
-		printf("---------------------------------------------------------\n");
-		printf("\n");
-		*/
+
+		if('y' == print_frame_info[0]
+		|| 'Y' == print_frame_info[0])
+		{
+			printf("\n");
+			printf("--------------------v4l2 frame param-------------------------------------\n");
+			printf("v4l2_buf_param.index : %d\n", vbuf_param.index);
+			printf("v4l2_buf_param.type : %d\n", vbuf_param.type);
+			printf("v4l2_buf_param.bytesused : %d\n", vbuf_param.bytesused);
+			printf("v4l2_buf_param.flags : 0x%x\n", vbuf_param.flags);
+			printf("v4l2_buf_param.field : %d\n", vbuf_param.field);
+			printf("v4l2_buf_param.timestamp.tv_sec : %lld\n", vbuf_param.timestamp.tv_sec);
+			printf("v4l2_buf_param.timestamp.tv_sec : %lld\n", vbuf_param.timestamp.tv_sec);
+			printf("v4l2_buf_param.timecode.type : %d\n", vbuf_param.timecode.type);
+			printf("v4l2_buf_param.timecode.flags : %d\n", vbuf_param.timecode.flags);
+			printf("v4l2_buf_param.timecode.frames : %d\n", vbuf_param.timecode.frames);
+			printf("v4l2_buf_param.timecode.seconds : %d\n", vbuf_param.timecode.seconds);
+			printf("v4l2_buf_param.timecode.minutes : %d\n", vbuf_param.timecode.minutes);
+			printf("v4l2_buf_param.timecode.hours : %d\n", vbuf_param.timecode.hours);
+			printf("v4l2_buf_param.timecode.userbits[0] : %d\n", vbuf_param.timecode.userbits[0]);
+			printf("v4l2_buf_param.timecode.userbits[1] : %d\n", vbuf_param.timecode.userbits[1]);
+			printf("v4l2_buf_param.timecode.userbits[2] : %d\n", vbuf_param.timecode.userbits[2]);
+			printf("v4l2_buf_param.timecode.userbits[3] : %d\n", vbuf_param.timecode.userbits[3]);
+			printf("v4l2_buf_param.sequence : %d\n", vbuf_param.sequence);
+			printf("v4l2_buf_param.memory : %d\n", vbuf_param.memory);
+			printf("v4l2_buf_param.length : %d\n", vbuf_param.length);
+			printf("---------------------------------------------------------\n");
+			printf("\n");
+		}
 	}
 	
     return 0;
@@ -265,8 +208,4 @@ static gint fmt_val_cmp(gconstpointer	a, gconstpointer b)
 	
 	return (key1 > key2) ? 1 : -1;
 }
-
-
-
-
 
