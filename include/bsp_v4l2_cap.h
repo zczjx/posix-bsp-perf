@@ -29,6 +29,7 @@ extern "C"
 #include <stdio.h>
 #include <linux/types.h>
 #include <linux/videodev2.h>
+#include <linux/v4l2-subdev.h>
 #include <poll.h>
 #include <sys/stat.h>
 #include <unistd.h>
@@ -47,6 +48,9 @@ typedef struct bsp_v4l2_param {
 } bsp_v4l2_param;
 
 extern int bsp_v4l2_open_dev(const char *dev_path, int *mp_buf_flag);
+
+extern int bsp_v4l2_subdev_open(const char *subdev_path);
+
 
 extern int bsp_v4l2_try_setup(int fd, struct bsp_v4l2_param *val, 
 	int mp_buf_flag);

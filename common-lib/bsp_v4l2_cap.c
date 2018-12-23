@@ -75,6 +75,31 @@ int bsp_v4l2_open_dev(const char *dev_path, int *mp_buf_flag)
 
 }
 
+int bsp_v4l2_subdev_open(const char *subdev_path)
+{
+
+	int fd, err;
+
+	if((NULL == subdev_path)) 
+	{
+		printf("%s NULL ptr subdev_path \n", __FUNCTION__);
+		return -1;
+
+	}
+
+	fd = open(subdev_path, O_RDWR);
+	
+	if (fd < 0)
+    {
+    	fprintf(stderr, "could not open %s\n", subdev_path);
+		return -1;
+	}
+
+	return fd;
+
+}
+
+
 int bsp_v4l2_try_setup(int fd, struct bsp_v4l2_param *val, 
 	int mp_buf_flag)
 {

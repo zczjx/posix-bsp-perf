@@ -25,13 +25,10 @@ int main(int argc, char *argv[])
 	}
 
 	dev_path = argv[1];
-	fd = open(dev_path, O_RDWR);
+	fd = bsp_v4l2_subdev_open(dev_path);
 
-	if (fd < 0)
-    {
-    	printf("usage: bsp_v4l2_subdev_param open dev failed fd: %d\n", fd);
-		return -1;
-	}
+	if(fd < 0)
+		return fd;
 	
 	/*v4l2_subdev_mbus_code_enum test*/
 	struct v4l2_subdev_mbus_code_enum mbus_code;
@@ -44,7 +41,6 @@ int main(int argc, char *argv[])
 	
 		if (err < 0)
     	{
-			// printf("VIDIOC_SUBDEV_ENUM_MBUS_CODE failed err: %d\n", err);
 			break;
 		}
 

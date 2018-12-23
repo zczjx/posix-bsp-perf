@@ -117,8 +117,22 @@ renter:
 	printf("v4l2_param.pixelformat: 0x%x \n", v4l2_param.pixelformat);
 	printf("v4l2_param.xres: %d \n", v4l2_param.xres);
 	printf("v4l2_param.yres: %d \n", v4l2_param.yres);
-	bsp_v4l2_req_buf(vfd, v4l2_buf, V4L2_BUF_NR, buf_mp_flag);
-	bsp_v4l2_stream_on(vfd, buf_mp_flag);
+	err = bsp_v4l2_req_buf(vfd, v4l2_buf, V4L2_BUF_NR, buf_mp_flag);
+
+	if(err < 0)
+	{
+		printf("bsp_v4l2_req_buf failed err: %d\n", err);
+		return -1;
+	}
+	
+	err = bsp_v4l2_stream_on(vfd, buf_mp_flag);
+
+	if(err < 0)
+	{
+		printf("bsp_v4l2_stream_on failed err: %d\n", err);
+		return -1;
+
+	}
 
 	while(++pts <= 1000)
 	{
