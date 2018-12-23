@@ -52,7 +52,8 @@ int main(int argc, char *argv[])
 	printf("[%s]: v4l2_cap.capabilities: 0x%x \n", dev_path, v4l2_cap.capabilities);
 
 	if(v4l2_cap.capabilities & 
-	(V4L2_CAP_VIDEO_CAPTURE_MPLANE | V4L2_CAP_VIDEO_OUTPUT_MPLANE
+	(V4L2_CAP_VIDEO_CAPTURE_MPLANE
+	| V4L2_CAP_VIDEO_OUTPUT_MPLANE
 	| V4L2_CAP_VIDEO_M2M_MPLANE))
 	{
 		buf_mp_flag = 1;
