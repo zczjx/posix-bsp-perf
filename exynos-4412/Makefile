@@ -3,3 +3,5 @@ obj-y += hc_sr04/
 obj-y += pwm_buzzer/
 obj-y += rc522_spidev/
 obj-y += tiny4412_dvp_v4l2_fps/
+obj-y += tiny4412_hw_jpeg_dec/
+obj-y += tiny4412_hw_mjpg_dec/
