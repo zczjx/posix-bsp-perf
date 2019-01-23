@@ -62,8 +62,39 @@ int main(int argc, char *argv[])
 
 	/*frame format test*/
 	struct v4l2_fmtdesc fmt_dsc;
-	memset(&fmt_dsc, 0, sizeof(struct v4l2_fmtdesc));
+	
+	if(v4l2_cap.capabilities & 
+	(V4L2_CAP_VIDEO_M2M_MPLANE
+	|V4L2_CAP_VIDEO_M2M))
+	{
+		memset(&fmt_dsc, 0, sizeof(struct v4l2_fmtdesc));
+		for(i = 0; i < V4L2_MAX_FMT; i++)
+		{
+			fmt_dsc.index = i;
+			fmt_dsc.type = (buf_mp_flag ? 
+				V4L2_BUF_TYPE_VIDEO_OUTPUT_MPLANE : V4L2_BUF_TYPE_VIDEO_OUTPUT);
+			err = ioctl(fd, VIDIOC_ENUM_FMT, &fmt_dsc);
+		
+			if (err < 0)
+			{
+				if(i <= 0)
+				{
+					printf("VIDIOC_ENUM_FMT failed err:%d\n", err);
+				}
+				break;
+			}
 
+			printf("---enum output format------\n");
+			printf("[%s]: fmt_dsc.index: %d \n", dev_path, fmt_dsc.index);
+			printf("[%s]: fmt_dsc.type: 0x%x \n", dev_path, fmt_dsc.type);
+			printf("[%s]: fmt_dsc.flags: 0x%x \n", dev_path, fmt_dsc.flags);
+			printf("[%s]: fmt_dsc.description: %s \n", dev_path, fmt_dsc.description);
+			printf("[%s]: fmt_dsc.pixelformat: 0x%x \n", dev_path, fmt_dsc.pixelformat);
+			printf("\n");
+		}
+	}
+
+	memset(&fmt_dsc, 0, sizeof(struct v4l2_fmtdesc));
 	for(i = 0; i < V4L2_MAX_FMT; i++)
 	{
 		fmt_dsc.index = i;
@@ -80,7 +111,7 @@ int main(int argc, char *argv[])
 			break;
 		}
 
-		printf("\n");
+		printf("---enum capture format------\n");
 		printf("[%s]: fmt_dsc.index: %d \n", dev_path, fmt_dsc.index);
 		printf("[%s]: fmt_dsc.type: 0x%x \n", dev_path, fmt_dsc.type);
 		printf("[%s]: fmt_dsc.flags: 0x%x \n", dev_path, fmt_dsc.flags);
