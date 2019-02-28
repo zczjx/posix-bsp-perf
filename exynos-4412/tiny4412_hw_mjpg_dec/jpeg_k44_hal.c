@@ -522,7 +522,7 @@ int jpeghal_deinit(int fd, struct jpeg_buf *in_buf, struct jpeg_buf *out_buf)
 
     jpeg_v4l2_reqbufs(fd, 0, in_buf);
     jpeg_v4l2_reqbufs(fd, 0, out_buf);
-	v4l2_ioctl(fd, VIDIOC_LOG_STATUS, NULL);
+	// v4l2_ioctl(fd, VIDIOC_LOG_STATUS, NULL);
     ret = close(fd);
 
     return ret;

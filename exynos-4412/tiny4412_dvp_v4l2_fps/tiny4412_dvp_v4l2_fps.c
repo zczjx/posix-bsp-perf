@@ -42,7 +42,7 @@ int main(int argc, char **argv)
 	struct timespec tp;
 	struct v4l2_fmtdesc fmt_dsc;
 	struct v4l2_capability v4l2_cap;
-	struct bsp_v4l2_cap_buf v4l2_buf[V4L2_BUF_NR];
+	struct bsp_v4l2_buf v4l2_buf[V4L2_BUF_NR];
 	struct bsp_v4l2_param v4l2_param;
 	struct v4l2_input input;
 	struct v4l2_subdev_mbus_code_enum mbus_code;
@@ -89,8 +89,8 @@ int main(int argc, char **argv)
 	
 	if (err < 0) {
         printf("VIDIOC_S_INPUT failed err: %d\n", err);
- 
     }
+	
 	memset(&fmt_dsc, 0, sizeof(struct v4l2_fmtdesc));
 
 	for(i = 0; i < V4L2_MAX_FMT; i++)
@@ -135,7 +135,8 @@ renter:
 	
 	v4l2_param.xres = xres;
 	v4l2_param.yres = yres;
-	bsp_v4l2_try_setup(vfd, &v4l2_param, buf_mp_flag);
+	bsp_v4l2_try_setup(vfd, &v4l2_param, (buf_mp_flag ? 
+		V4L2_BUF_TYPE_VIDEO_CAPTURE_MPLANE : V4L2_BUF_TYPE_VIDEO_CAPTURE));
 	printf("v4l2_param.fps: %d \n", v4l2_param.fps);
 	printf("v4l2_param.pixelformat: 0x%x \n", v4l2_param.pixelformat);
 	printf("v4l2_param.xres: %d \n", v4l2_param.xres);
@@ -270,7 +271,9 @@ renter:
 	printf("[%s]: subdev_format.format.quantization: %d \n", 
 		sink_subdev, subdev_format.format.quantization);
 	
-	err = bsp_v4l2_req_buf(vfd, v4l2_buf, V4L2_BUF_NR, buf_mp_flag);
+	err = bsp_v4l2_req_buf(vfd, v4l2_buf, V4L2_BUF_NR, (buf_mp_flag ?
+			V4L2_BUF_TYPE_VIDEO_CAPTURE_MPLANE : V4L2_BUF_TYPE_VIDEO_CAPTURE),
+			(buf_mp_flag ? 1 : 0));
 
 	if(err < 0)
 	{
@@ -279,7 +282,8 @@ renter:
 	}
 	
 	
-	err = bsp_v4l2_stream_on(vfd, buf_mp_flag);
+	err = bsp_v4l2_stream_on(vfd, (buf_mp_flag ? 
+			V4L2_BUF_TYPE_VIDEO_CAPTURE_MPLANE : V4L2_BUF_TYPE_VIDEO_CAPTURE));
 
 	if(err < 0)
 	{
@@ -290,7 +294,9 @@ renter:
 
 	while(++pts <= 1000)
 	{
-		err = bsp_v4l2_get_frame(vfd, &vbuf_param, buf_mp_flag);
+		err = bsp_v4l2_get_frame_buf(vfd, &vbuf_param, (buf_mp_flag ? 
+			V4L2_BUF_TYPE_VIDEO_CAPTURE_MPLANE : V4L2_BUF_TYPE_VIDEO_CAPTURE),
+			(buf_mp_flag ? 1 : 0));
 		err = bsp_v4l2_put_frame_buf(vfd, &vbuf_param);	
 		bsp_print_fps("bsp_v4l2_fps: ", &fps, &pre_time, &curr_time);
 		
@@ -326,6 +332,8 @@ renter:
 		
 	}
 
+	bsp_v4l2_stream_off(vfd, (buf_mp_flag ? 
+			V4L2_BUF_TYPE_VIDEO_CAPTURE_MPLANE : V4L2_BUF_TYPE_VIDEO_CAPTURE));
 	close(vfd);
 	close(fd_src);
 	close(fd_sink);
@@ -381,8 +389,4 @@ static gint fmt_val_cmp(gconstpointer	a, gconstpointer b)
 	
 	return (key1 > key2) ? 1 : -1;
 }
-
-
-
-
 

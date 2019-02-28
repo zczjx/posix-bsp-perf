@@ -42,18 +42,6 @@
 #define LIBV4L2_BUF_NR (4)
 #define LIBV4L2_MAX_FMT (16)
 
-typedef struct libv4l2_param {
-	__u32 xres;
-	__u32 yres;
-	__u32 pixelformat;
-	__u32 fps;
-} libv4l2_param;
-
-typedef struct libv4l2_cap_buf {
-	int bytes;
-	char *addr;
-} libv4l2_cap_buf;
-
 int disp_fd = 0;
 static struct bsp_fb_var_attr fb_var_attr;
 static struct bsp_fb_fix_attr fb_fix_attr;
@@ -70,21 +58,19 @@ int main(int argc, char **argv)
 	struct v4l2_requestbuffers req_bufs;
 	struct jpeg_buf in_buf;
 	struct jpeg_buf out_buf;
-	struct libv4l2_param v4l2_param;
-	struct libv4l2_cap_buf v4l2_buf[LIBV4L2_BUF_NR];
+	struct bsp_v4l2_param v4l2_param;
+	struct bsp_v4l2_buf v4l2_buf[LIBV4L2_BUF_NR];
 	struct pollfd fd_set[1];
 	int buf_mp_flag = 0;
 	int video_type = V4L2_BUF_TYPE_VIDEO_CAPTURE;
 	int xres = 640;
 	int yres = 480;
-	int i, err, vfd, pts = 0;
+	int i, err, buf_cnt, vfd, pts = 0;
 	int fps = 0;
 	char pixformat[32];
-	char *dev_path, *dec_path;
 	char *ret;
 	char *src_path;
-	struct stat image_stat;
-	char *image_addr;
+	char *dec_path;
 	int fd_src;
 	int rd_size, total_size= 0;
 	struct jpeg_config dec_config;
@@ -121,11 +107,11 @@ int main(int argc, char **argv)
 		return -1;
 	}
 
-	printf("[%s]: v4l2_cap.driver: %s \n", dev_path, cap.driver);
-	printf("[%s]: v4l2_cap.card: %s \n", dev_path, cap.card);
-	printf("[%s]: v4l2_cap.bus_info: %s \n", dev_path, cap.bus_info);
-	printf("[%s]: v4l2_cap.version: 0x%x \n", dev_path, cap.version);
-	printf("[%s]: v4l2_cap.capabilities: 0x%x \n", dev_path, cap.capabilities);	
+	printf("[%s]: v4l2_cap.driver: %s \n", dec_path, cap.driver);
+	printf("[%s]: v4l2_cap.card: %s \n", dec_path, cap.card);
+	printf("[%s]: v4l2_cap.bus_info: %s \n", dec_path, cap.bus_info);
+	printf("[%s]: v4l2_cap.version: 0x%x \n", dec_path, cap.version);
+	printf("[%s]: v4l2_cap.capabilities: 0x%x \n", dec_path, cap.capabilities);	
 	memset(&fmtdsc, 0, sizeof(struct v4l2_fmtdesc));
 
 	for(i = 0; i < LIBV4L2_MAX_FMT; i++)
@@ -142,11 +128,11 @@ int main(int argc, char **argv)
 
 		printf("\n");
 		printf("------------V4L2_BUF_TYPE_VIDEO_OUTPUT--------\n");
-		printf("[%s]: fmt_dsc.index: %d \n", dev_path, fmtdsc.index);
-		printf("[%s]: fmt_dsc.type: 0x%x \n", dev_path, fmtdsc.type);
-		printf("[%s]: fmt_dsc.flags: 0x%x \n", dev_path, fmtdsc.flags);
-		printf("[%s]: fmt_dsc.description: %s \n", dev_path, fmtdsc.description);
-		printf("[%s]: fmt_dsc.pixelformat: 0x%x \n", dev_path, fmtdsc.pixelformat);
+		printf("[%s]: fmt_dsc.index: %d \n", dec_path, fmtdsc.index);
+		printf("[%s]: fmt_dsc.type: 0x%x \n", dec_path, fmtdsc.type);
+		printf("[%s]: fmt_dsc.flags: 0x%x \n", dec_path, fmtdsc.flags);
+		printf("[%s]: fmt_dsc.description: %s \n", dec_path, fmtdsc.description);
+		printf("[%s]: fmt_dsc.pixelformat: 0x%x \n", dec_path, fmtdsc.pixelformat);
 		printf("\n");
 		
 	}
@@ -165,11 +151,11 @@ int main(int argc, char **argv)
 
 		printf("\n");
 		printf("------------V4L2_BUF_TYPE_VIDEO_CAPTURE--------\n");
-		printf("[%s]: fmt_dsc.index: %d \n", dev_path, fmtdsc.index);
-		printf("[%s]: fmt_dsc.type: 0x%x \n", dev_path, fmtdsc.type);
-		printf("[%s]: fmt_dsc.flags: 0x%x \n", dev_path, fmtdsc.flags);
-		printf("[%s]: fmt_dsc.description: %s \n", dev_path, fmtdsc.description);
-		printf("[%s]: fmt_dsc.pixelformat: 0x%x \n", dev_path, fmtdsc.pixelformat);
+		printf("[%s]: fmt_dsc.index: %d \n", dec_path, fmtdsc.index);
+		printf("[%s]: fmt_dsc.type: 0x%x \n", dec_path, fmtdsc.type);
+		printf("[%s]: fmt_dsc.flags: 0x%x \n", dec_path, fmtdsc.flags);
+		printf("[%s]: fmt_dsc.description: %s \n", dec_path, fmtdsc.description);
+		printf("[%s]: fmt_dsc.pixelformat: 0x%x \n", dec_path, fmtdsc.pixelformat);
 		printf("\n");
 	}
 	
@@ -177,16 +163,43 @@ int main(int argc, char **argv)
 	v4l2_param.pixelformat = V4L2_PIX_FMT_MJPEG;
 	v4l2_param.xres = xres;
 	v4l2_param.yres = yres;
-	bsp_v4l2_try_setup(fd_src, &v4l2_param, buf_mp_flag);
-	err = bsp_v4l2_req_buf(fd_src, v4l2_buf, LIBV4L2_BUF_NR, buf_mp_flag);
-
-	if(err < 0)
+	bsp_v4l2_try_setup(fd_src, &v4l2_param, (buf_mp_flag ? 
+		V4L2_BUF_TYPE_VIDEO_CAPTURE_MPLANE : V4L2_BUF_TYPE_VIDEO_CAPTURE));
+	
+	printf("v4l2_param.fps: %d \n", v4l2_param.fps);
+	printf("v4l2_param.pixelformat: 0x%x \n", v4l2_param.pixelformat);
+	printf("v4l2_param.xres: %d \n", v4l2_param.xres);
+	printf("v4l2_param.yres: %d \n", v4l2_param.yres);
+	
+	buf_cnt = bsp_v4l2_req_buf(fd_src, v4l2_buf, LIBV4L2_BUF_NR, (buf_mp_flag ?
+			V4L2_BUF_TYPE_VIDEO_CAPTURE_MPLANE : V4L2_BUF_TYPE_VIDEO_CAPTURE),
+			(buf_mp_flag ? 1 : 0));
+	
+	if(buf_cnt < 0)
 	{
-		printf("bsp_v4l2_req_buf failed err: %d\n", err);
+		printf("bsp_v4l2_req_buf failed err: %d\n", buf_cnt);
 		return -1;
 	}
 	
-	err = bsp_v4l2_stream_on(fd_src, buf_mp_flag);
+	printf("bsp_v4l2_req_buf buf_cnt: %d\n", buf_cnt);
+
+	for(i = 0; i < buf_cnt; i++)
+	{
+		vbuf_param.index = i;
+		vbuf_param.type = (buf_mp_flag ? 
+			V4L2_BUF_TYPE_VIDEO_CAPTURE_MPLANE : V4L2_BUF_TYPE_VIDEO_CAPTURE);
+		vbuf_param.memory = V4L2_MEMORY_MMAP;
+		err = bsp_v4l2_put_frame_buf(fd_src, &vbuf_param);
+		
+		if(err < 0)
+		{
+			printf("bsp_v4l2_put_frame_buf err: %d, line: %d\n", err, __LINE__);
+			return -1;
+		}
+	}
+
+	err = bsp_v4l2_stream_on(fd_src, (buf_mp_flag ? 
+			V4L2_BUF_TYPE_VIDEO_CAPTURE_MPLANE : V4L2_BUF_TYPE_VIDEO_CAPTURE));
 
 	if(err < 0)
 	{
@@ -218,16 +231,20 @@ int main(int argc, char **argv)
 	out_buf.memory = V4L2_MEMORY_MMAP;
 	out_buf.num_planes = 1;
 	jpeghal_set_outbuf(vfd, &out_buf);
-	printf("image_stat.st_size: %d, in_buf.length[0]: %d\n", 
-			image_stat.st_size, in_buf.length[0]);
 
 	
 	while(++pts <= 1000)
 	{
-		err = bsp_v4l2_get_frame(fd_src, &vbuf_param, buf_mp_flag);
-		memcpy(in_buf.start[0], v4l2_buf[vbuf_param.index].addr, 
-			v4l2_buf[vbuf_param.index].bytes);
-		in_buf.length[0] = v4l2_buf[vbuf_param.index].bytes;
+		fd_set[0].fd = fd_src;
+		fd_set[0].events = POLLIN;
+		err = poll(fd_set, 1, -1);
+	
+		err = bsp_v4l2_get_frame_buf(fd_src, &vbuf_param, (buf_mp_flag ? 
+			V4L2_BUF_TYPE_VIDEO_CAPTURE_MPLANE : V4L2_BUF_TYPE_VIDEO_CAPTURE),
+			(buf_mp_flag ? 1 : 0));
+		memcpy(in_buf.start[0], v4l2_buf[vbuf_param.index].addr[0], 
+			v4l2_buf[vbuf_param.index].bytes[0]);
+		in_buf.length[0] = v4l2_buf[vbuf_param.index].bytes[0];
 		err = bsp_v4l2_put_frame_buf(fd_src, &vbuf_param);
 		jpeghal_dec_exe(vfd, &in_buf, &out_buf);
 		disp_frame.xres = xres;
@@ -245,7 +262,8 @@ int main(int argc, char **argv)
 		bsp_fb_flush(disp_fd, &fb_var_attr, &fb_fix_attr, &disp_frame);	
 	}
 
-	bsp_v4l2_stream_off(fd_src, buf_mp_flag);
+	bsp_v4l2_stream_off(fd_src, (buf_mp_flag ? 
+			V4L2_BUF_TYPE_VIDEO_CAPTURE_MPLANE : V4L2_BUF_TYPE_VIDEO_CAPTURE));
 	close(fd_src);
 	jpeghal_deinit(vfd, &in_buf, &out_buf);
 	printf("jpeg dec finish return 0\n");

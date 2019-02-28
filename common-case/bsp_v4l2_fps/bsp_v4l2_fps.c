@@ -1,15 +1,24 @@
 /*******************************************************************************
-* @function name:     
+* Copyright (C), 2000-2019,  Electronic Technology Co., Ltd.
+*                
+* @filename: bsp_v4l2_fps.c 
+*                
+* @author: Clarence.Zhou <zhou_chenz@163.com> 
+*                
+* @version:
+*                
+* @date: 2019-2-27    
 *                
 * @brief:          
-*                
-* @param:        
-*                
-*                
-* @return:        
-*                
-* @comment:        
+*                  
+*                  
+* @details:        
+*                 
+*    
+*    
+* @comment           
 *******************************************************************************/
+
 #include "bsp_v4l2_cap.h"
 
 #include <sys/time.h>
@@ -34,21 +43,22 @@ int main(int argc, char **argv)
 	struct timespec tp;
 	struct v4l2_fmtdesc fmt_dsc;
 	struct v4l2_capability v4l2_cap;
-	struct bsp_v4l2_cap_buf v4l2_buf[V4L2_BUF_NR];
-	struct bsp_v4l2_param v4l2_param;
+	int buf_mp_flag = 0;
 	GData *name_to_fmt_set = NULL;
 	GTree *fmt_to_name_set = NULL;
 	int i, xres, yres;
-	int err, vfd, pts = 0;
+	int err, buf_cnt, vfd, pts = 0;
 	long pre_time = 0;
 	long curr_time = 0;
 	int fps = 0;
-	int buf_mp_flag = 0;
-	struct v4l2_buffer vbuf_param;
+	struct pollfd fd_set[1];
 	char pixformat[32];
 	char *dev_path = NULL;
 	char *ret;
 	char *print_frame_info = NULL;
+	struct bsp_v4l2_buf v4l2_buf[V4L2_BUF_NR];
+	struct bsp_v4l2_param v4l2_param;
+	struct v4l2_buffer vbuf_param;
 
 	if(argc < 5)
 	{
@@ -112,20 +122,41 @@ renter:
 	
 	v4l2_param.xres = xres;
 	v4l2_param.yres = yres;
-	bsp_v4l2_try_setup(vfd, &v4l2_param, buf_mp_flag);
+	bsp_v4l2_try_setup(vfd, &v4l2_param, (buf_mp_flag ? 
+		V4L2_BUF_TYPE_VIDEO_CAPTURE_MPLANE : V4L2_BUF_TYPE_VIDEO_CAPTURE));
 	printf("v4l2_param.fps: %d \n", v4l2_param.fps);
 	printf("v4l2_param.pixelformat: 0x%x \n", v4l2_param.pixelformat);
 	printf("v4l2_param.xres: %d \n", v4l2_param.xres);
 	printf("v4l2_param.yres: %d \n", v4l2_param.yres);
-	err = bsp_v4l2_req_buf(vfd, v4l2_buf, V4L2_BUF_NR, buf_mp_flag);
+	buf_cnt = bsp_v4l2_req_buf(vfd, v4l2_buf, V4L2_BUF_NR, (buf_mp_flag ?
+			V4L2_BUF_TYPE_VIDEO_CAPTURE_MPLANE : V4L2_BUF_TYPE_VIDEO_CAPTURE),
+			(buf_mp_flag ? 1 : 0));
 
-	if(err < 0)
+	if(buf_cnt < 0)
 	{
-		printf("bsp_v4l2_req_buf failed err: %d\n", err);
+		printf("bsp_v4l2_req_buf failed err: %d\n", buf_cnt);
 		return -1;
 	}
+
+	printf("bsp_v4l2_req_buf buf_cnt: %d\n", buf_cnt);
+
+	for(i = 0; i < buf_cnt; i++)
+	{
+		vbuf_param.index = i;
+		vbuf_param.type = (buf_mp_flag ? 
+			V4L2_BUF_TYPE_VIDEO_CAPTURE_MPLANE : V4L2_BUF_TYPE_VIDEO_CAPTURE);
+		vbuf_param.memory = V4L2_MEMORY_MMAP;
+		err = bsp_v4l2_put_frame_buf(vfd, &vbuf_param);
+		
+		if(err < 0)
+		{
+			printf("bsp_v4l2_put_frame_buf err: %d, line: %d\n", err, __LINE__);
+			return -1;
+		}
+	}
 	
-	err = bsp_v4l2_stream_on(vfd, buf_mp_flag);
+	err = bsp_v4l2_stream_on(vfd, (buf_mp_flag ? 
+			V4L2_BUF_TYPE_VIDEO_CAPTURE_MPLANE : V4L2_BUF_TYPE_VIDEO_CAPTURE));
 
 	if(err < 0)
 	{
@@ -136,7 +167,14 @@ renter:
 
 	while(++pts <= 1000)
 	{
-		err = bsp_v4l2_get_frame(vfd, &vbuf_param, buf_mp_flag);
+		fd_set[0].fd = vfd;
+		fd_set[0].events = POLLIN;
+		err = poll(fd_set, 1, -1);
+
+		err = bsp_v4l2_get_frame_buf(vfd, &vbuf_param, (buf_mp_flag ? 
+			V4L2_BUF_TYPE_VIDEO_CAPTURE_MPLANE : V4L2_BUF_TYPE_VIDEO_CAPTURE),
+			(buf_mp_flag ? 1 : 0));
+		
 		err = bsp_v4l2_put_frame_buf(vfd, &vbuf_param);
 		bsp_print_fps("bsp_v4l2_fps: ", &fps, &pre_time, &curr_time);
 
@@ -169,7 +207,10 @@ renter:
 			printf("\n");
 		}
 	}
-	
+
+	err = bsp_v4l2_stream_off(vfd, (buf_mp_flag ? 
+			V4L2_BUF_TYPE_VIDEO_CAPTURE_MPLANE : V4L2_BUF_TYPE_VIDEO_CAPTURE));
+	close(vfd);
     return 0;
 
 }

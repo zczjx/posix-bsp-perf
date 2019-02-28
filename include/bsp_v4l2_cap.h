@@ -35,37 +35,41 @@ extern "C"
 #include <unistd.h>
 #include <fcntl.h>
 
-typedef struct bsp_v4l2_cap_buf {
-	__u32 bytes;
-	char *addr;
-} bsp_v4l2_cap_buf;
+typedef struct bsp_v4l2_buf {
+	__u32 xres;
+	__u32 yres;
+	__u32 planes_num;
+	__u32 bytes[VIDEO_MAX_PLANES];
+	char *addr[VIDEO_MAX_PLANES];
+} bsp_v4l2_buf;
 
 typedef struct bsp_v4l2_param {
 	__u32 xres;
 	__u32 yres;
 	__u32 pixelformat;
+	__u32 planes_num;
 	__u32 fps;
+	__u32 req_buf_size[VIDEO_MAX_PLANES];
 } bsp_v4l2_param;
 
 extern int bsp_v4l2_open_dev(const char *dev_path, int *mp_buf_flag);
 
 extern int bsp_v4l2_subdev_open(const char *subdev_path);
 
-
 extern int bsp_v4l2_try_setup(int fd, struct bsp_v4l2_param *val, 
-	int mp_buf_flag);
+	enum v4l2_buf_type buf_type);
 
-extern int bsp_v4l2_req_buf(int fd, struct bsp_v4l2_cap_buf buf_arr[], 
-	int buf_count, int mp_buf_flag);
+extern int bsp_v4l2_req_buf(int fd, struct bsp_v4l2_buf buf_arr[], 
+	int buf_count, enum v4l2_buf_type buf_type, __u32 planes_num);
 
-extern int bsp_v4l2_get_frame(int fd, struct v4l2_buffer *buf_param, 
-	int mp_buf_flag);
+extern int bsp_v4l2_get_frame_buf(int fd, struct v4l2_buffer *buf_param, 
+	enum v4l2_buf_type buf_type, __u32 planes_num);
 
 extern int bsp_v4l2_put_frame_buf(int fd, struct v4l2_buffer *buf_param);
 
-extern int bsp_v4l2_stream_on(int fd, int mp_buf_flag);
+extern int bsp_v4l2_stream_on(int fd, enum v4l2_buf_type buf_type);
 
-extern int bsp_v4l2_stream_off(int fd, int mp_buf_flag);
+extern int bsp_v4l2_stream_off(int fd, enum v4l2_buf_type buf_type);
 
 extern int bsp_v4l2_close_dev(int fd);
 
