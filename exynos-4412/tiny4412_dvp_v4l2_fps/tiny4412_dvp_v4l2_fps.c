@@ -48,10 +48,12 @@ int main(int argc, char **argv)
 	struct v4l2_subdev_mbus_code_enum mbus_code;
 	struct v4l2_subdev_format subdev_format;
 	struct v4l2_buffer vbuf_param;
+	struct v4l2_plane mplane;
+	struct pollfd fd_set[1];
 	GData *name_to_fmt_set = NULL;
 	GTree *fmt_to_name_set = NULL;
 	int i, xres, yres;
-	int err, vfd, pts = 0;
+	int err, buf_cnt, vfd, pts = 0;
 	long pre_time = 0;
 	long curr_time = 0;
 	int fps = 0;
@@ -135,6 +137,8 @@ renter:
 	
 	v4l2_param.xres = xres;
 	v4l2_param.yres = yres;
+	v4l2_param.planes_num = 1;
+	v4l2_param.req_buf_size[0] = 0;
 	bsp_v4l2_try_setup(vfd, &v4l2_param, (buf_mp_flag ? 
 		V4L2_BUF_TYPE_VIDEO_CAPTURE_MPLANE : V4L2_BUF_TYPE_VIDEO_CAPTURE));
 	printf("v4l2_param.fps: %d \n", v4l2_param.fps);
@@ -271,16 +275,34 @@ renter:
 	printf("[%s]: subdev_format.format.quantization: %d \n", 
 		sink_subdev, subdev_format.format.quantization);
 	
-	err = bsp_v4l2_req_buf(vfd, v4l2_buf, V4L2_BUF_NR, (buf_mp_flag ?
+	buf_cnt = bsp_v4l2_req_buf(vfd, v4l2_buf, V4L2_BUF_NR, (buf_mp_flag ?
 			V4L2_BUF_TYPE_VIDEO_CAPTURE_MPLANE : V4L2_BUF_TYPE_VIDEO_CAPTURE),
 			(buf_mp_flag ? 1 : 0));
 
-	if(err < 0)
+	if(buf_cnt < 0)
 	{
-		printf("bsp_v4l2_req_buf failed err: %d\n", err);
+		printf("bsp_v4l2_req_buf failed err: %d\n", buf_cnt);
 		return -1;
 	}
+
+	for(i = 0; i < buf_cnt; i++)
+	{
+		memset(&vbuf_param, 0, sizeof(struct v4l2_buffer));
+		vbuf_param.index = i;
+		vbuf_param.type = (buf_mp_flag ? 
+			V4L2_BUF_TYPE_VIDEO_CAPTURE_MPLANE : V4L2_BUF_TYPE_VIDEO_CAPTURE);
+		vbuf_param.memory = V4L2_MEMORY_MMAP;
+		vbuf_param.m.planes = &mplane;
+		vbuf_param.length = 1;
+		err = bsp_v4l2_put_frame_buf(vfd, &vbuf_param);
+		
+		if(err < 0)
+		{
+			printf("bsp_v4l2_put_frame_buf err: %d, line: %d\n", err, __LINE__);
+			return -1;
+		}
 	
+	}
 	
 	err = bsp_v4l2_stream_on(vfd, (buf_mp_flag ? 
 			V4L2_BUF_TYPE_VIDEO_CAPTURE_MPLANE : V4L2_BUF_TYPE_VIDEO_CAPTURE));
@@ -294,6 +316,10 @@ renter:
 
 	while(++pts <= 1000)
 	{
+		fd_set[0].fd = vfd;
+		fd_set[0].events = POLLIN;
+		err = poll(fd_set, 1, -1);
+	
 		err = bsp_v4l2_get_frame_buf(vfd, &vbuf_param, (buf_mp_flag ? 
 			V4L2_BUF_TYPE_VIDEO_CAPTURE_MPLANE : V4L2_BUF_TYPE_VIDEO_CAPTURE),
 			(buf_mp_flag ? 1 : 0));
