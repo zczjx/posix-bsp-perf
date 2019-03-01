@@ -43,9 +43,8 @@
 #define V4L2_OUTPUT_BUF_NR (2)
 #define V4L2_CAP_BUF_NR (4)
 #define LIBV4L2_MAX_FMT (16)
-#define SWSCALE_PLANES_NR (4)
 #define MAX_DECODER_INPUT_BUFFER_SIZE  (1024 * 2048)
-#define MFC_DEC_NUM_PLANES (2)
+#define CODEC_NUM_PLANES (2)
 #define DEFAULT_OUTPUT_BUF_IDX (0)
 
 #define H264_NAL_TYPE_IDR 0x05
@@ -98,7 +97,7 @@ int main(int argc, char **argv)
 	struct bsp_v4l2_buf output_buf[V4L2_OUTPUT_BUF_NR];
 	struct bsp_v4l2_buf cap_buf[V4L2_CAP_BUF_NR];
 	struct v4l2_crop crop;
-	struct v4l2_plane mplanes[MFC_DEC_NUM_PLANES];
+	struct v4l2_plane mplanes[CODEC_NUM_PLANES];
 	struct pollfd fd_set[1];
 	int buf_mp_flag = 0;
 	int video_type = V4L2_BUF_TYPE_VIDEO_CAPTURE;
@@ -496,7 +495,7 @@ static int convert_to_disp_frame_fmt(char *cov_path, struct rgb_frame *dst,
 	static struct bsp_v4l2_buf cov_cap_buf[V4L2_CAP_BUF_NR];
 	struct bsp_v4l2_param cov_param;
 	struct v4l2_buffer vbuf_param;
-	struct v4l2_plane mplanes[MFC_DEC_NUM_PLANES];
+	struct v4l2_plane mplanes[CODEC_NUM_PLANES];
 	int ret, i, j = 0;
 	struct pollfd fd_set[1];
 

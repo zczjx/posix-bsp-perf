@@ -47,14 +47,12 @@
 #define MAX_PLANES_NR (4)
 #define DEFAULT_DISP_XRES (640)
 #define DEFAULT_DISP_YRES (480)
-#define MFC_DEC_NUM_PLANES (2)
+#define CODEC_NUM_PLANES (2)
 #define V4L2_OUTPUT_BUF_NR (2)
 #define V4L2_CAP_BUF_NR (4)
 #define H264_ENC_DEF_CTRL_VAL (0)
 #define DEFAULT_OUTPUT_BUF_IDX (0)
 #define MAX_H264_BUF_SIZE (1*1024*1024)
-
-
 
 typedef struct convert_dsc {
 	int fd_cov; 
@@ -255,7 +253,7 @@ static int convert_to_spec_pix_fmt(struct convert_dsc *cvt,
 {
 	struct bsp_v4l2_param cov_param;
 	struct v4l2_buffer vbuf_param;
-	struct v4l2_plane mplanes[MFC_DEC_NUM_PLANES];
+	struct v4l2_plane mplanes[CODEC_NUM_PLANES];
 	int ret, i, j = 0;
 	struct pollfd fd_set[1];
 	
@@ -566,7 +564,7 @@ static void *h264_record_thread(void *arg)
 	struct v4l2_ext_control ext_ctrl[38];
     struct v4l2_ext_controls ext_ctrls;
 	struct v4l2_buffer enc_buf_param;
-	struct v4l2_plane mplanes[MFC_DEC_NUM_PLANES];
+	struct v4l2_plane mplanes[CODEC_NUM_PLANES];
 	struct bsp_v4l2_buf output_buf[V4L2_OUTPUT_BUF_NR];
 	struct bsp_v4l2_buf cap_buf[V4L2_CAP_BUF_NR];
 
