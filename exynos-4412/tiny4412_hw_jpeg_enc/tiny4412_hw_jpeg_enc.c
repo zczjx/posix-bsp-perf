@@ -1,13 +1,13 @@
 /*******************************************************************************
 * Copyright (C), 2000-2019,  Electronic Technology Co., Ltd.
 *                
-* @filename: libv4l_tiny4412_jpeg_enc.c 
+* @filename: tiny4412_hw_jpeg_enc.c 
 *                
 * @author: Clarence.Zhou <zhou_chenz@163.com> 
 *                
 * @version:
 *                
-* @date: 2019-1-11    
+* @date: 2019-3-1    
 *                
 * @brief:          
 *                  
@@ -18,7 +18,6 @@
 *    
 * @comment           
 *******************************************************************************/
-
 #include <stdlib.h>
 #include <malloc.h>
 #include <string.h>
@@ -42,7 +41,6 @@
 
 #define LIBV4L2_BUF_NR (4)
 #define LIBV4L2_MAX_FMT (16)
-#define SWSCALE_PLANES_NR (4)
 #define CODEC_NUM_PLANES (2)
 #define V4L2_OUTPUT_BUF_NR (2)
 #define V4L2_CAP_BUF_NR (4)
@@ -100,7 +98,7 @@ int main(int argc, char **argv)
 	
 	if(argc < 4)
 	{
-		printf("usage: libv4l_tiny4412_jpeg_enc [source_path] [encode_path] [cov_path]\n");
+		printf("usage: tiny4412_hw_jpeg_enc [source_path] [encode_path] [cov_path]\n");
 		return -1;
 	}
 

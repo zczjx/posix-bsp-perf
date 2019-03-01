@@ -58,6 +58,14 @@
 #define DEFAULT_DISP_XRES (640)
 #define DEFAULT_DISP_YRES (480)
 
+typedef struct convert_dsc {
+	int fd_cov; 
+	char *cov_path;
+	int bcnt;
+	struct bsp_v4l2_buf cov_output_buf[V4L2_OUTPUT_BUF_NR];
+	struct bsp_v4l2_buf cov_cap_buf[V4L2_CAP_BUF_NR];
+	int cov_mp_flag;
+} convert_dsc;
 
 static int disp_fd = 0;
 static struct bsp_fb_var_attr fb_var_attr;
@@ -70,8 +78,9 @@ static int h264_start_pos = 0;
 static int h264_current_pos = 0;
 static int h264_end_pos = 0;
 
-static int convert_to_disp_frame_fmt(char *cov_path, struct rgb_frame *dst, 
-	struct bsp_v4l2_buf *src);
+static int convert_to_spec_pix_fmt(struct convert_dsc *cvt,
+	struct bsp_v4l2_buf *dst, __u32 dst_fmt, 
+	struct bsp_v4l2_buf *src, __u32 src_fmt);
 
 static void libv4l2_print_fps(const char *fsp_dsc, long *fps, 
 	long *pre_time, long *curr_time);
@@ -121,6 +130,8 @@ int main(int argc, char **argv)
 	int delta_pos = 0;
 	int nalu_start_from_curr_pos;
 	int nalu_end_from_curr_pos;
+	struct bsp_v4l2_buf rgb_frame;
+	struct convert_dsc rgb_conversion;
 	
 	if(argc < 4)
 	{
@@ -129,8 +140,9 @@ int main(int argc, char **argv)
 	}
 
 	dec_path = argv[1];
-	cov_path = argv[2];
 	src_path = argv[3];
+	rgb_conversion.cov_path = argv[2];
+	rgb_conversion.fd_cov = -1;
 	fd_img = open(src_path, O_RDONLY);
 
 	if(fd_img < 0)
@@ -313,6 +325,7 @@ int main(int argc, char **argv)
 		vbuf_param.memory = V4L2_MEMORY_MMAP;
 		vbuf_param.m.planes = mplanes;
 		vbuf_param.length = pix_mp->num_planes;
+		cap_buf[i].planes_num = pix_mp->num_planes;
 		cap_buf[i].xres = pix_mp->width;
 		cap_buf[i].yres = pix_mp->height;
 		err = ioctl(fd_dec, VIDIOC_QUERYBUF, &vbuf_param);
@@ -457,8 +470,13 @@ int main(int argc, char **argv)
 		}
 		else
 		{
-
-			err = convert_to_disp_frame_fmt(cov_path, &disp_frame, &cap_buf[vbuf_param.index]);
+			rgb_frame.planes_num = 1;
+			rgb_frame.xres = disp_frame.xres;
+			rgb_frame.yres = disp_frame.yres;
+			rgb_frame.bytes[0] = disp_frame.bytes;
+			rgb_frame.addr[0] = disp_frame.addr;
+			err = convert_to_spec_pix_fmt(&rgb_conversion, &rgb_frame, V4L2_PIX_FMT_BGR32,
+						&cap_buf[vbuf_param.index], V4L2_PIX_FMT_NV12MT);
 
 			if(err < 0)
 			{
@@ -483,84 +501,78 @@ int main(int argc, char **argv)
     return 0;
 }
 
-static int convert_to_disp_frame_fmt(char *cov_path, struct rgb_frame *dst, 
-	struct bsp_v4l2_buf *src)
+static int convert_to_spec_pix_fmt(struct convert_dsc *cvt,
+	struct bsp_v4l2_buf *dst, __u32 dst_fmt, 
+	struct bsp_v4l2_buf *src, __u32 src_fmt)
+
 
 {
-	static int conversion_inited = 0;
-	static int cov_mp_flag = 0;
-	static int fd_cov = -1;
-	static int bcnt = 0;
-	static struct bsp_v4l2_buf cov_output_buf[V4L2_OUTPUT_BUF_NR];
-	static struct bsp_v4l2_buf cov_cap_buf[V4L2_CAP_BUF_NR];
 	struct bsp_v4l2_param cov_param;
 	struct v4l2_buffer vbuf_param;
 	struct v4l2_plane mplanes[CODEC_NUM_PLANES];
 	int ret, i, j = 0;
 	struct pollfd fd_set[1];
-
-	if((NULL == dst) || (NULL == src)
-	|| (NULL == cov_path))
+	
+	if(cvt->fd_cov < 0)
 	{
-		printf("enter NULL in [%s]:[%d]\n", __FUNCTION__, __LINE__);
-		return -1;
-	}
-
-	if(0 == conversion_inited)
-	{
-		fd_cov = bsp_v4l2_open_dev(cov_path, &cov_mp_flag);
-		cov_param.pixelformat = V4L2_PIX_FMT_NV12MT;
+		cvt->fd_cov = bsp_v4l2_open_dev(cvt->cov_path, &cvt->cov_mp_flag);
+		cov_param.pixelformat = src_fmt;
 		cov_param.xres = src->xres;
 		cov_param.yres = src->yres;
-		cov_param.planes_num = 2;
+		cov_param.planes_num = src->planes_num;
 		
 		for(i = 0; i < cov_param.planes_num; i++)
 		{
-			cov_param.req_buf_size[i] = 1 * src->xres * src->yres;
+			cov_param.req_buf_size[i] = src->bytes[i];
 		}
 		
-		bsp_v4l2_try_setup(fd_cov, &cov_param, (cov_mp_flag ? 
+		bsp_v4l2_try_setup(cvt->fd_cov, &cov_param, (cvt->cov_mp_flag ? 
 			V4L2_BUF_TYPE_VIDEO_OUTPUT_MPLANE : V4L2_BUF_TYPE_VIDEO_OUTPUT));
-		bcnt = bsp_v4l2_req_buf(fd_cov, cov_output_buf, 1, (cov_mp_flag ? 
+		cvt->bcnt = bsp_v4l2_req_buf(cvt->fd_cov, cvt->cov_output_buf, 1, 
+				(cvt->cov_mp_flag ? 
 				V4L2_BUF_TYPE_VIDEO_OUTPUT_MPLANE : V4L2_BUF_TYPE_VIDEO_OUTPUT), 
-				2);
+				cov_param.planes_num);
 		
-		if(bcnt < 0)
+		if(cvt->bcnt < 0)
 		{
-			printf("bsp_v4l2_req_buf failed err: %d line: %d\n", bcnt, __LINE__);
+			printf("bsp_v4l2_req_buf failed err: %d line: %d\n", cvt->bcnt, __LINE__);
 			return -1;
 		}
 
-	 	cov_param.pixelformat = V4L2_PIX_FMT_BGR32;
-		cov_param.xres = DEFAULT_DISP_XRES;
-		cov_param.yres = DEFAULT_DISP_YRES;
-		cov_param.req_buf_size[0] = 4 * cov_param.xres * cov_param.yres;
-		cov_param.planes_num = 1;
-		bsp_v4l2_try_setup(fd_cov, &cov_param, (cov_mp_flag ? 
-			V4L2_BUF_TYPE_VIDEO_CAPTURE_MPLANE : V4L2_BUF_TYPE_VIDEO_CAPTURE));
-		bcnt = bsp_v4l2_req_buf(fd_cov, cov_cap_buf, 1, (cov_mp_flag ? 
-				V4L2_BUF_TYPE_VIDEO_CAPTURE_MPLANE : V4L2_BUF_TYPE_VIDEO_CAPTURE), 
-				1);
-		
-		if(bcnt < 0)
+	 	cov_param.pixelformat = dst_fmt;
+		cov_param.xres = dst->xres;
+		cov_param.yres = dst->yres;
+		cov_param.planes_num = dst->planes_num;
+		for(i = 0; i < cov_param.planes_num; i++)
 		{
-			printf("bsp_v4l2_req_buf failed err: %d line: %d\n", bcnt, __LINE__);
+			cov_param.req_buf_size[i] = dst->bytes[i];
+		}
+		bsp_v4l2_try_setup(cvt->fd_cov, &cov_param, (cvt->cov_mp_flag ? 
+			V4L2_BUF_TYPE_VIDEO_CAPTURE_MPLANE : V4L2_BUF_TYPE_VIDEO_CAPTURE));
+		cvt->bcnt = bsp_v4l2_req_buf(cvt->fd_cov, cvt->cov_cap_buf, 1, 
+				(cvt->cov_mp_flag ? 
+				V4L2_BUF_TYPE_VIDEO_CAPTURE_MPLANE : V4L2_BUF_TYPE_VIDEO_CAPTURE), 
+				cov_param.planes_num);
+		
+		if(cvt->bcnt < 0)
+		{
+			printf("bsp_v4l2_req_buf failed err: %d line: %d\n", cvt->bcnt, __LINE__);
 			return -1;
 		}
 
 		for(i = 0; i < src->planes_num; i++)
 		{
-			memcpy(cov_output_buf[0].addr[i], src->addr[i], src->bytes[i]);
+			memcpy(cvt->cov_output_buf[0].addr[i], src->addr[i], src->bytes[i]);
 		}
 
 		memset(&vbuf_param, 0, sizeof(struct v4l2_buffer));
 		vbuf_param.index = 0;
-		vbuf_param.type = (cov_mp_flag ? 
+		vbuf_param.type = (cvt->cov_mp_flag ? 
 			V4L2_BUF_TYPE_VIDEO_OUTPUT_MPLANE : V4L2_BUF_TYPE_VIDEO_OUTPUT);
 		vbuf_param.memory = V4L2_MEMORY_MMAP;
 		vbuf_param.m.planes = mplanes;
 		vbuf_param.length = src->planes_num;
-		ret = ioctl(fd_cov, VIDIOC_QUERYBUF, &vbuf_param);
+		ret = ioctl(cvt->fd_cov, VIDIOC_QUERYBUF, &vbuf_param);
 			
 		if (ret) 
 		{
@@ -573,7 +585,7 @@ static int convert_to_disp_frame_fmt(char *cov_path, struct rgb_frame *dst,
 			vbuf_param.m.planes[j].bytesused = src->bytes[j];
 		}
 
-		ret = bsp_v4l2_put_frame_buf(fd_cov, &vbuf_param);
+		ret = bsp_v4l2_put_frame_buf(cvt->fd_cov, &vbuf_param);
 		
 		if(ret < 0)
 		{
@@ -583,12 +595,12 @@ static int convert_to_disp_frame_fmt(char *cov_path, struct rgb_frame *dst,
 		
 		memset(&vbuf_param, 0, sizeof(struct v4l2_buffer));
 		vbuf_param.index = 0;
-		vbuf_param.type = (cov_mp_flag ? 
+		vbuf_param.type = (cvt->cov_mp_flag ? 
 			V4L2_BUF_TYPE_VIDEO_CAPTURE_MPLANE : V4L2_BUF_TYPE_VIDEO_CAPTURE);
 		vbuf_param.memory = V4L2_MEMORY_MMAP;
 		vbuf_param.m.planes = mplanes;
-		vbuf_param.length = 1;
-		ret = ioctl(fd_cov, VIDIOC_QUERYBUF, &vbuf_param);
+		vbuf_param.length = dst->planes_num;
+		ret = ioctl(cvt->fd_cov, VIDIOC_QUERYBUF, &vbuf_param);
 			
 		if (ret) 
 		{
@@ -598,10 +610,10 @@ static int convert_to_disp_frame_fmt(char *cov_path, struct rgb_frame *dst,
 		
 		for(j = 0; j < 1; j++)
 		{
-			vbuf_param.m.planes[j].bytesused = cov_cap_buf[0].bytes[j];
+			vbuf_param.m.planes[j].bytesused = cvt->cov_cap_buf[0].bytes[j];
 		}
 		
-		ret = bsp_v4l2_put_frame_buf(fd_cov, &vbuf_param);
+		ret = bsp_v4l2_put_frame_buf(cvt->fd_cov, &vbuf_param);
 		
 		if(ret < 0)
 		{
@@ -609,7 +621,7 @@ static int convert_to_disp_frame_fmt(char *cov_path, struct rgb_frame *dst,
 			return -1;
 		}
 
-		ret = bsp_v4l2_stream_on(fd_cov, (cov_mp_flag ? 
+		ret = bsp_v4l2_stream_on(cvt->fd_cov, (cvt->cov_mp_flag  ? 
 			V4L2_BUF_TYPE_VIDEO_OUTPUT_MPLANE : V4L2_BUF_TYPE_VIDEO_OUTPUT));
 
 		if(ret < 0)
@@ -618,7 +630,7 @@ static int convert_to_disp_frame_fmt(char *cov_path, struct rgb_frame *dst,
 			return -1;
 		}
 
-		ret = bsp_v4l2_stream_on(fd_cov, (cov_mp_flag ? 
+		ret = bsp_v4l2_stream_on(cvt->fd_cov, (cvt->cov_mp_flag  ? 
 			V4L2_BUF_TYPE_VIDEO_CAPTURE_MPLANE : V4L2_BUF_TYPE_VIDEO_CAPTURE));
 
 		if(ret < 0)
@@ -627,7 +639,7 @@ static int convert_to_disp_frame_fmt(char *cov_path, struct rgb_frame *dst,
 			return -1;
 		}
 
-		fd_set[0].fd     = fd_cov;
+		fd_set[0].fd     = cvt->fd_cov;
     	fd_set[0].events = POLLIN;
     	ret = poll(fd_set, 1, -1);
 
@@ -637,12 +649,13 @@ static int convert_to_disp_frame_fmt(char *cov_path, struct rgb_frame *dst,
 		}
 
 		memset(&vbuf_param, 0, sizeof(struct v4l2_buffer));
-		vbuf_param.type = (cov_mp_flag ? 
+		vbuf_param.type = (cvt->cov_mp_flag ? 
 			V4L2_BUF_TYPE_VIDEO_OUTPUT_MPLANE : V4L2_BUF_TYPE_VIDEO_OUTPUT);
 		vbuf_param.memory = V4L2_MEMORY_MMAP;
 		vbuf_param.m.planes = mplanes;
 		vbuf_param.length = src->planes_num;
-		ret = bsp_v4l2_get_frame_buf(fd_cov, &vbuf_param, (cov_mp_flag ? 
+		ret = bsp_v4l2_get_frame_buf(cvt->fd_cov, &vbuf_param, 
+				(cvt->cov_mp_flag ? 
 				V4L2_BUF_TYPE_VIDEO_OUTPUT_MPLANE : V4L2_BUF_TYPE_VIDEO_OUTPUT),
 				src->planes_num);
 		
@@ -652,38 +665,42 @@ static int convert_to_disp_frame_fmt(char *cov_path, struct rgb_frame *dst,
 		}
 
 		memset(&vbuf_param, 0, sizeof(struct v4l2_buffer));
-		vbuf_param.type = (cov_mp_flag ? 
+		vbuf_param.type = (cvt->cov_mp_flag ? 
 			V4L2_BUF_TYPE_VIDEO_CAPTURE_MPLANE : V4L2_BUF_TYPE_VIDEO_CAPTURE);
 		vbuf_param.memory = V4L2_MEMORY_MMAP;
 		vbuf_param.m.planes = mplanes;
-		vbuf_param.length = 1;
-		ret = bsp_v4l2_get_frame_buf(fd_cov, &vbuf_param, (cov_mp_flag ? 
+		vbuf_param.length = dst->planes_num;
+		ret = bsp_v4l2_get_frame_buf(cvt->fd_cov, &vbuf_param, (cvt->cov_mp_flag ? 
 				V4L2_BUF_TYPE_VIDEO_CAPTURE_MPLANE : V4L2_BUF_TYPE_VIDEO_CAPTURE),
-				1);
+				dst->planes_num);
 		
 		if(ret < 0)
 		{
 			printf("bsp_v4l2_get_frame_buf err: %d, line: %d\n", ret, __LINE__);
 		}
+
 		
-		memcpy(dst->addr, cov_cap_buf[0].addr[0], dst->bytes);
-		conversion_inited = 1;
+		for(i = 0; i < dst->planes_num; i++)
+		{
+			memcpy(dst->addr[i], cvt->cov_cap_buf[0].addr[i], dst->bytes[i]);
+		}
+		
 		return 0;
 	}
 	
 	for(i = 0; i < src->planes_num; i++)
 	{
-		memcpy(cov_output_buf[0].addr[i], src->addr[i], src->bytes[i]);
+		memcpy(cvt->cov_output_buf[0].addr[i], src->addr[i], src->bytes[i]);
 	}
 
 	memset(&vbuf_param, 0, sizeof(struct v4l2_buffer));
 	vbuf_param.index = 0;
-	vbuf_param.type = (cov_mp_flag ? 
+	vbuf_param.type = (cvt->cov_mp_flag ? 
 		V4L2_BUF_TYPE_VIDEO_OUTPUT_MPLANE : V4L2_BUF_TYPE_VIDEO_OUTPUT);
 	vbuf_param.memory = V4L2_MEMORY_MMAP;
 	vbuf_param.m.planes = mplanes;
 	vbuf_param.length = src->planes_num;
-	ret = ioctl(fd_cov, VIDIOC_QUERYBUF, &vbuf_param);
+	ret = ioctl(cvt->fd_cov, VIDIOC_QUERYBUF, &vbuf_param);
 		
 	if (ret) 
 	{
@@ -696,7 +713,7 @@ static int convert_to_disp_frame_fmt(char *cov_path, struct rgb_frame *dst,
 		vbuf_param.m.planes[j].bytesused = src->bytes[j];
 	}
 
-	ret = bsp_v4l2_put_frame_buf(fd_cov, &vbuf_param);
+	ret = bsp_v4l2_put_frame_buf(cvt->fd_cov, &vbuf_param);
 
 	if(ret < 0)
 	{
@@ -706,12 +723,12 @@ static int convert_to_disp_frame_fmt(char *cov_path, struct rgb_frame *dst,
 
 	memset(&vbuf_param, 0, sizeof(struct v4l2_buffer));
 	vbuf_param.index = 0;
-	vbuf_param.type = (cov_mp_flag ? 
+	vbuf_param.type = (cvt->cov_mp_flag ? 
 		V4L2_BUF_TYPE_VIDEO_CAPTURE_MPLANE : V4L2_BUF_TYPE_VIDEO_CAPTURE);
 	vbuf_param.memory = V4L2_MEMORY_MMAP;
 	vbuf_param.m.planes = mplanes;
-	vbuf_param.length = 1;
-	ret = ioctl(fd_cov, VIDIOC_QUERYBUF, &vbuf_param);
+	vbuf_param.length = dst->planes_num;
+	ret = ioctl(cvt->fd_cov, VIDIOC_QUERYBUF, &vbuf_param);
 		
 	if (ret) 
 	{
@@ -721,10 +738,10 @@ static int convert_to_disp_frame_fmt(char *cov_path, struct rgb_frame *dst,
 	
 	for(j = 0; j < 1; j++)
 	{
-		vbuf_param.m.planes[j].bytesused = cov_cap_buf[0].bytes[j];
+		vbuf_param.m.planes[j].bytesused = cvt->cov_cap_buf[0].bytes[j];
 	}
 	
-	ret = bsp_v4l2_put_frame_buf(fd_cov, &vbuf_param);
+	ret = bsp_v4l2_put_frame_buf(cvt->fd_cov, &vbuf_param);
 	
 	if(ret < 0)
 	{
@@ -732,7 +749,7 @@ static int convert_to_disp_frame_fmt(char *cov_path, struct rgb_frame *dst,
 		return -1;
 	}
 	
-	fd_set[0].fd	 = fd_cov;
+	fd_set[0].fd	 = cvt->fd_cov;
 	fd_set[0].events = POLLIN;
 	ret = poll(fd_set, 1, -1);
 	
@@ -742,12 +759,12 @@ static int convert_to_disp_frame_fmt(char *cov_path, struct rgb_frame *dst,
 	}
 	
 	memset(&vbuf_param, 0, sizeof(struct v4l2_buffer));
-	vbuf_param.type = (cov_mp_flag ? 
+	vbuf_param.type = (cvt->cov_mp_flag ? 
 		V4L2_BUF_TYPE_VIDEO_OUTPUT_MPLANE : V4L2_BUF_TYPE_VIDEO_OUTPUT);
 	vbuf_param.memory = V4L2_MEMORY_MMAP;
 	vbuf_param.m.planes = mplanes;
 	vbuf_param.length = src->planes_num;
-	ret = bsp_v4l2_get_frame_buf(fd_cov, &vbuf_param, (cov_mp_flag ? 
+	ret = bsp_v4l2_get_frame_buf(cvt->fd_cov, &vbuf_param, (cvt->cov_mp_flag ? 
 			V4L2_BUF_TYPE_VIDEO_OUTPUT_MPLANE : V4L2_BUF_TYPE_VIDEO_OUTPUT),
 			src->planes_num);
 	
@@ -757,23 +774,27 @@ static int convert_to_disp_frame_fmt(char *cov_path, struct rgb_frame *dst,
 	}
 	
 	memset(&vbuf_param, 0, sizeof(struct v4l2_buffer));
-	vbuf_param.type = (cov_mp_flag ? 
+	vbuf_param.type = (cvt->cov_mp_flag ? 
 		V4L2_BUF_TYPE_VIDEO_CAPTURE_MPLANE : V4L2_BUF_TYPE_VIDEO_CAPTURE);
 	vbuf_param.memory = V4L2_MEMORY_MMAP;
 	vbuf_param.m.planes = mplanes;
-	vbuf_param.length = 1;
-	ret = bsp_v4l2_get_frame_buf(fd_cov, &vbuf_param, (cov_mp_flag ? 
+	vbuf_param.length = dst->planes_num;
+	ret = bsp_v4l2_get_frame_buf(cvt->fd_cov, &vbuf_param, (cvt->cov_mp_flag ? 
 			V4L2_BUF_TYPE_VIDEO_CAPTURE_MPLANE : V4L2_BUF_TYPE_VIDEO_CAPTURE),
-			1);
+			dst->planes_num);
 	
 	if(ret < 0)
 	{
 		printf("bsp_v4l2_get_frame_buf err: %d, line: %d\n", ret, __LINE__);
 	}
+
+	for(i = 0; i < dst->planes_num; i++)
+	{
+		memcpy(dst->addr[i], cvt->cov_cap_buf[0].addr[i], dst->bytes[i]);
+	}
 	
-	memcpy(dst->addr, cov_cap_buf[0].addr[0], dst->bytes);
-	
-	return 0;
+	return ret;
+
 }
 
 static int parser_next_h264_header(unsigned char *start_addr, int src_len, 
