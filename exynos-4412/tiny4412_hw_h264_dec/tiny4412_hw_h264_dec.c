@@ -37,11 +37,13 @@
 #include <sys/time.h>
 #include <pthread.h>
 #include <unistd.h>
+#include <gmodule.h>
 #include "bsp_fb.h"
 #include "bsp_v4l2_cap.h"
 
 #define V4L2_OUTPUT_BUF_NR (2)
 #define V4L2_CAP_BUF_NR (4)
+#define MFC_MAX_CAP_BUF_NR (18)
 #define LIBV4L2_MAX_FMT (16)
 #define MAX_DECODER_INPUT_BUFFER_SIZE  (1024 * 2048)
 #define CODEC_NUM_PLANES (2)
@@ -55,7 +57,7 @@
 #define H264_NAL_TYPE_RESVERD 0x0F
 
 
-#define DEFAULT_DISP_XRES (640)
+#define DEFAULT_DISP_XRES (800)
 #define DEFAULT_DISP_YRES (480)
 
 typedef struct convert_dsc {
@@ -92,8 +94,6 @@ static int parser_next_h264_header(unsigned char *start_addr, int src_len,
 static int get_next_h264_nalu(unsigned char *start_addr, int src_len, 
 	int *nalu_start_pos, int *nalu_end_pos);
 
-
-
 int main(int argc, char **argv)
 {
 	struct v4l2_format fmt;
@@ -103,11 +103,10 @@ int main(int argc, char **argv)
 	struct v4l2_pix_format_mplane *pix_mp;
 	struct v4l2_buffer vbuf_param;
 	struct bsp_v4l2_param v4l2_param;
-	struct bsp_v4l2_buf output_buf[V4L2_OUTPUT_BUF_NR];
-	struct bsp_v4l2_buf cap_buf[V4L2_CAP_BUF_NR];
 	struct v4l2_crop crop;
 	struct v4l2_plane mplanes[CODEC_NUM_PLANES];
 	struct pollfd fd_set[1];
+	int poll_state;
 	int buf_mp_flag = 0;
 	int video_type = V4L2_BUF_TYPE_VIDEO_CAPTURE;
 	int i, err, buf_cnt = 0;
@@ -122,7 +121,7 @@ int main(int argc, char **argv)
 	int rd_size, total_size= 0;
 	pthread_t snap_tid;
 	int fd_img = -1;
-	char *src_file_addr = NULL;
+	unsigned char *src_file_addr = NULL;
 	struct stat f_img_stat;
 	unsigned char *head_buf;
 	int head_buf_len;
@@ -132,6 +131,8 @@ int main(int argc, char **argv)
 	int nalu_end_from_curr_pos;
 	struct bsp_v4l2_buf rgb_frame;
 	struct convert_dsc rgb_conversion;
+	struct bsp_v4l2_buf output_buf[V4L2_OUTPUT_BUF_NR];
+	struct bsp_v4l2_buf cap_buf[MFC_MAX_CAP_BUF_NR];
 	
 	if(argc < 4)
 	{
@@ -158,7 +159,7 @@ int main(int argc, char **argv)
 	}
 
 	src_file_addr = mmap(NULL, f_img_stat.st_size, 
-					PROT_READ, MAP_SHARED, fd_img, 0);
+						PROT_READ, MAP_SHARED, fd_img, 0);
 	
 	if(src_file_addr == MAP_FAILED)
 	{
@@ -202,7 +203,6 @@ int main(int argc, char **argv)
 	}
 	
 	fd_dec = bsp_v4l2_open_dev(dec_path, &buf_mp_flag);
-	
 	v4l2_param.pixelformat = V4L2_PIX_FMT_H264;
 	v4l2_param.req_buf_size[0] = MAX_DECODER_INPUT_BUFFER_SIZE;
 	v4l2_param.planes_num = 1;
@@ -212,9 +212,6 @@ int main(int argc, char **argv)
 			(buf_mp_flag ? 
 			V4L2_BUF_TYPE_VIDEO_OUTPUT_MPLANE : V4L2_BUF_TYPE_VIDEO_OUTPUT), 
 			1);
-	
-	printf("buf_cnt: %d, line: %d\n", buf_cnt, __LINE__);
-	printf("output_buf[0].bytes[0]: %d, line: %d\n", output_buf[0].bytes[0], __LINE__);
 
 	if(buf_cnt < 0)
 	{
@@ -255,7 +252,7 @@ int main(int argc, char **argv)
 		printf("bsp_v4l2_stream_on failed err: %d line: %d\n", err, __LINE__);
 		return -1;
 	}
-	
+
 	memset(&fmt, 0, sizeof(struct v4l2_format));
 	fmt.type = (buf_mp_flag ? 
 			V4L2_BUF_TYPE_VIDEO_CAPTURE_MPLANE : V4L2_BUF_TYPE_VIDEO_CAPTURE);
@@ -296,11 +293,7 @@ int main(int argc, char **argv)
         printf("[%s] line: [%d] VIDIOC_G_CROP failed err: %d \n", __func__, __LINE__, err);
     }
 
-	printf("capture crop.c.left: %d\n", crop.c.left);
-	printf("capture crop.c.top: 0x%x\n", crop.c.top);
-	printf("capture crop.c.width: %d\n", crop.c.width);
-	printf("capture crop.c.height: %d\n", crop.c.height);
-	buf_cnt = bsp_v4l2_req_buf(fd_dec, cap_buf, V4L2_CAP_BUF_NR, 
+	buf_cnt = bsp_v4l2_req_buf(fd_dec, cap_buf, MFC_MAX_CAP_BUF_NR, 
 			(buf_mp_flag ? 
 			V4L2_BUF_TYPE_VIDEO_CAPTURE_MPLANE : V4L2_BUF_TYPE_VIDEO_CAPTURE), 
 			2);
@@ -374,14 +367,11 @@ int main(int argc, char **argv)
 		return -1;
 	}
 
-	printf("f_img_stat.st_size: %d, line: %d\n", f_img_stat.st_size, __LINE__);
-	
-
 	disp_frame.xres = DEFAULT_DISP_XRES;
 	disp_frame.yres = DEFAULT_DISP_YRES;
 	disp_frame.bits_per_pixel = fb_var_attr.bits_per_pixel;
-	disp_frame.bytes_per_line = DEFAULT_DISP_XRES * (disp_frame.bits_per_pixel >> 3);
-	disp_frame.bytes = disp_frame.bytes_per_line * DEFAULT_DISP_YRES;
+	disp_frame.bytes_per_line = disp_frame.xres * (disp_frame.bits_per_pixel >> 3);
+	disp_frame.bytes = disp_frame.bytes_per_line * disp_frame.yres;
 	printf("disp_frame.bytes: %d, line: %d\n", disp_frame.bytes, __LINE__);
 		
 	if(NULL == disp_frame.addr)
@@ -392,12 +382,8 @@ int main(int argc, char **argv)
 	delta_pos = 0;
 	while(f_curr_pos < (f_img_stat.st_size - 3))
 	{
-		struct pollfd fd_set[1];
-		int poll_state;
-
 		fd_set[0].fd     = fd_dec;
     	fd_set[0].events = POLLOUT | POLLERR;;
-    
 		delta_pos = get_next_h264_nalu((src_file_addr + f_curr_pos), 
 						(f_img_stat.st_size - f_curr_pos),
 						&nalu_start_from_curr_pos, &nalu_end_from_curr_pos);
@@ -420,7 +406,7 @@ int main(int argc, char **argv)
 			printf("bsp_v4l2_put_frame_buf err: %d, line: %d\n", err, __LINE__);
 			return -1;
 		}
-		
+
 		poll_state = poll(fd_set, 1, -1);
 
 		if(poll_state < 0)
@@ -482,7 +468,7 @@ int main(int argc, char **argv)
 			{
 				return -1;
 			}
-			
+
 			bsp_fb_flush(disp_fd, &fb_var_attr, &fb_fix_attr, &disp_frame);
 		}
 

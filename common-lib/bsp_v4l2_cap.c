@@ -214,6 +214,13 @@ int bsp_v4l2_req_buf(int fd, struct bsp_v4l2_buf buf_arr[],
         return -1;        
     }
 
+	if(req_bufs.count > buf_count)
+	{
+		printf("req_bufs.count > buf_count req_bufs.count: %d [%s] line: %d\n",
+				req_bufs.count, __func__, __LINE__);
+        return -1;
+	}
+
 	if((V4L2_BUF_TYPE_VIDEO_CAPTURE_MPLANE == buf_type)
 	|| (V4L2_BUF_TYPE_VIDEO_OUTPUT_MPLANE == buf_type))
 	{
