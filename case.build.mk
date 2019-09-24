@@ -30,7 +30,7 @@ $(subdir-y):
 	make -C $@ -f $(TOPDIR)/case.build.mk
 	
 $(test-bin) : $(test-objs)
-	$(CC) $(LDFLAGS) $(LOCAL_LDFLAGS) -o $@ $^
+	$(CC) -o $@ $^  $(LDFLAGS) $(LOCAL_LDFLAGS)
 	mv $@ $(BIN_DIR)
 
 %.o : %.c

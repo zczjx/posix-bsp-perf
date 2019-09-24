@@ -17,10 +17,8 @@ BIN_DIR=$(TOPDIR)/bin
 export TOPDIR
 export BIN_DIR
 
-CFLAGS = -Wall  -g -fPIC  -rdynamic
-CFLAGS += -I $(shell pwd)/include
-CFLAGS += -I ${TOPDIR}
-LDFLAGS ?= -lm -lpthread -L$(TOPDIR)
+CFLAGS ?= -Wall  -g -fPIC  -rdynamic -I $(TOPDIR) -I $(shell pwd)/include -I /usr/include/glib-2.0 -I /usr/lib/aarch64-linux-gnu/glib-2.0/include
+LDFLAGS ?= -lm -lpthread -L$(TOPDIR) -lcommon_bsp -lglib-2.0 -lgmodule-2.0 -lgobject-2.0 -lgio-2.0 -lgthread-2.0
 export CFLAGS LDFLAGS
 
 
@@ -41,6 +39,7 @@ all : lib
 
 BSP_DLIB ?= libcommon_bsp.so
 libobj-y += common-lib/
+export BSP_DLIB
 
 lib:
 	make -f $(TOPDIR)/lib.build.mk
