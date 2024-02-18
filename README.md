@@ -1,1 +1,2 @@
-# arm-linux-bsp-tests
+# posix-bsp-perf
+bsp perf test for posix OS(such as Linux/QNX/Rtthread)
