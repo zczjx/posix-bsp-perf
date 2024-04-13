@@ -259,7 +259,7 @@ renter:
 		err = ioctl(fd_src, VIDIOC_SUBDEV_ENUM_MBUS_CODE, &mbus_code);
 	
 		if (err < 0)
-    	{
+    	{ 	{
 			break;
 		}
 
@@ -278,8 +278,7 @@ renter:
 		mbus_code.index = i;
 		err = ioctl(fd_sink, VIDIOC_SUBDEV_ENUM_MBUS_CODE, &mbus_code);
 	
-		if (err < 0)
-    	{
+		if (err <     	{    	{
 			break;
 		}
 		
