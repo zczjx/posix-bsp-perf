@@ -7,8 +7,6 @@ project(case_framework VERSION 0.0.1 LANGUAGES CXX)
 # Set the language version
 set(CMAKE_C_STANDARD 99)
 set(CMAKE_CXX_STANDARD 11)
-set(CMAKE_CXX_STANDARD_REQUIRED ON)
-set(CMAKE_C_STANDARD_REQUIRED ON)
 
 # Add the source files
 set(SOURCES
@@ -32,6 +30,8 @@ target_compile_options(${PROJECT_NAME} PRIVATE
 target_compile_options(${PROJECT_NAME} PRIVATE
     -Wall
     -Wextra
+    -rdynamic
+    -g
     # Add more compile options here if needed
 )
 

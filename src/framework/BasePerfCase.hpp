@@ -34,10 +34,12 @@ namespace common {
 
 class BasePerfCase {
 public:
+
+    static constexpr char LOG_TAG[] {"[BasePerfCase]: "};
     BasePerfCase()
     {
         m_name = "BasePerfCase";
-        std::cout << m_name << "::BasePerfCase()" << std::endl;
+        std::cout << LOG_TAG << m_name << "::BasePerfCase()" << std::endl;
     } // 添加构造函数
     BasePerfCase(const BasePerfCase&) = delete; // 删除拷贝构造函数
     BasePerfCase& operator=(const BasePerfCase&) = delete; // 删除拷贝赋值运算符

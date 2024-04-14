@@ -36,9 +36,11 @@ class HelloPerf : public bsp_perf::common::BasePerfCase
 {
 
 public:
+    static constexpr char LOG_TAG[] {"[HelloPerf]: "};
+
     HelloPerf()
     {
-        std::cout << "HelloPerf::HelloPerf()" << std::endl;
+        std::cout << LOG_TAG << "HelloPerf::HelloPerf()" << std::endl;
     }
     HelloPerf(const HelloPerf&) = delete;
     HelloPerf& operator=(const HelloPerf&) = delete;
@@ -46,23 +48,24 @@ public:
     HelloPerf& operator=(HelloPerf&&) = delete;
     ~HelloPerf()
     {
-        std::cout << "HelloPerf::~HelloPerf()" << std::endl;
+        std::cout << LOG_TAG << "HelloPerf::~HelloPerf()" << std::endl;
     }
 private:
+
     void onInit() override {
-        std::cout << "HelloPerf::onInit()" << std::endl;
+        std::cout << LOG_TAG << "HelloPerf::onInit()" << std::endl;
     }
 
     void onProcess() override {
-        std::cout << "HelloPerf::onProcess()" << std::endl;
+        std::cout << LOG_TAG << "HelloPerf::onProcess()" << std::endl;
     }
 
     void onPerfPrint() override {
-        std::cout << "HelloPerf::onPerfPrint()" << std::endl;
+        std::cout << LOG_TAG << "HelloPerf::onPerfPrint()" << std::endl;
     }
 
     void onRelease() override {
-        std::cout << "HelloPerf::onRelease()" << std::endl;
+        std::cout << LOG_TAG << "HelloPerf::onRelease()" << std::endl;
     }
 
 };
