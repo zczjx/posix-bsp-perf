@@ -8,14 +8,6 @@ project(PosixPerf)
 set(CMAKE_C_STANDARD 99)
 set(CMAKE_CXX_STANDARD 11)
 
-# 设置交叉编译工具链
-if(DEFINED CROSS_COMPILE)
-    set(CMAKE_SYSTEM_NAME Linux)
-    set(CMAKE_SYSTEM_PROCESSOR arm)
-    set(CMAKE_C_COMPILER ${CROSS_COMPILE}-gcc)
-    set(CMAKE_CXX_COMPILER ${CROSS_COMPILE}-g++)
-endif()
-
 set(CMAKE_INSTALL_PREFIX "${CMAKE_CURRENT_BINARY_DIR}/install")
 
 

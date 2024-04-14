@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 3.10)
+cmake_minimum_required(VERSION 3.12)
 
 option(BUILD_PERF_CASE_HELLO_WORLD "Build perf_cases/hello_world" ON)
 

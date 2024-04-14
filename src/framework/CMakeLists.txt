@@ -1,5 +1,5 @@
 # Set the minimum required version of CMake
-cmake_minimum_required(VERSION 3.10)
+cmake_minimum_required(VERSION 3.12)
 
 # Set the project name
 project(case_framework VERSION 0.0.1 LANGUAGES CXX)

@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 3.10)
+cmake_minimum_required(VERSION 3.12)
 
 option(BUILD_SRC_FRAMEWORK "Build src/framework" ON)
 option(BUILD_SRC_CORE "Build src/core" OFF)
