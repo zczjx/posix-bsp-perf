@@ -7,9 +7,10 @@ namespace common {
 
 constexpr char BasePerfCase::LOG_TAG[];
 
-void BasePerfCase::setUp()
+BasePerfCase::BasePerfCase()
 {
-    std::cout << LOG_TAG << "BasePerfCase::setUp()" << std::endl;
+    m_name = "BasePerfCase";
+    std::cout << LOG_TAG << m_name << "::BasePerfCase()" << std::endl;
 }
 
 void BasePerfCase::run()
@@ -17,12 +18,10 @@ void BasePerfCase::run()
     std::cout << LOG_TAG << "BasePerfCase::run()" << std::endl;
     onInit();
     onProcess();
+    onRender();
+    onRelease();
 }
 
-void BasePerfCase::tearDown()
-{
-    std::cout << LOG_TAG << "BasePerfCase::tearDown()" << std::endl;
-}
 
 void BasePerfCase::onInit()
 {
@@ -32,6 +31,11 @@ void BasePerfCase::onInit()
 void BasePerfCase::onProcess()
 {
     std::cout << LOG_TAG << "BasePerfCase::onProcess()" << std::endl;
+}
+
+void BasePerfCase::onRender()
+{
+    std::cout << LOG_TAG << "BasePerfCase::onRender()" << std::endl;
 }
 
 void BasePerfCase::onPerfPrint()

@@ -60,6 +60,10 @@ private:
         std::cout << LOG_TAG << "HelloPerf::onProcess()" << std::endl;
     }
 
+    void onRender() override {
+        std::cout << LOG_TAG << "HelloPerf::onRender()" << std::endl;
+    }
+
     void onPerfPrint() override {
         std::cout << LOG_TAG << "HelloPerf::onPerfPrint()" << std::endl;
     }

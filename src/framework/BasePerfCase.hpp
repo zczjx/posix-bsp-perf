@@ -36,24 +36,19 @@ class BasePerfCase {
 public:
 
     static constexpr char LOG_TAG[] {"[BasePerfCase]: "};
-    BasePerfCase()
-    {
-        m_name = "BasePerfCase";
-        std::cout << LOG_TAG << m_name << "::BasePerfCase()" << std::endl;
-    } // 添加构造函数
+    BasePerfCase(); // 添加构造函数
     BasePerfCase(const BasePerfCase&) = delete; // 删除拷贝构造函数
     BasePerfCase& operator=(const BasePerfCase&) = delete; // 删除拷贝赋值运算符
     BasePerfCase(BasePerfCase&&) = delete; // 删除移动构造函数
     BasePerfCase& operator=(BasePerfCase&&) = delete; // 删除移动赋值运算符
     virtual ~BasePerfCase() = default; // 设置析构函数为虚函数
 
-    virtual void setUp();
     virtual void run();
-    virtual void tearDown();
 
 private:
     virtual void onInit() = 0; // 添加纯虚函数 onInit()
     virtual void onProcess() = 0; // 添加纯虚函数 onProcess()
+    virtual void onRender() = 0; // 添加纯虚函数 onRender()
     virtual void onPerfPrint() = 0; // 添加纯虚函数 onPerfPrint()
     virtual void onRelease() = 0; // 添加纯虚函数 onRelease()
 
