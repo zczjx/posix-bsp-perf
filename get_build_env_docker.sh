@@ -4,7 +4,7 @@
 docker build -t bsp-perf-build-env-x86-base:latest -f Dockerfile.base .
 
 # build docker image
-docker build --build-arg USER_ID=$(id -u) --build-arg GROUP_ID=$(id -g) -t bsp-perf-build-env-x86:v0.0.1 -f Dockerfile .
+docker build --build-arg USER_ID=$(id -u) --build-arg GROUP_ID=$(id -g) --build-arg DIR_SRC_PATH=tools_conf -t bsp-perf-build-env-x86:v0.0.1 -f Dockerfile .
 
 # run build docker image
 
