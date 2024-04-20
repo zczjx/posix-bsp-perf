@@ -1,16 +1,14 @@
 #!/bin/bash
 
-docker run -it -P --mount type=bind,source=/nvidia/code/clarencez/docker_path,target=/mnt zczjx/bsp-perf-build-env-x86:v0.0.1 /bin/bash
+# build base docker image(optional)
+docker build -t bsp-perf-build-env-x86-base:latest -f Dockerfile.base .
 
-docker run -it -v /nvidia/code/clarencez/docker_path:/mnt zczjx/bsp-perf-build-env-x86:v0.0.1 /bin/bash
+# build docker image
+docker build --build-arg USER_ID=$(id -u) --build-arg GROUP_ID=$(id -g) -t bsp-perf-build-env-x86:v0.0.1 -f Dockerfile .
 
-docker run -it -v /nvidia/code/clarencez/docker_path:/mnt bsp-perf-build-env-x86:latest /bin/bash
+# run build docker image
 
-docker run -it -P --mount type=bind,source=/nvidia/code/clarencez/docker_path,target=/mnt bsp-perf-build-env-x86:latest /bin/bash
+docker run --network=host --privileged --user $(id -u):$(id -g) -it -v /nvidia/code/clarencez:/build -v /dev/bus/usb:/dev/bus/usb bsp-perf-build-env-x86:v0.0.1 /bin/bash
 
-
-docker run -it -P --mount type=bind,source=/home/build,target=/mnt ubuntu:20.04 /bin/bash
-
-docker run -it -P --mount type=bind,source=/home/clarencez,target=/mnt ubuntu:20.04 /bin/bash
-
-docker run -it -P --mount type=bind,source=/nvidia/code/clarencez,target=/mnt ubuntu:20.04 /bin/bash
+# run base docker image(if required to update base image for enviroment modification)
+docker run --network=host --privileged  -it -v /nvidia/code/clarencez:/build -v /dev/bus/usb:/dev/bus/usb zczjx/bsp-perf-build-env-x86-base:latest /bin/bash
