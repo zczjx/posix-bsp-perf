@@ -12,6 +12,8 @@ RUN groupadd -g ${GROUP_ID} builder && \
 # 设置工作目录
 WORKDIR /home/builder
 
+RUN chown builder:builder /home/builder
+
 # 切换到新用户
 USER builder
 
