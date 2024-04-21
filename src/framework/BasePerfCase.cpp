@@ -9,8 +9,7 @@ constexpr char BasePerfCase::LOG_TAG[];
 
 BasePerfCase::BasePerfCase()
 {
-    m_name = "BasePerfCase";
-    std::cout << LOG_TAG << m_name << "::BasePerfCase()" << std::endl;
+    std::cout << LOG_TAG << "::BasePerfCase()" << std::endl;
 }
 
 void BasePerfCase::run()
@@ -18,6 +17,7 @@ void BasePerfCase::run()
     std::cout << LOG_TAG << "BasePerfCase::run()" << std::endl;
     onInit();
     onProcess();
+    onPerfPrint();
     onRender();
     onRelease();
 }

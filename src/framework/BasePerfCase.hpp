@@ -52,8 +52,6 @@ private:
     virtual void onPerfPrint() = 0; // 添加纯虚函数 onPerfPrint()
     virtual void onRelease() = 0; // 添加纯虚函数 onRelease()
 
-private:
-    std::string m_name; // 添加私有成员变量 m_name
 };
 
 } // namespace common

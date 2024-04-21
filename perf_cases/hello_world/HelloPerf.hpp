@@ -54,6 +54,7 @@ private:
 
     void onInit() override {
         std::cout << LOG_TAG << "HelloPerf::onInit()" << std::endl;
+        std::cout << LOG_TAG << "name: " << m_name << std::endl;
     }
 
     void onProcess() override {
@@ -72,6 +73,8 @@ private:
         std::cout << LOG_TAG << "HelloPerf::onRelease()" << std::endl;
     }
 
+private:
+    std::string m_name {"HelloPerf"};
 };
 } // namespace perf_cases
 } // namespace bsp_perf
