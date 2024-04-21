@@ -9,10 +9,15 @@ ARG DIR_SRC_PATH
 RUN groupadd -g ${GROUP_ID} builder && \
     useradd -l -u ${USER_ID} -g builder builder
 
+# 设置用户myuser的密码
+RUN echo 'builder:builder' | chpasswd
+# 配置sudo免密码
+RUN echo 'builder ALL=(ALL) NOPASSWD: ALL' >> /etc/sudoers
 # 设置工作目录
 WORKDIR /home/builder
 
 RUN chown builder:builder /home/builder
+
 
 # 切换到新用户
 USER builder
