@@ -16,12 +16,12 @@ WORKDIR /home/builder
 USER builder
 
 # 复制文件到容器(optinal)， 主要是复制shell 和 vim 配置，让终端好看一点
-COPY ${DIR_SRC_PATH}/.bashrc /home/builder/.bashrc
-COPY ${DIR_SRC_PATH}/.bashrc.rk3588s /home/builder/.bashrc.rk3588s
-COPY ${DIR_SRC_PATH}/.bashrc.rpi /home/builder/.bashrc.rpi
-COPY ${DIR_SRC_PATH}/.profile /home/builder/.profile
-COPY ${DIR_SRC_PATH}/.vimrc /home/builder/.vimrc
-COPY ${DIR_SRC_PATH}/.vim /home/builder/.vim
-COPY ${DIR_SRC_PATH}/.gitconfig  /home/builder/.gitconfig
+# COPY ${DIR_SRC_PATH}/.bashrc /home/builder/.bashrc
+# COPY ${DIR_SRC_PATH}/.bashrc.rk3588s /home/builder/.bashrc.rk3588s
+# COPY ${DIR_SRC_PATH}/.bashrc.rpi /home/builder/.bashrc.rpi
+# COPY ${DIR_SRC_PATH}/.profile /home/builder/.profile
+# COPY ${DIR_SRC_PATH}/.vimrc /home/builder/.vimrc
+# COPY ${DIR_SRC_PATH}/.vim /home/builder/.vim
+# COPY ${DIR_SRC_PATH}/.gitconfig  /home/builder/.gitconfig
 # 容器启动命令
 CMD ["echo", "posix-bsp-perf cross build docker launch!"]
