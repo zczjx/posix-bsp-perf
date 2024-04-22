@@ -1,5 +1,5 @@
 # Set the minimum required version of CMake
-cmake_minimum_required(VERSION 3.10)
+cmake_minimum_required(VERSION 3.12)
 
 # Set the project name
 project(case_framework VERSION 0.0.1 LANGUAGES CXX)
@@ -22,18 +22,24 @@ add_library(${PROJECT_NAME} SHARED ${SOURCES})
 target_compile_options(${PROJECT_NAME} PRIVATE
     -Wall
     -Wextra
-    # Add more compile options here if needed
-)
-
-
-# Set the compile options
-target_compile_options(${PROJECT_NAME} PRIVATE
-    -Wall
-    -Wextra
     -rdynamic
     -g
     # Add more compile options here if needed
 )
+
+target_include_directories(${PROJECT_NAME} PRIVATE
+    $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/..>
+    $<INSTALL_INTERFACE:include>
+)
+
+# 指定pkgconfig文件的内容
+set(${PROJECT_NAME}_PC "${CMAKE_CURRENT_BINARY_DIR}/${PROJECT_NAME}.pc")
+
+# 配置pkgconfig文件
+configure_file(${CMAKE_SOURCE_DIR}/cmake/subProject.pc.in ${${PROJECT_NAME}_PC} @ONLY)
+
+# 安装pkgconfig文件
+install(FILES ${${PROJECT_NAME}_PC} DESTINATION lib/${CMAKE_PROJECT_NAME}/pkgconfig)
 
 string(COMPARE EQUAL ${PROJECT_NAME} ${CMAKE_PROJECT_NAME} is_top_level)
 if(is_top_level)
@@ -47,12 +53,6 @@ install(TARGETS ${PROJECT_NAME}
   LIBRARY DESTINATION lib/${CMAKE_PROJECT_NAME}
 )
 
-target_include_directories(${PROJECT_NAME} PRIVATE
-    $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/..>
-    $<INSTALL_INTERFACE:include>
-)
-
-message(STATUS "CMAKE_BINARY_DIR: ${CMAKE_BINARY_DIR}")
 
 install(DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/
   DESTINATION include/${CMAKE_PROJECT_NAME}
