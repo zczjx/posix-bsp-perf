@@ -1,0 +1,12 @@
+prefix=@CMAKE_INSTALL_PREFIX@
+exec_prefix=${prefix}
+libdir=${exec_prefix}/lib/@CMAKE_PROJECT_NAME@
+includedir=${prefix}/include
+
+Name: lib@PROJECT_NAME@
+Description: @CMAKE_PROJECT_DESCRIPTION@
+Version: @PROJECT_VERSION@
+URL: https://github.com/zczjx/posix-bsp-perf
+CFlags: -I${includedir}
+Libs: -L${libdir} -l@PROJECT_NAME@
+Requires: @PKG_CONFIG_REQUIRES@
