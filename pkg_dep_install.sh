@@ -25,3 +25,17 @@ make -j8 install
 # build cpp-tbox
 cmake .. -DCMAKE_INSTALL_PREFIX=./install
 make -j8 install
+
+# build posix-bsp-perf
+
+# for X86
+
+cmake -DPKG_CONFIG_PATH=/opt/cross_env/x86/install/lib/pkgconfig ..
+
+# for rk3588s
+
+cmake -DPKG_CONFIG_PATH=/opt/cross_env/rk3588s/install/lib/pkgconfig ..
+
+# for rpi
+
+cmake -DPKG_CONFIG_PATH=/opt/cross_env/rpi/install/lib/pkgconfig ..
