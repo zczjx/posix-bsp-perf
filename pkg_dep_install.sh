@@ -32,6 +32,10 @@ make -j8 install
 
 cmake -DPKG_CONFIG_PATH=/opt/cross_env/x86/install/lib/pkgconfig ..
 
+cmake -DPKG_CONFIG_PATH=/build/cross_env/x86/install/lib/pkgconfig ..
+
+make -j8 install
+
 # for rk3588s
 
 cmake -DPKG_CONFIG_PATH=/opt/cross_env/rk3588s/install/lib/pkgconfig ..

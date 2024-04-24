@@ -16,9 +16,9 @@ target_compile_options(${PROJECT_NAME} PRIVATE
 
 target_include_directories(${PROJECT_NAME} PRIVATE ${CMAKE_SOURCE_DIR}/src)
 
-set_target_properties(${PROJECT_NAME} PROPERTIES INSTALL_RPATH "$ORIGIN/../lib/${CMAKE_PROJECT_NAME}")
+set_target_properties(${PROJECT_NAME} PROPERTIES INSTALL_RPATH "$ORIGIN/../lib")
 
-target_link_libraries(${PROJECT_NAME} PRIVATE case_framework)
+target_link_libraries(${PROJECT_NAME} PRIVATE case_framework bsp_shared)
 
 
 

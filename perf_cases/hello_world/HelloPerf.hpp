@@ -26,11 +26,14 @@ SOFTWARE.
 #ifndef HELLO_PERF_HPP
 #define HELLO_PERF_HPP
 
-#include<framework/BasePerfCase.hpp>
-#include<iostream>
+#include <framework/BasePerfCase.hpp>
+#include <shared/BspLogger.hpp>
+#include <iostream>
 
 namespace bsp_perf {
 namespace perf_cases {
+
+using string_view_t = bsp_perf::shared::string_view_t;
 
 class HelloPerf : public bsp_perf::common::BasePerfCase
 {
@@ -40,7 +43,9 @@ public:
 
     HelloPerf()
     {
-        std::cout << LOG_TAG << "HelloPerf::HelloPerf()" << std::endl;
+        // std::cout << LOG_TAG << "HelloPerf::HelloPerf()" << std::endl;
+        m_logger = std::make_shared<bsp_perf::shared::BspLogger>();
+        m_logger->printStdoutLog(bsp_perf::shared::BspLogger::LogLevel::Debug, "{} HelloPerf::HelloPerf()");
     }
     HelloPerf(const HelloPerf&) = delete;
     HelloPerf& operator=(const HelloPerf&) = delete;
@@ -48,33 +53,40 @@ public:
     HelloPerf& operator=(HelloPerf&&) = delete;
     ~HelloPerf()
     {
-        std::cout << LOG_TAG << "HelloPerf::~HelloPerf()" << std::endl;
+        // std::cout << LOG_TAG << "HelloPerf::~HelloPerf()" << std::endl;
+        m_logger->printStdoutLog(bsp_perf::shared::BspLogger::LogLevel::Debug, "{} HelloPerf::~HelloPerf()");
     }
 private:
 
     void onInit() override {
-        std::cout << LOG_TAG << "HelloPerf::onInit()" << std::endl;
-        std::cout << LOG_TAG << "name: " << m_name << std::endl;
+        // std::cout << LOG_TAG << "HelloPerf::onInit()" << std::endl;
+        // std::cout << LOG_TAG << "name: " << m_name << std::endl;
+        m_logger->printStdoutLog(bsp_perf::shared::BspLogger::LogLevel::Debug, "{} HelloPerf::onInit()");
     }
 
     void onProcess() override {
-        std::cout << LOG_TAG << "HelloPerf::onProcess()" << std::endl;
+        // std::cout << LOG_TAG << "HelloPerf::onProcess()" << std::endl;
+        m_logger->printStdoutLog(bsp_perf::shared::BspLogger::LogLevel::Debug, "{} HelloPerf::onProcess()");
     }
 
     void onRender() override {
-        std::cout << LOG_TAG << "HelloPerf::onRender()" << std::endl;
+        // std::cout << LOG_TAG << "HelloPerf::onRender()" << std::endl;
+        m_logger->printStdoutLog(bsp_perf::shared::BspLogger::LogLevel::Debug, "{} HelloPerf::onRender()");
     }
 
     void onPerfPrint() override {
-        std::cout << LOG_TAG << "HelloPerf::onPerfPrint()" << std::endl;
+        // std::cout << LOG_TAG << "HelloPerf::onPerfPrint()" << std::endl;
+        m_logger->printStdoutLog(bsp_perf::shared::BspLogger::LogLevel::Debug, "{} HelloPerf::onPerfPrint()");
     }
 
     void onRelease() override {
-        std::cout << LOG_TAG << "HelloPerf::onRelease()" << std::endl;
+        // std::cout << LOG_TAG << "HelloPerf::onRelease()" << std::endl;
+        m_logger->printStdoutLog(bsp_perf::shared::BspLogger::LogLevel::Debug, "{} HelloPerf::onRelease()");
     }
 
 private:
     std::string m_name {"HelloPerf"};
+    std::shared_ptr<bsp_perf::shared::BspLogger> m_logger;
 };
 } // namespace perf_cases
 } // namespace bsp_perf

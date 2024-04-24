@@ -22,31 +22,5 @@ void BasePerfCase::run()
     onRelease();
 }
 
-
-void BasePerfCase::onInit()
-{
-    std::cout << LOG_TAG << "BasePerfCase::onInit()" << std::endl;
-}
-
-void BasePerfCase::onProcess()
-{
-    std::cout << LOG_TAG << "BasePerfCase::onProcess()" << std::endl;
-}
-
-void BasePerfCase::onRender()
-{
-    std::cout << LOG_TAG << "BasePerfCase::onRender()" << std::endl;
-}
-
-void BasePerfCase::onPerfPrint()
-{
-    std::cout << LOG_TAG << "BasePerfCase::onPerfPrint()" << std::endl;
-}
-
-void BasePerfCase::onRelease()
-{
-    std::cout << LOG_TAG << "BasePerfCase::onRelease()" << std::endl;
-}
-
 } // namespace common
 } // namespace bsp_perf
