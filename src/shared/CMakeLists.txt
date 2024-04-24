@@ -9,9 +9,15 @@ set(CMAKE_C_STANDARD 99)
 set(CMAKE_CXX_STANDARD 11)
 
 find_package(PkgConfig REQUIRED)
-pkg_check_modules(SPDLOG REQUIRED spdlog)
+pkg_check_modules(PC_SPDLOG REQUIRED spdlog)
 
-include_directories(${SPDLOG_INCLUDE_DIRS})
+
+
+message(STATUS "PC_SPDLOG_LIBRARY_DIRS: ${PC_SPDLOG_LIBRARY_DIRS}")
+message(STATUS "PC_SPDLOG_INCLUDE_DIRS: ${PC_SPDLOG_INCLUDE_DIRS}")
+message(STATUS "PC_SPDLOG_LDFLAGS: ${PC_SPDLOG_LDFLAGS}")
+message(STATUS "PC_SPDLOG_CFLAGS: ${PC_SPDLOG_CFLAGS}")
+message(STATUS "PC_SPDLOG_LIBRARIES: ${PC_SPDLOG_LIBRARIES}")
 
 # Add the source files
 set(SOURCES
@@ -22,22 +28,21 @@ set(SOURCES
 
 # Add the library target
 add_library(${PROJECT_NAME} SHARED ${SOURCES})
-
-message(STATUS "SPDLOG_LIBRARIES: ${SPDLOG_LIBRARIES}")
-message(STATUS "SPDLOG_INCLUDE_DIRS: ${SPDLOG_INCLUDE_DIRS}")
-
-if(SPDLOG_LIBRARIES)
-    target_link_libraries(${PROJECT_NAME} PRIVATE spdlog pthread)
-endif()
-
 # Set the compile options
-target_compile_options(${PROJECT_NAME} PRIVATE
+target_compile_options(${PROJECT_NAME} PUBLIC
     -Wall
     -Wextra
     -rdynamic
     -g
     # Add more compile options here if needed
 )
+
+if(PC_SPDLOG_LIBRARIES)
+  message(STATUS "set PC_SPDLOG_LIBRARIES: ${PC_SPDLOG_LIBRARIES}")
+  target_link_options(${PROJECT_NAME} PRIVATE "-L${PC_SPDLOG_LIBRARY_DIRS}")
+  target_link_libraries(${PROJECT_NAME} PRIVATE ${PC_SPDLOG_LIBRARIES})
+  target_include_directories(${PROJECT_NAME} PUBLIC ${PC_SPDLOG_INCLUDE_DIRS})
+endif()
 
 target_include_directories(${PROJECT_NAME} PRIVATE
     $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/..>
