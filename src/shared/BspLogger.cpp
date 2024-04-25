@@ -6,25 +6,22 @@
 namespace bsp_perf {
 namespace shared {
 
-    BspLogger::BspLogger() {
+    BspLogger::BspLogger():
+        m_stdout_logger {spdlog::stdout_color_mt("console")},
+        m_file_logger {spdlog::basic_logger_mt("file_logger", "logs/bsp_perf.log")},
+        m_async_file_logger {spdlog::basic_logger_mt<spdlog::async_factory>("async_file_logger", "logs/bsp_perf_async.log")}
+    {
         // Initialize the logger here
-        m_stdout_logger = spdlog::stdout_color_mt("console", spdlog::color_mode::automatic);
         m_stdout_logger->set_level(spdlog::level::debug);
 
-        m_file_logger = spdlog::basic_logger_mt("file_logger", "logs/bsp_perf.log");
         m_file_logger->set_level(spdlog::level::info);
-
-        m_async_file_logger = spdlog::basic_logger_mt<spdlog::async_factory>("async_file_logger", "logs/bsp_perf_async.log");
-        m_async_file_logger->set_level(spdlog::level::info);
-
-        // Set the pattern for log messages
-        spdlog::set_pattern("[%Y-%m-%d %H:%M:%S.%e] [%l] %v");
-
         // Set the flush level for the file logger
         m_file_logger->flush_on(spdlog::level::info);
 
+        m_async_file_logger->set_level(spdlog::level::info);
         // Set the flush level for the async file logger
         m_async_file_logger->flush_on(spdlog::level::info);
+
     }
 
     BspLogger::~BspLogger() {

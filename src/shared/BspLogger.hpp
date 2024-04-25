@@ -53,10 +53,6 @@ public:
     BspLogger(BspLogger&&) = delete;
     BspLogger& operator=(const BspLogger&) = delete;
     BspLogger& operator=(BspLogger&&) = delete;
-    // void printStdoutLog(LogLevel level, const char* fmt)
-    // {
-    //     std::cout << fmt << std::endl;
-    // }
 
     template<typename... Args>
     void printStdoutLog(LogLevel level, const char* fmt, const Args &... args)
@@ -73,7 +69,7 @@ public:
 
 protected:
     template<typename... Args>
-    void printLogger(std::shared_ptr<spdlog::logger> logger, LogLevel level, string_view_t fmt, const Args &... args)
+    void printLogger(std::shared_ptr<spdlog::logger> &logger, LogLevel level, string_view_t fmt, const Args &... args)
     {
         // Print the log message to the logger
         switch (level)

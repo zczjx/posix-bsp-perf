@@ -77,7 +77,7 @@ private:
 
     void onPerfPrint() override {
         // std::cout << LOG_TAG << "HelloPerf::onPerfPrint()" << std::endl;
-        m_logger->printStdoutLog(bsp_perf::shared::BspLogger::LogLevel::Critical, "{} HelloPerf::onPerfPrint()", LOG_TAG);
+        m_logger->printStdoutLog(bsp_perf::shared::BspLogger::LogLevel::Error, "{} HelloPerf::onPerfPrint()", LOG_TAG);
     }
 
     void onRelease() override {
