@@ -8,6 +8,15 @@ project(bsp_shared VERSION 0.0.1 LANGUAGES CXX)
 set(CMAKE_C_STANDARD 99)
 set(CMAKE_CXX_STANDARD 11)
 
+
+message(STATUS "CMAKE_MODULE_PATH: ${CMAKE_MODULE_PATH}")
+
+# 检查是否已设置 MY_PKG_CONFIG_PATH 变量
+if(DEFINED BSP_PKG_CONFIG_PATH)
+    # 设置环境变量 PKG_CONFIG_PATH
+    set(ENV{PKG_CONFIG_PATH} ${BSP_PKG_CONFIG_PATH})
+endif()
+
 find_package(PkgConfig REQUIRED)
 pkg_check_modules(PC_SPDLOG REQUIRED spdlog)
 
