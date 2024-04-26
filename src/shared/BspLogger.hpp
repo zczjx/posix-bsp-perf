@@ -41,7 +41,7 @@ class BspLogger {
 public:
     BspLogger();
     virtual ~BspLogger();
-    // Delete unused constructors
+
     enum class LogLevel {
         Debug,
         Info,
@@ -55,17 +55,26 @@ public:
     BspLogger& operator=(BspLogger&&) = delete;
 
     template<typename... Args>
-    void printStdoutLog(LogLevel level, const char* fmt, const Args &... args)
+    void printStdoutLog(LogLevel level, string_view_t fmt, const Args &... args)
     {
         // Print the log message to stdout
         printLogger(m_stdout_logger, level, fmt, args...);
     }
 
-//     template<typename... Args>
-//     void printFileLog(LogLevel level, string_view_t fmt, const Args &... args);
+    template<typename... Args>
+    void printFileLog(LogLevel level, string_view_t fmt, const Args &... args)
+    {
+        // Print the log message to a file
+        printLogger(m_file_logger, level, fmt, args...);
+    }
 
-//     template<typename... Args>
-//     void printAsyncFileLog(LogLevel level, string_view_t fmt, const Args &... args);
+
+    template<typename... Args>
+    void printAsyncFileLog(LogLevel level, string_view_t fmt, const Args &... args)
+    {
+        // Print the log message to a file asynchronously
+        printLogger(m_async_file_logger, level, fmt, args...);
+    }
 
 protected:
     template<typename... Args>

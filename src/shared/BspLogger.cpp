@@ -33,20 +33,5 @@ namespace shared {
         m_async_file_logger.reset();
     }
 
-    // template<typename... Args>
-    // void BspLogger::printFileLog(LogLevel level, string_view_t fmt, const Args &... args)
-    // {
-    //     // Print the log message to a file
-    //     printLogger(m_file_logger, level, fmt, args...);
-    // }
-
-    // template<typename... Args>
-    // void BspLogger::printAsyncFileLog(LogLevel level, string_view_t fmt, const Args &... args)
-    // {
-    //     // Print the log message to a file asynchronously
-    //     printLogger(m_async_file_logger, level, fmt, args...);
-    // }
-
-
 } // namespace shared
 } // namespace bsp_perf

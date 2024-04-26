@@ -32,20 +32,17 @@ SOFTWARE.
 
 namespace bsp_perf {
 namespace perf_cases {
-
-using string_view_t = bsp_perf::shared::string_view_t;
-
 class HelloPerf : public bsp_perf::common::BasePerfCase
 {
 
 public:
     static constexpr char LOG_TAG[] {"[HelloPerf]: "};
 
-    HelloPerf()
+    HelloPerf(): BasePerfCase(), m_logger(std::make_shared<bsp_perf::shared::BspLogger>())
     {
-        // std::cout << LOG_TAG << "HelloPerf::HelloPerf()" << std::endl;
-        m_logger = std::make_shared<bsp_perf::shared::BspLogger>();
         m_logger->printStdoutLog(bsp_perf::shared::BspLogger::LogLevel::Debug, "{} HelloPerf::HelloPerf()", LOG_TAG);
+        m_logger->printFileLog(bsp_perf::shared::BspLogger::LogLevel::Debug, "{} HelloPerf::HelloPerf()", LOG_TAG);
+        m_logger->printAsyncFileLog(bsp_perf::shared::BspLogger::LogLevel::Debug, "{} HelloPerf::HelloPerf()", LOG_TAG);
     }
     HelloPerf(const HelloPerf&) = delete;
     HelloPerf& operator=(const HelloPerf&) = delete;
@@ -53,36 +50,41 @@ public:
     HelloPerf& operator=(HelloPerf&&) = delete;
     ~HelloPerf()
     {
-        // std::cout << LOG_TAG << "HelloPerf::~HelloPerf()" << std::endl;
         m_logger->printStdoutLog(bsp_perf::shared::BspLogger::LogLevel::Debug, "{} HelloPerf::~HelloPerf()", LOG_TAG);
+        m_logger->printFileLog(bsp_perf::shared::BspLogger::LogLevel::Debug, "{} HelloPerf::~HelloPerf()", LOG_TAG);
+        m_logger->printAsyncFileLog(bsp_perf::shared::BspLogger::LogLevel::Debug, "{} HelloPerf::~HelloPerf()", LOG_TAG);
     }
 private:
 
     void onInit() override {
-        // std::cout << LOG_TAG << "HelloPerf::onInit()" << std::endl;
-        // std::cout << LOG_TAG << "name: " << m_name << std::endl;
-        m_logger->printStdoutLog(bsp_perf::shared::BspLogger::LogLevel::Info, "{} HelloPerf::onInit()", LOG_TAG);
+        m_logger->printStdoutLog(bsp_perf::shared::BspLogger::LogLevel::Info, "{} HelloPerf::onInit() name: {}", LOG_TAG, m_name);
+        m_logger->printFileLog(bsp_perf::shared::BspLogger::LogLevel::Info, "{} HelloPerf::onInit() name: {}", LOG_TAG, m_name);
+        m_logger->printAsyncFileLog(bsp_perf::shared::BspLogger::LogLevel::Info, "{} HelloPerf::onInit() name: {}", LOG_TAG, m_name);
 
     }
 
     void onProcess() override {
-        // std::cout << LOG_TAG << "HelloPerf::onProcess()" << std::endl;
         m_logger->printStdoutLog(bsp_perf::shared::BspLogger::LogLevel::Warn, "{} HelloPerf::onProcess()", LOG_TAG);
+        m_logger->printFileLog(bsp_perf::shared::BspLogger::LogLevel::Warn, "{} HelloPerf::onProcess()", LOG_TAG);
+        m_logger->printAsyncFileLog(bsp_perf::shared::BspLogger::LogLevel::Warn, "{} HelloPerf::onProcess()", LOG_TAG);
     }
 
     void onRender() override {
-        // std::cout << LOG_TAG << "HelloPerf::onRender()" << std::endl;
         m_logger->printStdoutLog(bsp_perf::shared::BspLogger::LogLevel::Critical, "{} HelloPerf::onRender()", LOG_TAG);
+        m_logger->printFileLog(bsp_perf::shared::BspLogger::LogLevel::Critical, "{} HelloPerf::onRender()", LOG_TAG);
+        m_logger->printAsyncFileLog(bsp_perf::shared::BspLogger::LogLevel::Critical, "{} HelloPerf::onRender()", LOG_TAG);
     }
 
     void onPerfPrint() override {
-        // std::cout << LOG_TAG << "HelloPerf::onPerfPrint()" << std::endl;
         m_logger->printStdoutLog(bsp_perf::shared::BspLogger::LogLevel::Error, "{} HelloPerf::onPerfPrint()", LOG_TAG);
+        m_logger->printFileLog(bsp_perf::shared::BspLogger::LogLevel::Error, "{} HelloPerf::onPerfPrint()", LOG_TAG);
+        m_logger->printAsyncFileLog(bsp_perf::shared::BspLogger::LogLevel::Error, "{} HelloPerf::onPerfPrint()", LOG_TAG);
     }
 
     void onRelease() override {
-        // std::cout << LOG_TAG << "HelloPerf::onRelease()" << std::endl;
-        m_logger->printStdoutLog(bsp_perf::shared::BspLogger::LogLevel::Debug, "{} HelloPerf::onRelease()", LOG_TAG);
+        m_logger->printStdoutLog(bsp_perf::shared::BspLogger::LogLevel::Info, "{} HelloPerf::onRelease()", LOG_TAG);
+        m_logger->printFileLog(bsp_perf::shared::BspLogger::LogLevel::Info, "{} HelloPerf::onRelease()", LOG_TAG);
+        m_logger->printAsyncFileLog(bsp_perf::shared::BspLogger::LogLevel::Info, "{} HelloPerf::onRelease()", LOG_TAG);
     }
 
 private:
