@@ -47,7 +47,7 @@ target_compile_options(${PROJECT_NAME} PUBLIC
 )
 
 if(PC_SPDLOG_LIBRARIES)
-  target_link_options(${PROJECT_NAME} PRIVATE ${PC_SPDLOG_LDFLAGS})
+  target_link_options(${PROJECT_NAME} PRIVATE ${PC_SPDLOG_LDFLAGS} "-Wl,-rpath,${PC_SPDLOG_LIBRARY_DIRS}")
   # target_link_libraries(${PROJECT_NAME} PUBLIC ${PC_SPDLOG_LIBRARIES})
   target_include_directories(${PROJECT_NAME} PUBLIC ${PC_SPDLOG_INCLUDE_DIRS})
 endif()
