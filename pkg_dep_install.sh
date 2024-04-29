@@ -30,16 +30,19 @@ make -j8 install
 
 # for X86
 
-cmake -DBSP_PKG_CONFIG_PATH=/opt/cross_env/x86/install/lib/pkgconfig ..
+cmake -DBSP_PKG_CONFIG_PATH=/opt/cross_env/x86/install/lib/pkgconfig -DCMAKE_BUILD_TYPE=Debug  ..
 
-cmake -DBSP_PKG_CONFIG_PATH=/build/cross_env/x86/install/lib/pkgconfig ..
+cmake -DBSP_PKG_CONFIG_PATH=/opt/cross_env/x86/install/lib/pkgconfig -DCMAKE_BUILD_TYPE=Release ..
+
 
 make -j8 install
 
 # for rk3588s
 
-cmake -DBSP_PKG_CONFIG_PATH=/opt/cross_env/rk3588s/install/lib/pkgconfig ..
+cmake -DBSP_PKG_CONFIG_PATH=/opt/cross_env/rk3588s/install/lib/pkgconfig -DCMAKE_BUILD_TYPE=Debug ..
+cmake -DBSP_PKG_CONFIG_PATH=/opt/cross_env/rk3588s/install/lib/pkgconfig -DCMAKE_BUILD_TYPE=Release ..
 
 # for rpi
 
-cmake -DBSP_PKG_CONFIG_PATH=/opt/cross_env/rpi/install/lib/pkgconfig ..
+cmake -DBSP_PKG_CONFIG_PATH=/opt/cross_env/rpi/install/lib/pkgconfig -DCMAKE_BUILD_TYPE=Debug ..
+cmake -DBSP_PKG_CONFIG_PATH=/opt/cross_env/rpi/install/lib/pkgconfig -DCMAKE_BUILD_TYPE=Release ..

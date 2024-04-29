@@ -18,15 +18,6 @@ set(SOURCES
 # Add the library target
 add_library(${PROJECT_NAME} SHARED ${SOURCES})
 
-# Set the compile options
-target_compile_options(${PROJECT_NAME} PRIVATE
-    -Wall
-    -Wextra
-    -rdynamic
-    -g
-    # Add more compile options here if needed
-)
-
 target_include_directories(${PROJECT_NAME} PRIVATE
     $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/..>
     $<INSTALL_INTERFACE:include>
@@ -39,18 +30,18 @@ set(${PROJECT_NAME}_PC "${CMAKE_CURRENT_BINARY_DIR}/${PROJECT_NAME}.pc")
 configure_file(${CMAKE_SOURCE_DIR}/cmake/subProject.pc.in ${${PROJECT_NAME}_PC} @ONLY)
 
 # 安装pkgconfig文件
-install(FILES ${${PROJECT_NAME}_PC} DESTINATION lib/${CMAKE_PROJECT_NAME}/pkgconfig)
+install(FILES ${${PROJECT_NAME}_PC} DESTINATION lib/pkgconfig)
 
 string(COMPARE EQUAL ${PROJECT_NAME} ${CMAKE_PROJECT_NAME} is_top_level)
 if(is_top_level)
   message(FATAL_ERROR "This subproject must be built as part of the top-level project.")
 endif()
 
-set_target_properties(${PROJECT_NAME} PROPERTIES INSTALL_RPATH "$ORIGIN/../lib/${CMAKE_PROJECT_NAME}")
+set_target_properties(${PROJECT_NAME} PROPERTIES INSTALL_RPATH "$ORIGIN/../lib")
 
 install(TARGETS ${PROJECT_NAME}
   RUNTIME DESTINATION bin
-  LIBRARY DESTINATION lib/${CMAKE_PROJECT_NAME}
+  LIBRARY DESTINATION lib
 )
 
 

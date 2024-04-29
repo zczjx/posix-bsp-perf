@@ -10,6 +10,16 @@ set(CMAKE_CXX_STANDARD 11)
 
 set(CMAKE_INSTALL_PREFIX "${CMAKE_CURRENT_BINARY_DIR}/install")
 
+# 为不同的构建类型设置编译选项
+if(CMAKE_BUILD_TYPE MATCHES "Debug")
+    # Debug 构建选项
+    set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -rdynamic -g -Wall -Wextra")
+    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -rdynamic -g -Wall -Wextra")
+elseif(CMAKE_BUILD_TYPE MATCHES "Release")
+    # Release 构建选项
+    set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -O2 -Wall -Wextra")
+    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -O2 -Wall -Wextra")
+endif()
 
 # 添加子目录
 add_subdirectory(src)

@@ -18,15 +18,6 @@ set(SOURCES
 # Add the library target
 add_library(${PROJECT_NAME} SHARED ${SOURCES})
 
-# Set the compile options
-target_compile_options(${PROJECT_NAME} PRIVATE
-    -Wall
-    -Wextra
-    -rdynamic
-    -g
-    # Add more compile options here if needed
-)
-
 target_include_directories(${PROJECT_NAME} PRIVATE
     $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/..>
     $<INSTALL_INTERFACE:include>

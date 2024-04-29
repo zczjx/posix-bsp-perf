@@ -37,14 +37,6 @@ set(SOURCES
 
 # Add the library target
 add_library(${PROJECT_NAME} SHARED ${SOURCES})
-# Set the compile options
-target_compile_options(${PROJECT_NAME} PUBLIC
-    -Wall
-    -Wextra
-    -rdynamic
-    -g
-    # Add more compile options here if needed
-)
 
 if(PC_SPDLOG_LIBRARIES)
   target_link_options(${PROJECT_NAME} PRIVATE ${PC_SPDLOG_LDFLAGS} "-Wl,-rpath,${PC_SPDLOG_LIBRARY_DIRS}")
