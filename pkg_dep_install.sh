@@ -16,14 +16,34 @@ sudo apt install package1 package2 package3
 
 echo "Package installation complete."
 
-# build 3rd party packages
+# Docker build 3rd party packages
 
 # build spdlog
-cmake .. -DCMAKE_INSTALL_PREFIX=./install -DSPDLOG_BUILD_BENCH=ON -DSPDLOG_BUILD_SHARED=ON
+
+## for x86
+cmake .. -DCMAKE_INSTALL_PREFIX=/opt/cross_env/x86/install -DSPDLOG_BUILD_BENCH=ON -DSPDLOG_BUILD_SHARED=ON
+
+## for rk3588s
+cmake .. -DCMAKE_INSTALL_PREFIX=/opt/cross_env/rk3588s/install -DSPDLOG_BUILD_BENCH=ON -DSPDLOG_BUILD_SHARED=ON
+
 make -j8 install
 
 # build cpp-tbox
-cmake .. -DCMAKE_INSTALL_PREFIX=./install
+## for x86
+cmake .. -DCMAKE_INSTALL_PREFIX=/opt/cross_env/x86/install
+
+## for rk3588s
+cmake .. -DCMAKE_INSTALL_PREFIX=/opt/cross_env/rk3588s/install
+
+make -j8 install
+
+# build cli11
+
+## for x86
+cmake .. -DCMAKE_INSTALL_PREFIX=/opt/cross_env/x86/install
+## for rk3588s
+cmake .. -DCMAKE_INSTALL_PREFIX=/opt/cross_env/rk3588s/install
+
 make -j8 install
 
 # build posix-bsp-perf
