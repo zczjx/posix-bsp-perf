@@ -40,19 +40,33 @@ public:
     virtual ~ArgParser() = default;
     ArgParser(const ArgParser&) = delete;
     ArgParser& operator=(const ArgParser&) = delete;
-    ArgParser(ArgParser&&) = delete;
-    ArgParser& operator=(ArgParser&&) = delete;
+    ArgParser(ArgParser&&) = default;
+    ArgParser& operator=(ArgParser&&) = default;
+
+    void addOption(const std::string& name, const std::string& description = "")
+    {
+        parser->add_option(name, description);
+    }
 
     template <typename T>
-    void addOption(const std::string& name, T defaultVal, const std::string& description = "")
+    void getOptionVal(const std::string& option_name, T& ret)
     {
-        parser->add_option(name, defaultVal, description);
+        CLI::Option *opt = parser->get_option(option_name);
+        if (opt)
+        {
+            ret = opt->as<T>();
+        }
     }
 
     template <typename T>
     void addFlag(const std::string& name, T defaultVal, const std::string& description = "")
     {
         parser->add_flag(name, defaultVal, description);
+    }
+
+    bool getFlagVal(const std::string& flag_name)
+    {
+        return parser->get_option(flag_name)->as<bool>();
     }
 
     void parseArgs(int argc, char* argv[])

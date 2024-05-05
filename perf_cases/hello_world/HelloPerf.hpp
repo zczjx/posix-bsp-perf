@@ -62,7 +62,14 @@ public:
 private:
 
     void onInit() override {
-        m_logger->printStdoutLog(bsp_perf::shared::BspLogger::LogLevel::Info, "{} HelloPerf::onInit() name: {}", LOG_TAG, m_name);
+        auto& params = getArgs();
+        std::string ret;
+        params.getOptionVal("--append", ret);
+        m_logger->printStdoutLog(bsp_perf::shared::BspLogger::LogLevel::Info, "{} HelloPerf::onInit() append: {}", LOG_TAG, ret);
+        int val;
+        params.getOptionVal("--append", val);
+        m_logger->printStdoutLog(bsp_perf::shared::BspLogger::LogLevel::Info, "{} HelloPerf::onInit() val: {}", LOG_TAG, val);
+        std::cout << LOG_TAG << "val: " << val << std::endl;
         m_logger->printFileLog(bsp_perf::shared::BspLogger::LogLevel::Info, "{} HelloPerf::onInit() name: {}", LOG_TAG, m_name);
         m_logger->printAsyncFileLog(bsp_perf::shared::BspLogger::LogLevel::Info, "{} HelloPerf::onInit() name: {}", LOG_TAG, m_name);
 

@@ -47,7 +47,7 @@ public:
     virtual void run();
 
 protected:
-    const bsp_perf::shared::ArgParser& getArgs() const { return m_args; } // 添加成员函数 getArgs()
+    bsp_perf::shared::ArgParser& getArgs() { return m_args; } // 添加成员函数 getArgs()
 
 private:
     virtual void onInit() = 0; // 添加纯虚函数 onInit()
@@ -57,7 +57,7 @@ private:
     virtual void onRelease() = 0; // 添加纯虚函数 onRelease()
 
 private:
-    bsp_perf::shared::ArgParser& m_args; // 添加成员变量 m_args
+    bsp_perf::shared::ArgParser m_args; // 添加成员变量 m_args
 
 };
 
