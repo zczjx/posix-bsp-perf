@@ -28,6 +28,7 @@ SOFTWARE.
 
 #include <string>
 #include <iostream>
+#include <shared/ArgParser.hpp>
 
 namespace bsp_perf {
 namespace common {
@@ -36,7 +37,7 @@ class BasePerfCase {
 public:
 
     static constexpr char LOG_TAG[] {"[BasePerfCase]: "};
-    BasePerfCase(); // 添加构造函数
+    BasePerfCase(bsp_perf::shared::ArgParser&& args); // 添加构造函数
     BasePerfCase(const BasePerfCase&) = delete; // 删除拷贝构造函数
     BasePerfCase& operator=(const BasePerfCase&) = delete; // 删除拷贝赋值运算符
     BasePerfCase(BasePerfCase&&) = delete; // 删除移动构造函数
@@ -45,12 +46,18 @@ public:
 
     virtual void run();
 
+protected:
+    const bsp_perf::shared::ArgParser& getArgs() const { return m_args; } // 添加成员函数 getArgs()
+
 private:
     virtual void onInit() = 0; // 添加纯虚函数 onInit()
     virtual void onProcess() = 0; // 添加纯虚函数 onProcess()
     virtual void onRender() = 0; // 添加纯虚函数 onRender()
     virtual void onPerfPrint() = 0; // 添加纯虚函数 onPerfPrint()
     virtual void onRelease() = 0; // 添加纯虚函数 onRelease()
+
+private:
+    bsp_perf::shared::ArgParser& m_args; // 添加成员变量 m_args
 
 };
 

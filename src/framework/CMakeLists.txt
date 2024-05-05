@@ -6,7 +6,7 @@ project(case_framework VERSION 0.0.1 LANGUAGES CXX)
 
 # Set the language version
 set(CMAKE_C_STANDARD 99)
-set(CMAKE_CXX_STANDARD 11)
+set(CMAKE_CXX_STANDARD 14)
 
 # Add the source files
 set(SOURCES
@@ -17,6 +17,8 @@ set(SOURCES
 
 # Add the library target
 add_library(${PROJECT_NAME} SHARED ${SOURCES})
+
+target_link_libraries(${PROJECT_NAME} PRIVATE bsp_shared)
 
 target_include_directories(${PROJECT_NAME} PRIVATE
     $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/..>

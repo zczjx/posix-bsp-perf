@@ -7,7 +7,7 @@ namespace common {
 
 constexpr char BasePerfCase::LOG_TAG[];
 
-BasePerfCase::BasePerfCase()
+BasePerfCase::BasePerfCase(bsp_perf::shared::ArgParser&& args): m_args{args}
 {
     std::cout << LOG_TAG << "::BasePerfCase()" << std::endl;
 }

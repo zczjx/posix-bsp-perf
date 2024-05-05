@@ -28,6 +28,9 @@ SOFTWARE.
 
 #include <framework/BasePerfCase.hpp>
 #include <shared/BspLogger.hpp>
+#include <shared/ArgParser.hpp>
+#include <memory>
+#include <string>
 #include <iostream>
 
 namespace bsp_perf {
@@ -38,7 +41,9 @@ class HelloPerf : public bsp_perf::common::BasePerfCase
 public:
     static constexpr char LOG_TAG[] {"[HelloPerf]: "};
 
-    HelloPerf(): BasePerfCase(), m_logger(std::make_shared<bsp_perf::shared::BspLogger>())
+    HelloPerf(bsp_perf::shared::ArgParser&& args):
+        BasePerfCase(std::move(args)),
+        m_logger(std::make_shared<bsp_perf::shared::BspLogger>())
     {
         m_logger->printStdoutLog(bsp_perf::shared::BspLogger::LogLevel::Debug, "{} HelloPerf::HelloPerf()", LOG_TAG);
         m_logger->printFileLog(bsp_perf::shared::BspLogger::LogLevel::Debug, "{} HelloPerf::HelloPerf()", LOG_TAG);
