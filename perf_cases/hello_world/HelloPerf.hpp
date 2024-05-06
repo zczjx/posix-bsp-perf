@@ -66,17 +66,15 @@ private:
         std::string ret;
         params.getOptionVal("--append", ret);
         m_logger->printStdoutLog(bsp_perf::shared::BspLogger::LogLevel::Info, "{} HelloPerf::onInit() append: {}", LOG_TAG, ret);
-        int val;
-        params.getOptionVal("--append", val);
-        m_logger->printStdoutLog(bsp_perf::shared::BspLogger::LogLevel::Info, "{} HelloPerf::onInit() val: {}", LOG_TAG, val);
-        std::cout << LOG_TAG << "val: " << val << std::endl;
         m_logger->printFileLog(bsp_perf::shared::BspLogger::LogLevel::Info, "{} HelloPerf::onInit() name: {}", LOG_TAG, m_name);
         m_logger->printAsyncFileLog(bsp_perf::shared::BspLogger::LogLevel::Info, "{} HelloPerf::onInit() name: {}", LOG_TAG, m_name);
 
     }
 
     void onProcess() override {
-        m_logger->printStdoutLog(bsp_perf::shared::BspLogger::LogLevel::Warn, "{} HelloPerf::onProcess()", LOG_TAG);
+        bool ret;
+        ret = getArgs().getFlagVal("--enable");
+        m_logger->printStdoutLog(bsp_perf::shared::BspLogger::LogLevel::Warn, "{} HelloPerf::onProcess() ret: {}", LOG_TAG, ret);
         m_logger->printFileLog(bsp_perf::shared::BspLogger::LogLevel::Warn, "{} HelloPerf::onProcess()", LOG_TAG);
         m_logger->printAsyncFileLog(bsp_perf::shared::BspLogger::LogLevel::Warn, "{} HelloPerf::onProcess()", LOG_TAG);
     }

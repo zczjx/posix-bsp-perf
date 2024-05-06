@@ -43,9 +43,14 @@ public:
     ArgParser(ArgParser&&) = default;
     ArgParser& operator=(ArgParser&&) = default;
 
-    void addOption(const std::string& name, const std::string& description = "")
+    template <typename T>
+    void addOption(const std::string& name, const T defaultVal, const std::string& description = "")
     {
-        parser->add_option(name, description);
+        CLI::Option *opt = parser->add_option(name, description);
+        if (opt)
+        {
+            opt->default_val(defaultVal);
+        }
     }
 
     template <typename T>
@@ -58,10 +63,13 @@ public:
         }
     }
 
-    template <typename T>
-    void addFlag(const std::string& name, T defaultVal, const std::string& description = "")
+    void addFlag(const std::string& flag_name, const bool defaultVal, const std::string& description = "")
     {
-        parser->add_flag(name, defaultVal, description);
+        CLI::Option *flag = parser->add_flag(flag_name, description);
+        if (flag)
+        {
+            flag->default_val(defaultVal);
+        }
     }
 
     bool getFlagVal(const std::string& flag_name)

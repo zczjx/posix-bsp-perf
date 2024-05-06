@@ -6,7 +6,7 @@ project(bsp_shared VERSION 0.0.1 LANGUAGES CXX)
 
 # Set the language version
 set(CMAKE_C_STANDARD 99)
-set(CMAKE_CXX_STANDARD 11)
+set(CMAKE_CXX_STANDARD 14)
 
 
 message(STATUS "CMAKE_MODULE_PATH: ${CMAKE_MODULE_PATH}")
@@ -15,10 +15,12 @@ message(STATUS "CMAKE_MODULE_PATH: ${CMAKE_MODULE_PATH}")
 if(DEFINED BSP_PKG_CONFIG_PATH)
     # 设置环境变量 PKG_CONFIG_PATH
     set(ENV{PKG_CONFIG_PATH} ${BSP_PKG_CONFIG_PATH})
+    message(STATUS "ENV{PKG_CONFIG_PATH}: $ENV{PKG_CONFIG_PATH}")
 endif()
 
 find_package(PkgConfig REQUIRED)
 pkg_check_modules(PC_SPDLOG REQUIRED spdlog)
+pkg_check_modules(PC_CLI11 REQUIRED CLI11)
 
 
 
@@ -28,8 +30,15 @@ message(STATUS "PC_SPDLOG_LDFLAGS: ${PC_SPDLOG_LDFLAGS}")
 message(STATUS "PC_SPDLOG_CFLAGS: ${PC_SPDLOG_CFLAGS}")
 message(STATUS "PC_SPDLOG_LIBRARIES: ${PC_SPDLOG_LIBRARIES}")
 
+message(STATUS "PC_CLI11_LIBRARY_DIRS: ${PC_CLI11_LIBRARY_DIRS}")
+message(STATUS "PC_CLI11_INCLUDE_DIRS: ${PC_CLI11_INCLUDE_DIRS}")
+message(STATUS "PC_CLI11_LDFLAGS: ${PC_CLI11_LDFLAGS}")
+message(STATUS "PC_CLI11_CFLAGS: ${PC_CLI11_CFLAGS}")
+message(STATUS "PC_CLI11_LIBRARIES: ${PC_CLI11_LIBRARIES}")
+
 # Add the source files
 set(SOURCES
+  ArgParser.hpp
   BspLogger.hpp
   BspLogger.cpp
     # Add more source files here if needed
@@ -42,6 +51,10 @@ if(PC_SPDLOG_LIBRARIES)
   target_link_options(${PROJECT_NAME} PRIVATE ${PC_SPDLOG_LDFLAGS} "-Wl,-rpath,${PC_SPDLOG_LIBRARY_DIRS}")
   # target_link_libraries(${PROJECT_NAME} PUBLIC ${PC_SPDLOG_LIBRARIES})
   target_include_directories(${PROJECT_NAME} PUBLIC ${PC_SPDLOG_INCLUDE_DIRS})
+endif()
+
+if(PC_CLI11_CFLAGS)
+  target_include_directories(${PROJECT_NAME} PUBLIC ${PC_CLI11_INCLUDE_DIRS})
 endif()
 
 target_include_directories(${PROJECT_NAME} PRIVATE
