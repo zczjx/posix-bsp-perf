@@ -77,9 +77,16 @@ public:
         return parser->get_option(flag_name)->as<bool>();
     }
 
-    void parseArgs(int argc, char* argv[])
+    void parseArgs(int argc, char* argv[]) noexcept
     {
-        parser->parse(argc, argv);
+        try
+        {
+            parser->parse(argc, argv);
+        }
+        catch (const CLI::ExtrasError& e)
+        {
+            std::cerr << "Exception caught: " << e.what() << std::endl;
+        }
     }
 
 
