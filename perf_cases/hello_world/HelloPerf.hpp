@@ -73,7 +73,8 @@ private:
 
     void onProcess() override {
         bool ret;
-        ret = getArgs().getFlagVal("--enable");
+        auto& params = getArgs();
+        ret = params.getFlagVal("--enable");
         m_logger->printStdoutLog(bsp_perf::shared::BspLogger::LogLevel::Warn, "{} HelloPerf::onProcess() ret: {}", LOG_TAG, ret);
         m_logger->printFileLog(bsp_perf::shared::BspLogger::LogLevel::Warn, "{} HelloPerf::onProcess()", LOG_TAG);
         m_logger->printAsyncFileLog(bsp_perf::shared::BspLogger::LogLevel::Warn, "{} HelloPerf::onProcess()", LOG_TAG);

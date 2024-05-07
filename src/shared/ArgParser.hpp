@@ -35,8 +35,7 @@ namespace shared {
 
 class ArgParser {
 public:
-    ArgParser(const std::string& description = ""):
-        parser(std::make_unique<CLI::App>(description)) {}
+    ArgParser(const std::string& description = ""): parser {std::make_unique<CLI::App>(description)} {}
     virtual ~ArgParser() = default;
     ArgParser(const ArgParser&) = delete;
     ArgParser& operator=(const ArgParser&) = delete;
