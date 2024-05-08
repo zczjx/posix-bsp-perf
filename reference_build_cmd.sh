@@ -1,54 +1,35 @@
 #!/bin/bash
 
-# Install gstreamer
-sudo apt install gstreamer
-
-# Install perf
-sudo apt install perf
-
-# Install bpf
-sudo apt install bpf
-
-# Install other third-party packages
-sudo apt install package1 package2 package3
-
-# Add any additional packages you want to install here
-
-echo "Package installation complete."
-
-# Docker build 3rd party packages
-
 # build spdlog
-
-## for x86
+    ## for x86
 cmake .. -DCMAKE_INSTALL_PREFIX=/opt/cross_env/x86/install -DSPDLOG_BUILD_BENCH=ON -DSPDLOG_BUILD_SHARED=ON
 
-## for rk3588s
+    ## for rk3588s
 cmake .. -DCMAKE_INSTALL_PREFIX=/opt/cross_env/rk3588s/install -DSPDLOG_BUILD_BENCH=ON -DSPDLOG_BUILD_SHARED=ON
 
 make -j8 install
 
 # build cpp-tbox
-## for x86
+    ## for x86
 cmake .. -DCMAKE_INSTALL_PREFIX=/opt/cross_env/x86/install
 
-## for rk3588s
+    ## for rk3588s
 cmake .. -DCMAKE_INSTALL_PREFIX=/opt/cross_env/rk3588s/install
 
 make -j8 install
 
 # build cli11
 
-## for x86
+    ## for x86
 cmake .. -DCMAKE_INSTALL_PREFIX=/opt/cross_env/x86/install
-## for rk3588s
+    ## for rk3588s
 cmake .. -DCMAKE_INSTALL_PREFIX=/opt/cross_env/rk3588s/install
 
 make -j8 install
 
-# build posix-bsp-perf
+# build posix-bsp-perf in docker container
 
-# for X86
+    ## for X86
 
 cmake .. -DBSP_PKG_CONFIG_PATH=/opt/cross_env/x86/install/lib/pkgconfig:/opt/cross_env/x86/install/share/pkgconfig -DCMAKE_BUILD_TYPE=Debug
 
@@ -57,12 +38,12 @@ cmake .. -DBSP_PKG_CONFIG_PATH=/opt/cross_env/x86/install/lib/pkgconfig:/opt/cro
 
 make -j8 install
 
-# for rk3588s
+    ## for rk3588s
 
 cmake .. -DBSP_PKG_CONFIG_PATH=/opt/cross_env/rk3588s/install/lib/pkgconfig:/opt/cross_env/rk3588s/install/share/pkgconfig -DCMAKE_BUILD_TYPE=Debug
 cmake .. -DBSP_PKG_CONFIG_PATH=/opt/cross_env/rk3588s/install/lib/pkgconfig:/opt/cross_env/rk3588s/install/share/pkgconfig -DCMAKE_BUILD_TYPE=Release
 
-# for rpi
+    ## for rpi
 
 cmake .. -DBSP_PKG_CONFIG_PATH=/opt/cross_env/rpi/install/lib/pkgconfig:/opt/cross_env/rpi/install/share/pkgconfig -DCMAKE_BUILD_TYPE=Debug
 cmake .. -DBSP_PKG_CONFIG_PATH=/opt/cross_env/rpi/install/lib/pkgconfig:/opt/cross_env/rpi/install/share/pkgconfig -DCMAKE_BUILD_TYPE=Release

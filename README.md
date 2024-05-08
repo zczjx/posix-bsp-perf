@@ -13,3 +13,7 @@ please reference the cmd in [get_build_env_docker.sh](./get_build_env_docker.sh)
 
 please reference the cmd in [local_env_pkgs_intall.sh](./local_env_pkgs_intall.sh) to install the packages to setup
 the local native build env if required(or you don't like to use docker)
+
+## Reference Build cmd
+
+please reference the cmd in [reference_build_cmd.sh ](./reference_build_cmd.sh ) to get the reference build cmd
