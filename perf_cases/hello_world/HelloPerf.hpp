@@ -43,7 +43,7 @@ public:
 
     HelloPerf(bsp_perf::shared::ArgParser&& args):
         BasePerfCase(std::move(args)),
-        m_logger(std::make_shared<bsp_perf::shared::BspLogger>())
+        m_logger {std::make_unique<bsp_perf::shared::BspLogger>()}
     {
         m_logger->printStdoutLog(bsp_perf::shared::BspLogger::LogLevel::Debug, "{} HelloPerf::HelloPerf()", LOG_TAG);
         m_logger->printFileLog(bsp_perf::shared::BspLogger::LogLevel::Debug, "{} HelloPerf::HelloPerf()", LOG_TAG);
@@ -100,7 +100,7 @@ private:
 
 private:
     std::string m_name {"HelloPerf"};
-    std::shared_ptr<bsp_perf::shared::BspLogger> m_logger;
+    std::unique_ptr<bsp_perf::shared::BspLogger> m_logger;
 };
 } // namespace perf_cases
 } // namespace bsp_perf
