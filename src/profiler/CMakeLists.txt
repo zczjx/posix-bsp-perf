@@ -2,7 +2,7 @@
 cmake_minimum_required(VERSION 3.12)
 
 # Set the project name
-project(case_framework VERSION 0.0.1 LANGUAGES CXX)
+project(bsp_profiler VERSION 0.0.1 LANGUAGES CXX)
 
 # Set the language version
 set(CMAKE_C_STANDARD 99)
@@ -10,8 +10,8 @@ set(CMAKE_CXX_STANDARD 14)
 
 # Add the source files
 set(SOURCES
-    BasePerfCase.hpp
-    BasePerfCase.cpp
+  PerfProfiler.hpp
+  PerfProfiler.cpp
     # Add more source files here if needed
 )
 
