@@ -5,8 +5,8 @@ cmake_minimum_required(VERSION 3.12)
 project(case_framework VERSION 0.0.1 LANGUAGES CXX)
 
 # Set the language version
-set(CMAKE_C_STANDARD 99)
-set(CMAKE_CXX_STANDARD 14)
+set(CMAKE_C_STANDARD 11)
+set(CMAKE_CXX_STANDARD 17)
 
 # Add the source files
 set(SOURCES

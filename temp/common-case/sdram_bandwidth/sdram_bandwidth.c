@@ -43,7 +43,7 @@ int main(int argc, char *argv[])
 	printf("------------SDRAM read bandwidth test--------- \n");
 	gettimeofday(&time1, NULL);
 	fd_task = perf_task_clk_open_start();
-	
+
 	for(i = 0; i < rw_cnt; i++)
 	{
 		sum += test_arr[i];

@@ -9,6 +9,7 @@ namespace bsp_perf {
 namespace common {
 
 using time_point_t = std::chrono::steady_clock::time_point;
+constexpr int32_t memValueMB(size_t size) { return (size << 20); }
 
 
 class PerfProfiler {
@@ -25,16 +26,23 @@ public:
 
     std::string& getCaseName() { return m_caseName; }
 
-    time_point_t getCurrentTimePoint()
+    template<typename T>
+    void asyncRecordPerfData(const std::string& metricName, T val, const std::string& unitName)
     {
-       return std::chrono::steady_clock::now();
+        m_logger->printAsyncFileLog(bsp_perf::shared::BspLogger::LogLevel::Warn,
+            "{}:{}:{}:{}", m_caseName, metricName, val, unitName);
     }
 
     template<typename T>
     void printPerfData(const std::string& metricName, T val, const std::string& unitName)
     {
-        m_logger->printAsyncFileLog(bsp_perf::shared::BspLogger::LogLevel::Warn,
+        m_logger->printStdoutLog(bsp_perf::shared::BspLogger::LogLevel::Warn,
             "{}:{}:{}:{}", m_caseName, metricName, val, unitName);
+    }
+
+    time_point_t getCurrentTimePoint()
+    {
+       return std::chrono::steady_clock::now();
     }
 
     time_t getLatencyUs(time_point_t& start, time_point_t& end)

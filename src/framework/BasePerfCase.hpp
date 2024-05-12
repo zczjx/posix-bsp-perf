@@ -53,7 +53,6 @@ private:
     virtual void onInit() = 0; // 添加纯虚函数 onInit()
     virtual void onProcess() = 0; // 添加纯虚函数 onProcess()
     virtual void onRender() = 0; // 添加纯虚函数 onRender()
-    virtual void onPerfPrint() = 0; // 添加纯虚函数 onPerfPrint()
     virtual void onRelease() = 0; // 添加纯虚函数 onRelease()
 
 private:

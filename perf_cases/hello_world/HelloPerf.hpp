@@ -86,12 +86,6 @@ private:
         m_logger->printAsyncFileLog(bsp_perf::shared::BspLogger::LogLevel::Critical, "{} HelloPerf::onRender()", LOG_TAG);
     }
 
-    void onPerfPrint() override {
-        m_logger->printStdoutLog(bsp_perf::shared::BspLogger::LogLevel::Error, "{} HelloPerf::onPerfPrint()", LOG_TAG);
-        m_logger->printFileLog(bsp_perf::shared::BspLogger::LogLevel::Error, "{} HelloPerf::onPerfPrint()", LOG_TAG);
-        m_logger->printAsyncFileLog(bsp_perf::shared::BspLogger::LogLevel::Error, "{} HelloPerf::onPerfPrint()", LOG_TAG);
-    }
-
     void onRelease() override {
         m_logger->printStdoutLog(bsp_perf::shared::BspLogger::LogLevel::Info, "{} HelloPerf::onRelease()", LOG_TAG);
         m_logger->printFileLog(bsp_perf::shared::BspLogger::LogLevel::Info, "{} HelloPerf::onRelease()", LOG_TAG);

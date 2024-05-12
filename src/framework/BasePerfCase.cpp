@@ -17,7 +17,6 @@ void BasePerfCase::run()
     std::cout << LOG_TAG << "BasePerfCase::run()" << std::endl;
     onInit();
     onProcess();
-    onPerfPrint();
     onRender();
     onRelease();
 }
