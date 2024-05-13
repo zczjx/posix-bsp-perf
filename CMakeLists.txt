@@ -19,6 +19,10 @@ elseif(CMAKE_BUILD_TYPE MATCHES "Release")
     # Release 构建选项
     set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -O2 -Wall -Wextra")
     set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -O2 -Wall -Wextra")
+elseif(CMAKE_BUILD_TYPE MATCHES "NoOptimize")
+    # Release 构建选项
+    set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -O0 -Wall -Wextra -fPIC")
+    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -O0 -Wall -Wextra -fPIC")
 endif()
 
 # 添加子目录
