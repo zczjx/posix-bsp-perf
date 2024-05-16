@@ -12,12 +12,16 @@ BasePerfCase::BasePerfCase(bsp_perf::shared::ArgParser&& args): m_args{std::move
     std::cout << LOG_TAG << "::BasePerfCase()" << std::endl;
 }
 
-void BasePerfCase::run()
+void BasePerfCase::run(int32_t cycles)
 {
     std::cout << LOG_TAG << "BasePerfCase::run()" << std::endl;
     onInit();
-    onProcess();
-    onRender();
+    while(cycles-- > 0)
+    {
+        onProcess();
+        onRender();
+    }
+
     onRelease();
 }
 

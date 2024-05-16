@@ -13,7 +13,7 @@ int main(int argc, char* argv[])
     parser.parseArgs(argc, argv);
 
     HelloPerf hello(std::move(parser));
-    hello.run();
+    hello.run(1);
 
     return 0;
 }

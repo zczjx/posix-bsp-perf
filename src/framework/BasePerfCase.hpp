@@ -44,7 +44,7 @@ public:
     BasePerfCase& operator=(BasePerfCase&&) = delete; // 删除移动赋值运算符
     virtual ~BasePerfCase() = default; // 设置析构函数为虚函数
 
-    virtual void run();
+    virtual void run(int32_t cycles = 1) final;
 
 protected:
     bsp_perf::shared::ArgParser& getArgs() { return m_args; } // 添加成员函数 getArgs()

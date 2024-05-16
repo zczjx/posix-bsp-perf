@@ -73,36 +73,62 @@ private:
         size_t mem_size;
         params.getOptionVal("--size_mb", mem_size);
         m_bytes_cnt = bsp_perf::common::memValueMB(mem_size);
-        m_test_arr.reset(new std::byte[m_bytes_cnt]);
+        m_test_arr.reset(new uint32_t[m_bytes_cnt / sizeof(uint32_t)]);
+        m_rw_cnt = m_bytes_cnt / sizeof(uint32_t);
         srand(time(0));
-        for(size_t i = 0; i < m_bytes_cnt; i++)
+        for(size_t i = 0; i < m_rw_cnt; i++)
         {
-            m_test_arr[i] = static_cast<std::byte>(rand() % 256);
+            m_test_arr[i] = rand();
         }
 
     }
 
     void onProcess() override
     {
-        auto begin = m_profiler->getCurrentTimePoint();
-        doWritingPerf();
-        auto end = m_profiler->getCurrentTimePoint();
-        auto write_latency = m_profiler->getLatencyUs(begin, end);
-        m_write_bw_mb = getDDRBandwidthMB(write_latency);
-        m_profiler->asyncRecordPerfData("Writing BandWidth", m_write_bw_mb, "MB/s");
+        {
+            auto begin = m_profiler->getCurrentTimePoint();
+            rawPtrWritingPerf(m_test_arr.get(), m_rw_cnt);
+            auto end = m_profiler->getCurrentTimePoint();
+            auto raw_ptr_write_latency = m_profiler->getLatencyUs(begin, end);
+            m_raw_write_bw_mb = getDDRBandwidthMB(raw_ptr_write_latency);
+            m_profiler->asyncRecordPerfData("Raw PTR Writing BandWidth", m_raw_write_bw_mb, "MB/s");
+        }
 
-        begin = m_profiler->getCurrentTimePoint();
-        doReadingPerf();
-        end = m_profiler->getCurrentTimePoint();
-        auto read_latency = m_profiler->getLatencyUs(begin, end);
-        m_read_bw_mb = getDDRBandwidthMB(read_latency);
-        m_profiler->asyncRecordPerfData("Reading BandWidth", m_write_bw_mb, "MB/s");
+        {
+            auto begin = m_profiler->getCurrentTimePoint();
+            smartPtrWritingPerf(m_test_arr, m_rw_cnt);
+            auto end = m_profiler->getCurrentTimePoint();
+            auto smart_ptr_write_latency = m_profiler->getLatencyUs(begin, end);
+            m_smart_write_bw_mb = getDDRBandwidthMB(smart_ptr_write_latency);
+            m_profiler->asyncRecordPerfData("Smart PTR Writing BandWidth", m_smart_write_bw_mb, "MB/s");
+        }
+
+        {
+            auto begin = m_profiler->getCurrentTimePoint();
+            rawPtrReadingPerf(m_test_arr.get(), m_rw_cnt);
+            auto end = m_profiler->getCurrentTimePoint();
+            auto raw_ptr_read_latency = m_profiler->getLatencyUs(begin, end);
+            m_raw_read_bw_mb = getDDRBandwidthMB(raw_ptr_read_latency);
+            m_profiler->asyncRecordPerfData("Raw PTR Reading BandWidth", m_raw_read_bw_mb, "MB/s");
+        }
+
+        {
+            auto begin = m_profiler->getCurrentTimePoint();
+            smartPtrWritingPerf(m_test_arr, m_rw_cnt);
+            auto end = m_profiler->getCurrentTimePoint();
+            auto smart_ptr_read_latency = m_profiler->getLatencyUs(begin, end);
+            m_smart_read_bw_mb = getDDRBandwidthMB(smart_ptr_read_latency);
+            m_profiler->asyncRecordPerfData("Smart PTR Reading BandWidth", m_smart_read_bw_mb, "MB/s");
+        }
+
     }
 
     void onRender() override
     {
-        m_profiler->printPerfData("Writing BandWidth", m_write_bw_mb, "MB/s");
-        m_profiler->printPerfData("Reading BandWidth", m_read_bw_mb, "MB/s");
+        m_profiler->printPerfData("Raw PTR Writing BandWidth", m_raw_write_bw_mb, "MB/s");
+        m_profiler->printPerfData("Smart PTR Writing BandWidth", m_smart_write_bw_mb, "MB/s");
+        m_profiler->printPerfData("Raw PTR Reading BandWidth", m_raw_read_bw_mb, "MB/s");
+        m_profiler->printPerfData("Smart PTR Reading BandWidth", m_smart_read_bw_mb, "MB/s");
     }
 
     void onRelease() override
@@ -110,20 +136,37 @@ private:
         m_test_arr.reset();
     }
 
-    inline void doWritingPerf()
+    inline void rawPtrWritingPerf(uint32_t* ptr, size_t cnt = 0)
     {
-        for(size_t i = 0; i < m_bytes_cnt; i++)
+        for(size_t i = 0; i < cnt; i++)
         {
-            m_test_arr[i] = std::byte(0x55);
+            ptr[i] = 0x55;
         }
     }
 
-    inline void doReadingPerf()
+    inline void smartPtrWritingPerf(std::unique_ptr<uint32_t[]>& ptr, size_t cnt = 0)
+    {
+        for(size_t i = 0; i < cnt; i++)
+        {
+            ptr[i] = 0xaa;
+        }
+    }
+
+    inline void rawPtrReadingPerf(uint32_t* ptr, size_t cnt = 0)
     {
         size_t sum = 0;
-        for(size_t i = 0; i < m_bytes_cnt; i++)
+        for(size_t i = 0; i < cnt; i++)
         {
-            sum += static_cast<uint8_t>(m_test_arr[i]);
+            sum += ptr[i];
+        }
+    }
+
+    inline void smartPtrReadingPerf(std::unique_ptr<uint32_t[]>& ptr, size_t cnt = 0)
+    {
+        size_t sum = 0;
+        for(size_t i = 0; i < cnt; i++)
+        {
+            sum += ptr[i];
         }
     }
 
@@ -144,13 +187,15 @@ private:
     }
 
 private:
-    std::string m_name {"ddrPerf"};
     std::unique_ptr<bsp_perf::common::PerfProfiler> m_profiler{nullptr};
-    std::unique_ptr<std::byte[]> m_test_arr{nullptr};
+    std::unique_ptr<uint32_t[]> m_test_arr{nullptr};
     size_t m_bytes_cnt{0};
+    size_t m_rw_cnt{0};
 
-    float m_write_bw_mb{0.0};
-    float m_read_bw_mb{0.0};
+    float m_smart_write_bw_mb{0.0};
+    float m_raw_write_bw_mb{0.0};
+    float m_smart_read_bw_mb{0.0};
+    float m_raw_read_bw_mb{0.0};
 };
 
 } // namespace perf_cases

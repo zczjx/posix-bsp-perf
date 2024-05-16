@@ -48,7 +48,6 @@ public:
     time_t getLatencyUs(time_point_t& start, time_point_t& end)
     {
         return std::chrono::duration_cast<std::chrono::microseconds>(end - start).count();
-
     }
 
 private:
