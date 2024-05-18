@@ -9,13 +9,15 @@ namespace bsp_perf {
 namespace common {
 
 using time_point_t = std::chrono::steady_clock::time_point;
+using namespace std::string_literals;
+
 constexpr int32_t memValueMB(size_t size) { return (size << 20); }
 
 
 class PerfProfiler {
 public:
     static constexpr char LOG_TAG[] {"[PerfProfiler]: "};
-    PerfProfiler(std::string& caseName);
+    PerfProfiler(std::string& caseName, const std::string& profile_file_path = "logs/perf_case.profile"s);
     ~PerfProfiler() = default;
 
     PerfProfiler(const PerfProfiler&) = delete;

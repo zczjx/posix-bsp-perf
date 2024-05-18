@@ -53,7 +53,9 @@ public:
         auto& params = getArgs();
         std::string ret;
         params.getOptionVal("--case_name", ret);
-        m_profiler = std::make_unique<bsp_perf::common::PerfProfiler>(ret);
+        std::string file_path;
+        params.getOptionVal("--profile_path", file_path);
+        m_profiler = std::make_unique<bsp_perf::common::PerfProfiler>(ret, file_path);
 
     }
     ddrPerf(const ddrPerf&) = delete;

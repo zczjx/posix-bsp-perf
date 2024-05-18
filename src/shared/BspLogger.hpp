@@ -36,10 +36,11 @@ namespace bsp_perf {
 namespace shared {
 
 using string_view_t = spdlog::string_view_t;
+using namespace std::string_literals;
 
 class BspLogger {
 public:
-    BspLogger();
+    BspLogger(const std::string& log_file_path = "logs/bsp_perf.log"s, const std::string& async_log_file_path = "logs/bsp_perf_async.log"s);
     virtual ~BspLogger();
 
     enum class LogLevel {
@@ -53,6 +54,12 @@ public:
     BspLogger(BspLogger&&) = delete;
     BspLogger& operator=(const BspLogger&) = delete;
     BspLogger& operator=(BspLogger&&) = delete;
+
+    void setPattern(const std::string& pattern = "[%H:%M:%S.%f][%^%l%$] %v"s)
+    {
+        // Set the pattern for the loggers
+        spdlog::set_pattern(pattern);
+    }
 
     template<typename... Args>
     void printStdoutLog(LogLevel level, string_view_t fmt, const Args &... args)

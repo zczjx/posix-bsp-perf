@@ -6,10 +6,10 @@
 namespace bsp_perf {
 namespace shared {
 
-    BspLogger::BspLogger():
-        m_stdout_logger {spdlog::stdout_color_mt("console")},
-        m_file_logger {spdlog::basic_logger_mt("file_logger", "logs/bsp_perf.log")},
-        m_async_file_logger {spdlog::basic_logger_mt<spdlog::async_factory>("async_file_logger", "logs/bsp_perf_async.log")}
+    BspLogger::BspLogger(const std::string& log_file_path, const std::string& async_log_file_path):
+        m_stdout_logger {spdlog::stdout_color_mt("stdio")},
+        m_file_logger {spdlog::basic_logger_mt("logger", log_file_path)},
+        m_async_file_logger {spdlog::basic_logger_mt<spdlog::async_factory>("async_logger", async_log_file_path)}
     {
         // Initialize the logger here
         m_stdout_logger->set_level(spdlog::level::debug);

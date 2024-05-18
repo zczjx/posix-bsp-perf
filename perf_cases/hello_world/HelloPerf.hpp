@@ -45,6 +45,7 @@ public:
         BasePerfCase(std::move(args)),
         m_logger {std::make_unique<bsp_perf::shared::BspLogger>()}
     {
+        m_logger->setPattern();
         m_logger->printStdoutLog(bsp_perf::shared::BspLogger::LogLevel::Debug, "{} HelloPerf::HelloPerf()", LOG_TAG);
         m_logger->printFileLog(bsp_perf::shared::BspLogger::LogLevel::Debug, "{} HelloPerf::HelloPerf()", LOG_TAG);
         m_logger->printAsyncFileLog(bsp_perf::shared::BspLogger::LogLevel::Debug, "{} HelloPerf::HelloPerf()", LOG_TAG);
