@@ -2,13 +2,32 @@ FROM nvidia/cuda:12.4.1-cudnn-devel-ubuntu22.04
 
 # 安装必要的软件包和交叉编译工具链
 RUN apt-get update && \
-    apt-get install -y cmake make git vim gcc g++ gdb gdbserver tree sudo && \
+    apt-get install -y cmake make git vim gcc g++ gdb gdbserver tree sudo software-properties-common && \
     apt-get install -y autoconf automake pkg-config libssl-dev libboost-all-dev ncurses-dev nfs-common && \
     apt-get install -y net-tools openssh-server openssh-client rsync cpio unzip bc && \
-    apt-get install -y build-essential libgtest-dev libgmock-dev libmosquitto-dev libdbus-1-dev libprotobuf-dev protobuf-compiler
+    apt-get install -y build-essential libgtest-dev libgmock-dev libmosquitto-dev libdbus-1-dev libprotobuf-dev protobuf-compiler && \
+    apt-get install -y curl lsb-release software-properties-common
+
+RUN add-apt-repository universe -y
 
     # 设置root用户的密码
 RUN echo 'root:root' | chpasswd
+
+#(Optional) install ros2 humble depends on user optional requirements
+# 设置环境变量
+ENV LANG C.UTF-8
+ENV LC_ALL C.UTF-8
+
+# 添加 ROS 2 apt 仓库和密钥
+RUN curl -sSL https://raw.githubusercontent.com/ros/rosdistro/master/ros.key -o /usr/share/keyrings/ros-archive-keyring.gpg
+
+RUN echo "deb [arch=$(dpkg --print-architecture) signed-by=/usr/share/keyrings/ros-archive-keyring.gpg] http://packages.ros.org/ros2/ubuntu $(. /etc/os-release && echo $UBUNTU_CODENAME) main" | tee /etc/apt/sources.list.d/ros2.list > /dev/null
+
+# 安装 ROS 2 Humble 版本
+RUN apt-get update && apt-get install -y \
+    ros-humble-desktop
+
+RUN apt install ros-dev-tools -y
 
 # 设置工作目录
 WORKDIR /build

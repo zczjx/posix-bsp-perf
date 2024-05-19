@@ -54,7 +54,7 @@ public:
         std::string ret;
         params.getOptionVal("--case_name", ret);
         std::string file_path;
-        params.getOptionVal("--profile_path", file_path);
+        params.getOptionVal("--profile_file_path", file_path);
         m_profiler = std::make_unique<bsp_perf::common::PerfProfiler>(ret, file_path);
 
     }
