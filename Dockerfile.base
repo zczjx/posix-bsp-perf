@@ -6,7 +6,7 @@ RUN apt-get update && \
     apt-get install -y autoconf automake pkg-config libssl-dev libboost-all-dev ncurses-dev nfs-common && \
     apt-get install -y net-tools openssh-server openssh-client rsync cpio unzip bc && \
     apt-get install -y build-essential libgtest-dev libgmock-dev libmosquitto-dev libdbus-1-dev libprotobuf-dev protobuf-compiler && \
-    apt-get install -y curl lsb-release software-properties-common
+    apt-get install -y curl lsb-release software-properties-common locales
 
 RUN add-apt-repository universe -y
 
@@ -15,8 +15,11 @@ RUN echo 'root:root' | chpasswd
 
 #(Optional) install ros2 humble depends on user optional requirements
 # 设置环境变量
-ENV LANG C.UTF-8
-ENV LC_ALL C.UTF-8
+RUN locale-gen en_US en_US.UTF-8
+
+RUN update-locale LC_ALL=en_US.UTF-8 LANG=en_US.UTF-8
+
+RUN export LANG=en_US.UTF-8 && locale
 
 # 添加 ROS 2 apt 仓库和密钥
 RUN curl -sSL https://raw.githubusercontent.com/ros/rosdistro/master/ros.key -o /usr/share/keyrings/ros-archive-keyring.gpg
