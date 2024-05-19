@@ -31,6 +31,7 @@ SOFTWARE.
 #include <profiler/PerfProfiler.hpp>
 #include <memory>
 #include <string>
+#include <cstring>
 #include <iostream>
 #include <cstddef>
 #include <cstdlib>
@@ -54,7 +55,7 @@ public:
         std::string ret;
         params.getOptionVal("--case_name", ret);
         std::string file_path;
-        params.getOptionVal("--profile_file_path", file_path);
+        params.getOptionVal("--profile_path", file_path);
         m_profiler = std::make_unique<bsp_perf::common::PerfProfiler>(ret, file_path);
 
     }
@@ -123,6 +124,16 @@ private:
             m_profiler->asyncRecordPerfData("Smart PTR Reading BandWidth", m_smart_read_bw_mb, "MB/s");
         }
 
+        {
+            std::unique_ptr<uint32_t[]> dst_ptr = std::make_unique<uint32_t[]>(m_bytes_cnt / sizeof(uint32_t));
+            auto begin = m_profiler->getCurrentTimePoint();
+            stdMemcpyPerf(m_test_arr.get(), dst_ptr.get(), m_bytes_cnt);
+            auto end = m_profiler->getCurrentTimePoint();
+            auto raw_ptr_memcpy_latency = m_profiler->getLatencyUs(begin, end);
+            m_memcpy_bw_mb = getDDRBandwidthMB(raw_ptr_memcpy_latency);
+            m_profiler->asyncRecordPerfData("Raw PTR Memcpy BandWidth", m_memcpy_bw_mb, "MB/s");
+        }
+
     }
 
     void onRender() override
@@ -131,11 +142,17 @@ private:
         m_profiler->printPerfData("Smart PTR Writing BandWidth", m_smart_write_bw_mb, "MB/s");
         m_profiler->printPerfData("Raw PTR Reading BandWidth", m_raw_read_bw_mb, "MB/s");
         m_profiler->printPerfData("Smart PTR Reading BandWidth", m_smart_read_bw_mb, "MB/s");
+        m_profiler->printPerfData("Raw PTR Memcpy BandWidth", m_memcpy_bw_mb, "MB/s");
     }
 
     void onRelease() override
     {
         m_test_arr.reset();
+    }
+
+    inline void stdMemcpyPerf(uint32_t* src, uint32_t* dst, size_t bytes_cnt = 0)
+    {
+        std::memcpy(dst, src, bytes_cnt);
     }
 
     inline void rawPtrWritingPerf(uint32_t* ptr, size_t cnt = 0)
@@ -198,6 +215,7 @@ private:
     float m_raw_write_bw_mb{0.0};
     float m_smart_read_bw_mb{0.0};
     float m_raw_read_bw_mb{0.0};
+    float m_memcpy_bw_mb{0.0};
 };
 
 } // namespace perf_cases
