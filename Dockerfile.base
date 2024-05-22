@@ -26,9 +26,6 @@ RUN echo 'root:root' | chpasswd
 # 设置语言环境
 ENV LANG en_US.UTF-8
 ENV LANGUAGE en_US:en
-ENV LC_ALL en_US.UTF-8
-
-CMD ["/bin/bash"]
 
 # 添加 ROS 2 apt 仓库和密钥
 RUN curl -sSL https://raw.githubusercontent.com/ros/rosdistro/master/ros.key -o /usr/share/keyrings/ros-archive-keyring.gpg
