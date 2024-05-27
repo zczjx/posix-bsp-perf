@@ -19,9 +19,9 @@ public:
     //operator for IO event
     void addIoEvent(int fd, io_callback* proc, int mask, std::any args);
     //delete only mask event for fd in epoll
-    void del_ioev(int fd, int mask);
+    void delIoEvent(int fd, int mask);
     //delete event for fd in epoll
-    void del_ioev(int fd);
+    void delIoEvent(int fd);
     //get all fds this loop is listening
     void nlistenings(__gnu_cxx::hash_set<int>& conns) { conns = listening; }
 

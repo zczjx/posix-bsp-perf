@@ -16,7 +16,7 @@
 #include <arpa/inet.h>
 #include <sys/types.h>
 #include <sys/socket.h>
-
+#include <sys/epoll.h>
 
 namespace bsp_sockets
 {
@@ -127,15 +127,101 @@ TcpServer::TcpServer(std::shared_ptr<EventLoop> loop, bsp_perf::shared::ArgParse
     m_loop->addIoEvent(m_sockfd, accepterCb, EPOLLIN, std::make_any<std::shared_ptr<TcpServer>>(shared_from_this()));
 }
 
-//tcp_server类使用时往往具有程序的完全生命周期，其实并不需要析构函数
-tcp_server::~tcp_server()
+//TcpServer类使用时往往具有程序的完全生命周期，其实并不需要析构函数
+TcpServer::~TcpServer()
 {
-    _loop->del_ioev(_sockfd);
-    ::close(_sockfd);
-    ::close(_reservfd);
+    m_loop->delIoEvent(m_sockfd);
+    ::close(m_sockfd);
+    ::close(m_reservfd);
+
+    // Clean up the connections
+    for (auto& conn : g_conns)
+    {
+        conn.reset();
+    }
 }
 
 void TcpServer::doAccept()
+{
+    int connfd;
+    bool conn_full = false;
+    while (true)
+    {
+        connfd = ::accept(m_sockfd, (struct sockaddr*)&m_conn_addr, &m_addrlen);
+        if (connfd == -1)
+        {
+            if (errno == EINTR)
+            {
+                continue;
+            }
+            else if (errno == EMFILE)
+            {
+                conn_full = true;
+                ::close(m_reservfd);
+            }
+            else if (errno == EAGAIN)
+            {
+                break;
+            }
+            else
+            {
+                throw BspSocketException("accept()");
+            }
+        }
+        else if (conn_full)
+        {
+            ::close(connfd);
+            m_reservfd = ::open("/tmp/reactor_accepter", O_CREAT | O_RDONLY | O_CLOEXEC, 0666);
+            if (m_reservfd == -1)
+            {
+                throw BspSocketException("open()");
+            }
+        }
+        else
+        {
+            //connfd and max connections
+            int curr_conns;
+            get_conn_num(curr_conns);
+            if (curr_conns >= m_max_conns)
+            {
+                error_log("connection exceeds the maximum connection count %d", m_max_conns);
+                ::close(connfd);
+            }
+            else
+            {
+                assert(connfd < m_conns_size);
+                if (m_keep_alive)
+                {
+                    int opend = 1;
+                    int ret = ::setsockopt(connfd, SOL_SOCKET, SO_KEEPALIVE, &opend, sizeof(opend));
+                    if (ret < 0)
+                    {
+                        throw BspSocketException("setsockopt SO_KEEPALIVE");
+                    }
+                }
+
+                //multi-thread reactor model: round-robin a event loop and give message to it
+                if (m_thd_pool)
+                {
+                    thread_queue<queue_msg>* cq = m_thd_pool->get_next_thread();
+                    queue_msg msg;
+                    msg.cmd_type = queue_msg::NEW_CONN;
+                    msg.connfd = connfd;
+                    cq->send_msg(msg);
+                }
+                else//register in self thread
+                {
+                    tcp_conn* conn = g_conns[connfd].get();
+                    if (conn)
+                    {
+                        conn->init(connfd, m_loop);
+                    }
+                    else
+                    {
+                        conn = new tcp_conn(connfd, m_loop);
+                        if (conn ==
+}
+
 {
     int connfd;
     bool conn_full = false;
@@ -235,4 +321,4 @@ void TcpServer::decConnection()
 }
 
 
-}
+} // namespace bsp_sockets
