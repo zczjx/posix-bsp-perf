@@ -4,7 +4,6 @@
 #include <bsp_sockets/BspSocketException.hpp>
 #include <bsp_sockets/ConfigReader.hpp>
 #include "TcpConn.hpp"
-#include "PrintError.hpp"
 
 
 #include <stdio.h>
@@ -30,31 +29,32 @@ static void accepterCb(std::shared_ptr<EventLoop>loop, int fd, std::any args)
 }
 
 
-TcpServer::TcpServer(std::shared_ptr<EventLoop> loop, const std::string& ip, uint16_t port):
+TcpServer::TcpServer(std::shared_ptr<EventLoop> loop, bsp_perf::shared::ArgParser&& args):
     m_loop(loop),
+    m_args{std::move(args)},
     m_logger{std::make_unique<BspLogger>()}
 {
     m_logger->setPattern();
-    bzero(&m_conn_addr, sizeof(m_conn_addr));
+    ::bzero(&m_conn_addr, sizeof(m_conn_addr));
     //ignore SIGHUP and SIGPIPE
-    if (signal(SIGHUP, SIG_IGN) == SIG_ERR)
+    if (::signal(SIGHUP, SIG_IGN) == SIG_ERR)
     {
         m_logger->printStdoutLog(BspLogger::LogLevel::Error, "signal ignore SIGHUP");
     }
-    if (signal(SIGPIPE, SIG_IGN) == SIG_ERR)
+    if (::signal(SIGPIPE, SIG_IGN) == SIG_ERR)
     {
         m_logger->printStdoutLog(BspLogger::LogLevel::Error, "signal ignore SIGPIPE");
     }
 
     //create socket
-    m_sockfd = socket(AF_INET, SOCK_STREAM | SOCK_NONBLOCK | SOCK_CLOEXEC, IPPROTO_TCP);
+    m_sockfd = ::socket(AF_INET, SOCK_STREAM | SOCK_NONBLOCK | SOCK_CLOEXEC, IPPROTO_TCP);
 
     if (m_sockfd < 0)
     {
         throw BspSocketException("socket()");
     }
 
-    m_reservfd = open("/tmp/reactor_accepter", O_CREAT | O_RDONLY | O_CLOEXEC, 0666);
+    m_reservfd = ::open("/tmp/reactor_accepter", O_CREAT | O_RDONLY | O_CLOEXEC, 0666);
 
     if (m_reservfd < 0)
     {
@@ -62,32 +62,37 @@ TcpServer::TcpServer(std::shared_ptr<EventLoop> loop, const std::string& ip, uin
     }
 
     struct sockaddr_in servaddr;
-    bzero(&servaddr, sizeof(servaddr));
+    ::bzero(&servaddr, sizeof(servaddr));
     servaddr.sin_family = AF_INET;
 
-    int ret = inet_aton(ip.c_str(), &servaddr.sin_addr);
+    std::string ip;
+    m_args.getOptionVal("--ip", ip);
+    uint16_t port;
+    m_args.getOptionVal("--port", port);
+
+    int ret = ::inet_aton(ip.c_str(), &servaddr.sin_addr);
 
     if (ret == 0)
     {
         throw BspSocketException("ip format");
     }
-    servaddr.sin_port = htons(port);
+    servaddr.sin_port = ::htons(port);
 
     int opend = 1;
-    ret = setsockopt(m_sockfd, SOL_SOCKET, SO_REUSEADDR, &opend, sizeof(opend));
+    ret = ::setsockopt(m_sockfd, SOL_SOCKET, SO_REUSEADDR, &opend, sizeof(opend));
 
     if (ret < 0)
     {
         throw BspSocketException("setsockopt SO_REUSEADDR");
     }
 
-    ret = bind(m_sockfd, (const struct sockaddr*)&servaddr, sizeof(servaddr));
+    ret = ::bind(m_sockfd, (const struct sockaddr*)&servaddr, sizeof(servaddr));
     if (ret < 0)
     {
         throw BspSocketException("bind()");
     }
 
-    ret = listen(m_sockfd, 500);
+    ret = ::listen(m_sockfd, 500);
 
     if (ret < 0)
     {
@@ -96,73 +101,30 @@ TcpServer::TcpServer(std::shared_ptr<EventLoop> loop, const std::string& ip, uin
 
     info_log("server on %s:%u is running...", ip.c_str(), port);
     m_logger->printStdoutLog(BspLogger::LogLevel::Debug, "server on {}:{} is running...", ip.c_str(), port);
-    m_loop->addIoEvent(m_sockfd, accepterCb, EPOLLIN, std::make_any<std::shared_ptr<TcpServer>>(shared_from_this()));
-}
 
-{
-    ::bzero(&_connaddr, sizeof (_connaddr));
-    //ignore SIGHUP and SIGPIPE
-    if (::signal(SIGHUP, SIG_IGN) == SIG_ERR)
+    int thread_cnt = 0;
+    m_args.getOptionVal("--threadNum", thread_cnt);
+
+    if (thread_cnt > 0)
     {
-        error_log("signal ignore SIGHUP");
-    }
-    if (::signal(SIGPIPE, SIG_IGN) == SIG_ERR)
-    {
-        error_log("signal ignore SIGPIPE");
+        m_thd_pool = std::make_shared<ThreadPool>(thread_cnt);
+        if (nullptr == m_thd_pool)
+        {
+            throw BspSocketException("new thread_pool");
+        }
     }
 
-    //create socket
-    _sockfd = ::socket(AF_INET, SOCK_STREAM | SOCK_NONBLOCK | SOCK_CLOEXEC, IPPROTO_TCP);
-    exit_if(_sockfd == -1, "socket()");
-
-    _reservfd = ::open("/tmp/reactor_accepter", O_CREAT | O_RDONLY | O_CLOEXEC, 0666);
-    error_if(_reservfd == -1, "open()");
-
-    struct sockaddr_in servaddr;
-    ::bzero(&servaddr, sizeof (servaddr));
-    servaddr.sin_family = AF_INET;
-    int ret = ::inet_aton(ip, &servaddr.sin_addr);
-    exit_if(ret == 0, "ip format %s", ip);
-    servaddr.sin_port = htons(port);
-
-    int opend = 1;
-    ret = ::setsockopt(_sockfd, SOL_SOCKET, SO_REUSEADDR, &opend, sizeof(opend));
-    error_if(ret < 0, "setsockopt SO_REUSEADDR");
-
-    ret = ::bind(_sockfd, (const struct sockaddr*)&servaddr, sizeof servaddr);
-    exit_if(ret == -1, "bind()");
-
-    ret = ::listen(_sockfd, 500);
-    exit_if(ret == -1, "listen()");
-
-    info_log("server on %s:%u is running...", ip, port);
-
-    _loop = loop;
-
-    _addrlen = sizeof (struct sockaddr_in);
-
-    //if mode is multi-thread reactor, create thread pool
-    int thread_cnt = config_reader::ins()->GetNumber("reactor", "threadNum", 0);
-    _thd_pool = NULL;
-    if (thread_cnt)
-    {
-        _thd_pool = new thread_pool(thread_cnt);
-        exit_if(_thd_pool == NULL, "new thread_pool");
-    }
-
-    //create connection pool
-    _max_conns = config_reader::ins()->GetNumber("reactor", "maxConns", 10000);
+    m_args.getOptionVal("--maxConns", m_max_conns);
     int next_fd = ::dup(1);
-    _conns_size = _max_conns + next_fd;
+    m_conns_size = m_max_conns + next_fd;
     ::close(next_fd);
+    g_conns.resize(m_conns_size);
+    for (auto& conn : g_conns)
+    {
+        conn.reset(); // 或者 conn = nullptr;
+    }
 
-    conns = new tcp_conn*[_conns_size];
-    exit_if(conns == NULL, "new conns[%d]", _conns_size);
-    for (int i = 0;i < _max_conns + next_fd; ++i)
-        conns[i] = NULL;
-
-    //add accepter event
-    _loop->add_ioev(_sockfd, accepter_cb, EPOLLIN, this);
+    m_loop->addIoEvent(m_sockfd, accepterCb, EPOLLIN, std::make_any<std::shared_ptr<TcpServer>>(shared_from_this()));
 }
 
 //tcp_server类使用时往往具有程序的完全生命周期，其实并不需要析构函数
