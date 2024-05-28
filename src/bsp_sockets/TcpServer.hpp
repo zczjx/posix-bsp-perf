@@ -20,6 +20,14 @@
 
 namespace bsp_sockets
 {
+
+struct ServerParams
+{
+    std::string ipaddr{""};
+    int port{-1};
+    int thread_num{0};
+    int max_connections{0};
+};
 class TcpServer
 {
 public:
@@ -48,10 +56,7 @@ public:
 
 public:
     static msg_dispatcher g_dispatcher;
-    static std::vector<std::unique_ptr<tcp_conn>> g_conns;
-
     using conn_callback = std::function<void(net_commu& conn)>;
-
     static conn_callback connBuildCb{nullptr};//用户设置连接建立后的回调函数
     static conn_callback connCloseCb{nullptr};//用户设置连接释放后的回调函数
 
@@ -59,6 +64,7 @@ public:
     static void onConnClose(conn_callback cb) { connCloseCb = cb; }
 
 private:
+    ServerParams m_server_params;
     int m_sockfd{-1};
     int m_reservfd{-1};
     std::shared_ptr<EventLoop> m_loop{nullptr};
@@ -68,11 +74,12 @@ private:
     bool m_keep_alive{false};
 
     int m_conns_size{0};
-    int m_max_conns{0};
     int m_curr_conns{0};
     std::mutex m_mutex{}; // Default initialization
     std::unique_ptr<bsp_perf::shared::BspLogger> m_logger;
     bsp_perf::shared::ArgParser m_args;
+
+    std::vector<std::shared_ptr<tcp_conn>> m_connections_pool{};//连接池
 };
 
 }

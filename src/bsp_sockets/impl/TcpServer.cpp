@@ -34,6 +34,11 @@ TcpServer::TcpServer(std::shared_ptr<EventLoop> loop, bsp_perf::shared::ArgParse
     m_args{std::move(args)},
     m_logger{std::make_unique<BspLogger>()}
 {
+    m_args.getOptionVal("--ip", m_server_params.ipaddr);
+    m_args.getOptionVal("--port", m_server_params.port);
+    m_args.getOptionVal("--threadNum", m_server_params.thread_num);
+    m_args.getOptionVal("--maxConns", m_server_params.max_connections);
+
     m_logger->setPattern();
     ::bzero(&m_conn_addr, sizeof(m_conn_addr));
     //ignore SIGHUP and SIGPIPE
@@ -65,18 +70,13 @@ TcpServer::TcpServer(std::shared_ptr<EventLoop> loop, bsp_perf::shared::ArgParse
     ::bzero(&servaddr, sizeof(servaddr));
     servaddr.sin_family = AF_INET;
 
-    std::string ip;
-    m_args.getOptionVal("--ip", ip);
-    uint16_t port;
-    m_args.getOptionVal("--port", port);
-
-    int ret = ::inet_aton(ip.c_str(), &servaddr.sin_addr);
+    int ret = ::inet_aton(m_server_params.ipaddr.c_str(), &servaddr.sin_addr);
 
     if (ret == 0)
     {
         throw BspSocketException("ip format");
     }
-    servaddr.sin_port = ::htons(port);
+    servaddr.sin_port = ::htons(m_server_params.port);
 
     int opend = 1;
     ret = ::setsockopt(m_sockfd, SOL_SOCKET, SO_REUSEADDR, &opend, sizeof(opend));
@@ -99,27 +99,23 @@ TcpServer::TcpServer(std::shared_ptr<EventLoop> loop, bsp_perf::shared::ArgParse
         throw BspSocketException("listen()");
     }
 
-    info_log("server on %s:%u is running...", ip.c_str(), port);
-    m_logger->printStdoutLog(BspLogger::LogLevel::Debug, "server on {}:{} is running...", ip.c_str(), port);
+    info_log("server on %s:%u is running...", m_server_params.ipaddr.c_str(), m_server_params.port);
+    m_logger->printStdoutLog(BspLogger::LogLevel::Debug, "server on {}:{} is running...", m_server_params.ipaddr.c_str(), m_server_params.port);
 
-    int thread_cnt = 0;
-    m_args.getOptionVal("--threadNum", thread_cnt);
-
-    if (thread_cnt > 0)
+    if (m_server_params.thread_num > 0)
     {
-        m_thd_pool = std::make_shared<ThreadPool>(thread_cnt);
+        m_thd_pool = std::make_shared<ThreadPool>(m_server_params.thread_num);
         if (nullptr == m_thd_pool)
         {
             throw BspSocketException("new thread_pool");
         }
     }
 
-    m_args.getOptionVal("--maxConns", m_max_conns);
     int next_fd = ::dup(1);
-    m_conns_size = m_max_conns + next_fd;
+    m_conns_size = m_server_params.max_connections + next_fd;
     ::close(next_fd);
-    g_conns.resize(m_conns_size);
-    for (auto& conn : g_conns)
+    m_connections_pool.resize(m_conns_size);
+    for (auto& conn : m_connections_pool)
     {
         conn.reset(); // 或者 conn = nullptr;
     }
@@ -135,7 +131,7 @@ TcpServer::~TcpServer()
     ::close(m_reservfd);
 
     // Clean up the connections
-    for (auto& conn : g_conns)
+    for (auto& conn : m_connections_pool)
     {
         conn.reset();
     }
@@ -182,9 +178,9 @@ void TcpServer::doAccept()
             //connfd and max connections
             int curr_conns;
             get_conn_num(curr_conns);
-            if (curr_conns >= m_max_conns)
+            if (curr_conns >= m_server_params.max_connections)
             {
-                error_log("connection exceeds the maximum connection count %d", m_max_conns);
+                m_logger->printStdoutLog(BspLogger::LogLevel::Error, "connection exceeds the maximum connection count {}", m_server_params.max_connections);
                 ::close(connfd);
             }
             else
@@ -201,7 +197,7 @@ void TcpServer::doAccept()
                 }
 
                 //multi-thread reactor model: round-robin a event loop and give message to it
-                if (m_thd_pool)
+                if (m_thd_pool != nullptr)
                 {
                     thread_queue<queue_msg>* cq = m_thd_pool->get_next_thread();
                     queue_msg msg;
@@ -211,90 +207,15 @@ void TcpServer::doAccept()
                 }
                 else//register in self thread
                 {
-                    tcp_conn* conn = g_conns[connfd].get();
-                    if (conn)
+
+                    std::weak_ptr<tcp_conn> conn = m_connections_pool[connfd];
+                    if (!conn.expired())
                     {
                         conn->init(connfd, m_loop);
                     }
                     else
                     {
-                        conn = new tcp_conn(connfd, m_loop);
-                        if (conn ==
-}
-
-{
-    int connfd;
-    bool conn_full = false;
-    while (true)
-    {
-        connfd = ::accept(_sockfd, (struct sockaddr*)&_connaddr, &_addrlen);
-        if (connfd == -1)
-        {
-            if (errno == EINTR)
-            {
-                continue;
-            }
-            else if (errno == EMFILE)
-            {
-                conn_full = true;
-                ::close(_reservfd);
-            }
-            else if (errno == EAGAIN)
-            {
-                break;
-            }
-            else
-            {
-                exit_log("accept()");
-            }
-        }
-        else if (conn_full)
-        {
-            ::close(connfd);
-            _reservfd = ::open("/tmp/reactor_accepter", O_CREAT | O_RDONLY | O_CLOEXEC, 0666);
-            error_if(_reservfd == -1, "open()");
-        }
-        else
-        {
-            //connfd and max connections
-            int curr_conns;
-            get_conn_num(curr_conns);
-            if (curr_conns >= _max_conns)
-            {
-                error_log("connection exceeds the maximum connection count %d", _max_conns);
-                ::close(connfd);
-            }
-            else
-            {
-                assert(connfd < _conns_size);
-                if (_keepalive)
-                {
-                    int opend = 1;
-                    int ret = ::setsockopt(connfd, SOL_SOCKET, SO_KEEPALIVE, &opend, sizeof(opend));
-                    error_if(ret < 0, "setsockopt SO_KEEPALIVE");
-                }
-
-                //multi-thread reactor model: round-robin a event loop and give message to it
-                if (_thd_pool)
-                {
-                    thread_queue<queue_msg>* cq = _thd_pool->get_next_thread();
-                    queue_msg msg;
-                    msg.cmd_type = queue_msg::NEW_CONN;
-                    msg.connfd = connfd;
-                    cq->send_msg(msg);
-                }
-                else//register in self thread
-                {
-                    tcp_conn* conn = conns[connfd];
-                    if (conn)
-                    {
-                        conn->init(connfd, _loop);
-                    }
-                    else
-                    {
-                        conn = new tcp_conn(connfd, _loop);
-                        exit_if(conn == NULL, "new tcp_conn");
-                        conns[connfd] = conn;
+                        m_connections_pool[connfd] = std::shared_ptr<tcp_conn>(connfd, m_loop);
                     }
                 }
             }
@@ -319,6 +240,5 @@ void TcpServer::decConnection()
     std::lock_guard<std::mutex> lockGuard(m_mutex);
     m_curr_conns--;
 }
-
 
 } // namespace bsp_sockets
