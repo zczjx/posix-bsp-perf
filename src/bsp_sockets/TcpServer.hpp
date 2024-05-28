@@ -52,7 +52,7 @@ public:
 
     std::shared_ptr<EventLoop> loop() { return m_loop; }
 
-    std::shared_ptr<ThreadPool> getThreadPool() { return m_thd_pool; }
+    std::shared_ptr<ThreadPool> getThreadPool() { return m_thread_pool; }
 
 public:
     static msg_dispatcher g_dispatcher;
@@ -68,7 +68,7 @@ private:
     int m_sockfd{-1};
     int m_reservfd{-1};
     std::shared_ptr<EventLoop> m_loop{nullptr};
-    std::shared_ptr<ThreadPool> m_thd_pool{nullptr};
+    std::shared_ptr<ThreadPool> m_thread_pool{nullptr};
     struct sockaddr_in m_conn_addr{};
     socklen_t m_addrlen{sizeof(struct sockaddr_in)};
     bool m_keep_alive{false};

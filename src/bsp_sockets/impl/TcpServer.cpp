@@ -104,8 +104,8 @@ TcpServer::TcpServer(std::shared_ptr<EventLoop> loop, bsp_perf::shared::ArgParse
 
     if (m_server_params.thread_num > 0)
     {
-        m_thd_pool = std::make_shared<ThreadPool>(m_server_params.thread_num);
-        if (nullptr == m_thd_pool)
+        m_thread_pool = std::make_shared<ThreadPool>(m_server_params.thread_num);
+        if (nullptr == m_thread_pool)
         {
             throw BspSocketException("new thread_pool");
         }
@@ -197,9 +197,9 @@ void TcpServer::doAccept()
                 }
 
                 //multi-thread reactor model: round-robin a event loop and give message to it
-                if (m_thd_pool != nullptr)
+                if (m_thread_pool != nullptr)
                 {
-                    thread_queue<queue_msg>* cq = m_thd_pool->get_next_thread();
+                    thread_queue<queue_msg>* cq = m_thread_pool->get_next_thread();
                     queue_msg msg;
                     msg.cmd_type = queue_msg::NEW_CONN;
                     msg.connfd = connfd;
