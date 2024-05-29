@@ -1,52 +1,67 @@
 #ifndef __EVENT_LOOP_H__
 #define __EVENT_LOOP_H__
 
-#include "event_base.h"
-#include "timer_queue.h"
+#include "impl/TimerQueue.hpp"
 #include <sys/epoll.h>
-#include <ext/hash_map>
-#include <ext/hash_set>
+#include <unordered_map>
+#include <unordered_set>
 #include <any>
+#include <functional>
+#include <iostream>
+#include <memory>
 
-#define MAXEVENTS 10
+constexpr int max_events = 10;
 
-class event_loop
+using ioCallback = std::function<void(EventLoop& loop, int fd, std::any args)>;
+//让当前loop在一次poll循环后执行指定任务
+using pendingFunc = std::function<void(EventLoop&, std::any)>;
+
+struct IOEvent//注册的IO事件
+{
+    int mask{0x00};             //EPOLLIN EPOLLOUT
+    ioCallback read_callback{nullptr};  //callback when EPOLLIN comming
+    ioCallback write_callback{nullptr}; //callback when EPOLLOUT comming
+    std::any rcb_args{nullptr};   //extra arguments for read_cb
+    std::any wcb_args{nullptr};  //extra arguments for write_cb
+};
+class EventLoop
 {
 public:
-    event_loop();
-    void process_evs();
+    EventLoop();
+
+    void processEvents();
 
     //operator for IO event
-    void addIoEvent(int fd, io_callback* proc, int mask, std::any args);
+    void addIoEvent(int fd, ioCallback proc, int mask, std::any args);
     //delete only mask event for fd in epoll
     void delIoEvent(int fd, int mask);
     //delete event for fd in epoll
     void delIoEvent(int fd);
     //get all fds this loop is listening
-    void nlistenings(__gnu_cxx::hash_set<int>& conns) { conns = listening; }
+    std::unordered_set<int>& getAllListenings() { return m_listening; }
 
     //operator for timer event
-    int run_at(timer_callback cb, void* args, uint64_t ts);
-    int run_after(timer_callback cb, void* args, int sec, int millis = 0);
-    int run_every(timer_callback cb, void* args, int sec, int millis = 0);
-    void del_timer(int timer_id);
+    int runAt(timer_callback cb, std::any args, time_t ts);
+    int runAfter(timer_callback cb, std::any args, int sec, int millis = 0);
+    int runEvery(timer_callback cb, std::anyargs, int sec, int millis = 0);
+    void delTimer(int timer_id);
 
-    void add_task(pendingFunc func, void* args);
-    void run_task();
+    void addTask(pendingFunc func, std::any args);
+    void runTask();
 
 private:
-    int _epfd;
-    struct epoll_event _fired_evs[MAXEVENTS];
-    //map: fd->io_event
-    __gnu_cxx::hash_map<int, io_event> _io_evs;
-    typedef __gnu_cxx::hash_map<int, io_event>::iterator ioev_it;
-    timer_queue* _timer_que;
+    int m_epoll_fd{-1};
+    struct epoll_event m_fired_events[max_events];
+    //map: fd->IOEvent
+    std::unordered_map<int, IOEvent> m_io_events;
+    using ioevIterator = std::unordered_map<int, IOEvent>::iterator;
+    std::shared_ptr<timer_queue> m_timer_que;
     //此队列用于:暂存将要执行的任务
-    std::vector<std::pair<pendingFunc, void*> > _pendingFactors;
+    std::vector<std::pair<pendingFunc, std::any> > m_pending_factors;
 
-    __gnu_cxx::hash_set<int> listening;
+    std::unordered_set<int> m_listening;
 
-    friend void timerqueue_cb(event_loop* loop, int fd, void *args);
+    friend void timerQueueCallback(EventLoop& loop, int fd, std::any args);
 };
 
 #endif

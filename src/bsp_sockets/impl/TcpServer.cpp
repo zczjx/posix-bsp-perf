@@ -22,7 +22,7 @@ namespace bsp_sockets
 {
 using namespace bsp_perf::shared;
 
-static void accepterCb(std::shared_ptr<EventLoop>loop, int fd, std::any args)
+static void accepterCb(std::shared_ptr<EventLoop> loop, int fd, std::any args)
 {
     std::shared_ptr<TcpServer> server = std::any_cast<std::shared_ptr<TcpServer>>(args);
     server->doAccept();

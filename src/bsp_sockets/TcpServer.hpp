@@ -1,17 +1,16 @@
 #ifndef __TCP_SERVER_H__
 #define __TCP_SERVER_H__
 
-#include "impl/EventLoop.hpp"
 #include "impl/ThreadPool.hpp"
 #include "impl/TcpConn.hpp"
+#include "EventLoop.hpp"
+#include "NetCommu.hpp"
+
 #include "impl/MsgDispatcher.hpp"
 #include <shared/BspLogger.hpp>
 #include <shared/ArgParser.hpp>
 
-
-#include "NetCommu.hpp"
 #include <netinet/in.h>
-
 #include <iostream>
 #include <mutex>
 #include <thread>
@@ -64,7 +63,7 @@ public:
     static void onConnClose(conn_callback cb) { connCloseCb = cb; }
 
 private:
-    ServerParams m_server_params;
+    struct ServerParams m_server_params;
     int m_sockfd{-1};
     int m_reservfd{-1};
     std::shared_ptr<EventLoop> m_loop{nullptr};
