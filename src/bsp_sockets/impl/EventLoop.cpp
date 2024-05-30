@@ -12,10 +12,13 @@
 
 namespace bsp_sockets
 {
+using namespace bsp_perf::shared;
+
 void timerQueueCallback(EventLoop& loop, int fd, std::any args)
 {
     std::vector<timer_event> fired_evs;
-    loop.m_timer_que->get_timo(fired_evs);
+    auto& tq = loop.getTimerQueue();
+    tq->get_timo(fired_evs);
     for (std::vector<timer_event>::iterator it = fired_evs.begin();
         it != fired_evs.end(); ++it)
     {
@@ -25,7 +28,8 @@ void timerQueueCallback(EventLoop& loop, int fd, std::any args)
 
 EventLoop::EventLoop():
     m_epoll_fd{::epoll_create1(0)},
-    m_timer_que{std::make_shared<TimerQueue>()}
+    m_timer_que{std::make_shared<TimerQueue>()},
+    m_logger{std::make_unique<BspLogger>()}
 {
 
     if (m_epoll_fd = -1)
@@ -41,49 +45,48 @@ EventLoop::EventLoop():
     addIoEvent(m_timer_que->notifier(), timerQueueCallback, EPOLLIN, m_timer_que);
 }
 
-void EventLoop::process_evs()
+void EventLoop::processEvents()
 {
     while (true)
     {
-        //handle file event
-        ioev_it it;
-        int nfds = ::epoll_wait(_epfd, _fired_evs, MAXEVENTS, 10);
-        for (int i = 0;i < nfds; ++i)
+        int nfds = ::epoll_wait(m_epoll_fd, m_fired_events, max_events, 10);
+        for (int i = 0; i < nfds; ++i)
         {
-            it = _io_evs.find(_fired_evs[i].data.fd);
-            assert(it != _io_evs.end());
-            io_event* ev = &(it->second);
+            ioevIterator it = m_io_events.find(m_fired_events[i].data.fd);
+            assert(it != m_io_events.end());
+            std::unique_ptr<IOEvent> ev;
+            ev.reset(&(it->second));
 
-            if (_fired_evs[i].events & EPOLLIN)
+            if (m_fired_events[i].events & EPOLLIN)
             {
-                void *args = ev->rcb_args;
-                ev->read_cb(this, _fired_evs[i].data.fd, args);
+                std::any args = ev->rcb_args;
+                ev->read_callback(*this, m_fired_events[i].data.fd, args);
             }
-            else if (_fired_evs[i].events & EPOLLOUT)
+            else if (m_fired_events[i].events & EPOLLOUT)
             {
-                void *args = ev->wcb_args;
-                ev->write_cb(this, _fired_evs[i].data.fd, args);
+                std::any args = ev->wcb_args;
+                ev->write_callback(*this, m_fired_events[i].data.fd, args);
             }
-            else if (_fired_evs[i].events & (EPOLLHUP | EPOLLERR))
+            else if (m_fired_events[i].events & (EPOLLHUP | EPOLLERR))
             {
-                if (ev->read_cb)
+                if (ev->read_callback)
                 {
-                    void *args = ev->rcb_args;
-                    ev->read_cb(this, _fired_evs[i].data.fd, args);
+                    std::any args = ev->rcb_args;
+                    ev->read_callback(*this, m_fired_events[i].data.fd, args);
                 }
-                else if (ev->write_cb)
+                else if (ev->write_callback)
                 {
-                    void *args = ev->wcb_args;
-                    ev->write_cb(this, _fired_evs[i].data.fd, args);
+                    std::any args = ev->wcb_args;
+                    ev->write_callback(*this, m_fired_events[i].data.fd, args);
                 }
                 else
                 {
-                    error_log("fd %d get error, delete it from epoll", _fired_evs[i].data.fd);
-                    del_ioev(_fired_evs[i].data.fd);
+                    m_logger->printStdoutLog(BspLogger::LogLevel::Error, "fd {} get error, delete it from epoll", m_fired_events[i].data.fd);
+                    delIoEvent(m_fired_events[i].data.fd);
                 }
             }
         }
-        run_task();
+        runTask();
     }
 }
 
@@ -92,12 +95,12 @@ void EventLoop::process_evs()
  * if EPOLLOUT in mask, EPOLLIN must not in mask;
  * if want to register EPOLLOUT | EPOLLIN event, just call add_ioev twice!
  */
-void EventLoop::add_ioev(int fd, io_callback* proc, int mask, void* args)
+void EventLoop::addIoEvent(int fd, ioCallback proc, int mask, std::any args)
 {
     int f_mask = 0;//finial mask
     int op;
-    ioev_it it = _io_evs.find(fd);
-    if (it == _io_evs.end())
+    ioevIterator it = m_io_events.find(fd);
+    if (it == m_io_events.end())
     {
         f_mask = mask;
         op = EPOLL_CTL_ADD;
@@ -109,22 +112,25 @@ void EventLoop::add_ioev(int fd, io_callback* proc, int mask, void* args)
     }
     if (mask & EPOLLIN)
     {
-        _io_evs[fd].read_cb = proc;
-        _io_evs[fd].rcb_args = args;
+        it->second.read_callback = proc;
+        it->second.rcb_args = args;
     }
     else if (mask & EPOLLOUT)
     {
-        _io_evs[fd].write_cb = proc;
-        _io_evs[fd].wcb_args = args;
+        it->second.write_callback = proc;
+        it->second.wcb_args = args;
     }
 
-    _io_evs[fd].mask = f_mask;
+    m_io_events[fd].mask = f_mask;
     struct epoll_event event;
     event.events = f_mask;
     event.data.fd = fd;
-    int ret = ::epoll_ctl(_epfd, op, fd, &event);
-    error_if(ret == -1, "epoll_ctl");
-    listening.insert(fd);//加入到监听集合中
+    int ret = ::epoll_ctl(m_epoll_fd, op, fd, &event);
+    if (ret == -1)
+    {
+        throw BspSocketException("epoll_ctl");
+    }
+    m_listening.insert(fd);//加入到监听集合中
 }
 
 void EventLoop::del_ioev(int fd, int mask)

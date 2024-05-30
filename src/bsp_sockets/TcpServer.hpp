@@ -20,7 +20,7 @@
 namespace bsp_sockets
 {
 
-struct ServerParams
+using ServerParams = struct ServerParams
 {
     std::string ipaddr{""};
     int port{-1};
@@ -63,7 +63,7 @@ public:
     static void onConnClose(conn_callback cb) { connCloseCb = cb; }
 
 private:
-    struct ServerParams m_server_params;
+    ServerParams m_server_params;
     int m_sockfd{-1};
     int m_reservfd{-1};
     std::shared_ptr<EventLoop> m_loop{nullptr};

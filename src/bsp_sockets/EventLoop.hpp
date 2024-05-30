@@ -2,6 +2,7 @@
 #define __EVENT_LOOP_H__
 
 #include "impl/TimerQueue.hpp"
+#include <shared/BspLogger.hpp>
 #include <sys/epoll.h>
 #include <unordered_map>
 #include <unordered_set>
@@ -48,6 +49,7 @@ public:
 
     void addTask(pendingFunc func, std::any args);
     void runTask();
+    std::shared_ptr<timer_queue>& getTimerQueue() { return m_timer_que; }
 
 private:
     int m_epoll_fd{-1};
@@ -59,9 +61,11 @@ private:
     //此队列用于:暂存将要执行的任务
     std::vector<std::pair<pendingFunc, std::any> > m_pending_factors;
 
-    std::unordered_set<int> m_listening;
+    std::unordered_set<int> m_listening{};
 
-    friend void timerQueueCallback(EventLoop& loop, int fd, std::any args);
+    std::unique_ptr<bsp_perf::shared::BspLogger> m_logger;
+
+    friend void timerQueueCallback(EventLoop& loop, int fd, std::any args)
 };
 
 #endif
