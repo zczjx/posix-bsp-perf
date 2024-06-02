@@ -41,15 +41,15 @@ public:
     //get all fds this loop is listening
     std::unordered_set<int>& getAllListenings() { return m_listening; }
 
+    void addTask(pendingFunc func, std::any args);
+    void runTask();
+
+    std::unique_ptr<timer_queue>& getTimerQueue() { return m_timer_que; }
     //operator for timer event
     int runAt(timer_callback cb, std::any args, time_t ts);
     int runAfter(timer_callback cb, std::any args, int sec, int millis = 0);
-    int runEvery(timer_callback cb, std::anyargs, int sec, int millis = 0);
+    int runEvery(timer_callback cb, std::any args, int sec, int millis = 0);
     void delTimer(int timer_id);
-
-    void addTask(pendingFunc func, std::any args);
-    void runTask();
-    std::shared_ptr<timer_queue>& getTimerQueue() { return m_timer_que; }
 
 private:
     int m_epoll_fd{-1};
@@ -57,7 +57,7 @@ private:
     //map: fd->IOEvent
     std::unordered_map<int, IOEvent> m_io_events;
     using ioevIterator = std::unordered_map<int, IOEvent>::iterator;
-    std::shared_ptr<timer_queue> m_timer_que;
+    std::unique_ptr<timer_queue> m_timer_que;
     //此队列用于:暂存将要执行的任务
     std::vector<std::pair<pendingFunc, std::any> > m_pending_factors;
 
@@ -65,7 +65,7 @@ private:
 
     std::unique_ptr<bsp_perf::shared::BspLogger> m_logger;
 
-    friend void timerQueueCallback(EventLoop& loop, int fd, std::any args)
+    friend void timerQueueCallback(EventLoop& loop, int fd, std::any args);
 };
 
 #endif

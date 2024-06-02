@@ -12,8 +12,8 @@ typedef void timer_callback(EventLoop& loop, std::any usr_data);//Timer事件回
 
 struct timer_event//注册的Timer事件
 {
-    timer_event(timer_callback* timo_cb, void* data, uint64_t arg_ts, uint32_t arg_int = 0):
-    cb(timo_cb), cb_data(data), ts(arg_ts), interval(arg_int)
+    timer_event(timer_callback* timer_cb, void* data, uint64_t arg_ts, uint32_t arg_interval = 0):
+    cb(timer_cb), cb_data(data), ts(arg_ts), interval(arg_interval)
     {
     }
 

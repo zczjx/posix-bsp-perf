@@ -28,7 +28,7 @@ void timerQueueCallback(EventLoop& loop, int fd, std::any args)
 
 EventLoop::EventLoop():
     m_epoll_fd{::epoll_create1(0)},
-    m_timer_que{std::make_shared<TimerQueue>()},
+    m_timer_que{std::make_unique<TimerQueue>()},
     m_logger{std::make_unique<BspLogger>()}
 {
 
@@ -133,88 +133,103 @@ void EventLoop::addIoEvent(int fd, ioCallback proc, int mask, std::any args)
     m_listening.insert(fd);//加入到监听集合中
 }
 
-void EventLoop::del_ioev(int fd, int mask)
+void EventLoop::delIoEvent(int fd, int mask)
 {
-    ioev_it it = _io_evs.find(fd);
-    if (it == _io_evs.end())
+    ioevIterator it = m_io_events.find(fd);
+    if (it == m_io_events.end())
+    {
         return ;
+    }
     int& o_mask = it->second.mask;
     int ret;
-    //remove mask from o_mask
     o_mask = o_mask & (~mask);
     if (o_mask == 0)
     {
-        _io_evs.erase(it);
-        ret = ::epoll_ctl(_epfd, EPOLL_CTL_DEL, fd, NULL);
-        error_if(ret == -1, "epoll_ctl EPOLL_CTL_DEL");
-        listening.erase(fd);//从监听集合中删除
+        m_io_events.erase(it);
+        ret = ::epoll_ctl(m_epoll_fd, EPOLL_CTL_DEL, fd, NULL);
+        if (ret == -1)
+        {
+            throw BspSocketException("epoll_ctl EPOLL_CTL_DEL");
+        }
+        m_listening.erase(fd);//从监听集合中删除
     }
     else
     {
         struct epoll_event event;
         event.events = o_mask;
         event.data.fd = fd;
-        ret = ::epoll_ctl(_epfd, EPOLL_CTL_MOD, fd, &event);
-        error_if(ret == -1, "epoll_ctl EPOLL_CTL_MOD");
+        ret = ::epoll_ctl(m_epoll_fd, EPOLL_CTL_MOD, fd, &event);
+        if (ret == -1)
+        {
+            throw BspSocketException("epoll_ctl EPOLL_CTL_MOD");
+        }
     }
 }
 
-void EventLoop::del_ioev(int fd)
+void EventLoop::delIoEvent(int fd)
 {
-    _io_evs.erase(fd);
-    listening.erase(fd);//从监听集合中删除
-    ::epoll_ctl(_epfd, EPOLL_CTL_DEL, fd, NULL);
+    ioevIterator it = m_io_events.find(fd);
+    if (it == m_io_events.end())
+    {
+        return;
+    }
+    m_io_events.erase(it);
+    m_listening.erase(fd);
+    int ret = ::epoll_ctl(m_epoll_fd, EPOLL_CTL_DEL, fd, NULL);
+    if (ret == -1)
+    {
+        throw BspSocketException("epoll_ctl EPOLL_CTL_DEL");
+    }
 }
 
-int EventLoop::run_at(timer_callback cb, void* args, uint64_t ts)
+int EventLoop::runAt(timer_callback cb, std::any args, time_t ts)
 {
     timer_event te(cb, args, ts);
-    return _timer_que->add_timer(te);
+    return m_timer_que->add_timer(te);
 }
 
-int EventLoop::run_after(timer_callback cb, void* args, int sec, int millis)
+int EventLoop::runAfter(timer_callback cb, std::any args, int sec, int millis = 0)
 {
     struct timespec tpc;
     clock_gettime(CLOCK_REALTIME, &tpc);
     uint64_t ts = tpc.tv_sec * 1000 + tpc.tv_nsec / 1000000UL;
     ts += sec * 1000 + millis;
-    timer_event te(cb, args, ts);
-    return _timer_que->add_timer(te);
+    runAt(cb, args, ts);
 }
 
-int EventLoop::run_every(timer_callback cb, void* args, int sec, int millis)
+int EventLoop::runEvery(timer_callback cb, std::any args, int sec, int millis = 0)
 {
     uint32_t interval = sec * 1000 + millis;
     struct timespec tpc;
     clock_gettime(CLOCK_REALTIME, &tpc);
     uint64_t ts = tpc.tv_sec * 1000 + tpc.tv_nsec / 1000000UL + interval;
     timer_event te(cb, args, ts, interval);
-    return _timer_que->add_timer(te);
+    return m_timer_que->add_timer(te);
 }
 
-void EventLoop::del_timer(int timer_id)
+void EventLoop::delTimer(int timer_id)
 {
-    _timer_que->del_timer(timer_id);
+    m_timer_que->del_timer(timer_id);
 }
 
-void EventLoop::add_task(pendingFunc func, void* args)
+void EventLoop::addTask(pendingFunc func, std::any args)
 {
-    std::pair<pendingFunc, void*> item(func, args);
-    _pendingFactors.push_back(item);
+    std::pair<pendingFunc, std::any> item(func, args);
+    m_pending_factors.push_back(item);
 }
 
-void EventLoop::run_task()
+void EventLoop::runTask()
 {
-    std::vector<std::pair<pendingFunc, void*> >::iterator it;
-    for (it = _pendingFactors.begin();it != _pendingFactors.end(); ++it)
+    std::vector<std::pair<pendingFunc, std::any> >::iterator it;
+    for (it = m_pending_factors.begin(); it != m_pending_factors.end(); ++it)
     {
         pendingFunc func = it->first;
-        void* args = it->second;
-        func(this, args);
+        std::any args = it->second;
+        func(*this, args);
     }
-    _pendingFactors.clear();
+    m_pending_factors.clear();
 }
 
-
+}
 }
 
