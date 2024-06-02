@@ -6,7 +6,7 @@ project(cli11_case VERSION 0.0.1 LANGUAGES CXX)
 
 # Set the language version
 set(CMAKE_C_STANDARD 11)
-set(CMAKE_CXX_STANDARD 17)
+set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_INSTALL_PREFIX "${CMAKE_CURRENT_BINARY_DIR}/install")
 
 

@@ -10,10 +10,10 @@
 using msgCallback = std::function<void(const char* data, uint32_t len, int cmdid, net_commu* commu, void* usr_data)>;
 
 
-class msg_dispatcher
+class MsgDispatcher
 {
 public:
-    msg_dispatcher() {}
+    MsgDispatcher() {}
 
     int add_msg_cb(int cmdid, msgCallback msg_cb, void* usr_data)
     {

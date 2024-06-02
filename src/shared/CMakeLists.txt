@@ -6,7 +6,7 @@ project(bsp_shared VERSION 0.0.1 LANGUAGES CXX)
 
 # Set the language version
 set(CMAKE_C_STANDARD 11)
-set(CMAKE_CXX_STANDARD 17)
+set(CMAKE_CXX_STANDARD 20)
 
 
 message(STATUS "CMAKE_MODULE_PATH: ${CMAKE_MODULE_PATH}")

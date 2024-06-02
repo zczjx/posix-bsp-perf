@@ -4,7 +4,7 @@
 #include "impl/ThreadPool.hpp"
 #include "impl/TcpConn.hpp"
 #include "EventLoop.hpp"
-#include "NetCommu.hpp"
+#include "ISocketConnection.hpp"
 
 #include "impl/MsgDispatcher.hpp"
 #include <shared/BspLogger.hpp>
@@ -15,6 +15,7 @@
 #include <mutex>
 #include <thread>
 #include <functional>
+#include <memory>
 #include <any>
 
 namespace bsp_sockets
@@ -54,13 +55,12 @@ public:
     std::shared_ptr<ThreadPool> getThreadPool() { return m_thread_pool; }
 
 public:
-    static msg_dispatcher g_dispatcher;
-    using conn_callback = std::function<void(net_commu& conn)>;
-    static conn_callback connBuildCb{nullptr};//用户设置连接建立后的回调函数
-    static conn_callback connCloseCb{nullptr};//用户设置连接释放后的回调函数
-
-    static void onConnBuild(conn_callback cb) { connBuildCb = cb; }
-    static void onConnClose(conn_callback cb) { connCloseCb = cb; }
+    MsgDispatcher& getMsgDispatcher() { return m_msg_dispatcher; }
+    using connectionCallback = std::function<void(ISocketConnection& conn)>;
+    connectionCallback connectionEstablishCb{nullptr};//用户设置连接建立后的回调函数
+    connectionCallback connectionCloseCb{nullptr};//用户设置连接释放后的回调函数
+    void onConnectionEstablish(connectionCallback cb) { connBuildCb = cb; }
+    void onConnectionClose(connectionCallback cb) { connCloseCb = cb; }
 
 private:
     ServerParams m_server_params;
@@ -79,6 +79,7 @@ private:
     bsp_perf::shared::ArgParser m_args;
 
     std::vector<std::shared_ptr<tcp_conn>> m_connections_pool{};//连接池
+    MsgDispatcher m_msg_dispatcher{};
 };
 
 }

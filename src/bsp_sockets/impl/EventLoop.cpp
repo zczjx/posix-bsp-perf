@@ -14,18 +14,6 @@ namespace bsp_sockets
 {
 using namespace bsp_perf::shared;
 
-void timerQueueCallback(EventLoop& loop, int fd, std::any args)
-{
-    std::vector<timerEvent> fired_evs;
-    auto& tq = loop.getTimerQueue();
-    tq->getFiredTimerEvents(fired_evs);
-    for (std::vector<timerEvent>::iterator it = fired_evs.begin();
-        it != fired_evs.end(); ++it)
-    {
-        it->cb(loop, it->cb_data);
-    }
-}
-
 EventLoop::EventLoop():
     m_epoll_fd{::epoll_create1(0)},
     m_timer_que{std::make_unique<TimerQueue>()},
@@ -42,7 +30,19 @@ EventLoop::EventLoop():
         throw BspSocketException("new TimerQueue");
     }
 
-    addIoEvent(m_timer_que->getNotifier(), timerQueueCallback, EPOLLIN, m_timer_que);
+    auto timerQueueCallback = [](EventLoop& loop, int fd, std::any args)
+    {
+        std::vector<timerEvent> fired_evs;
+        auto& tq = loop.getTimerQueue();
+        tq->getFiredTimerEvents(fired_evs);
+        for (std::vector<timerEvent>::iterator it = fired_evs.begin();
+            it != fired_evs.end(); ++it)
+        {
+            it->cb(loop, it->cb_data);
+        }
+    };
+
+    addIoEvent(m_timer_que->getNotifier(), timerQueueCallback, EPOLLIN, nullptr);
 }
 
 void EventLoop::processEvents()

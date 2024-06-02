@@ -3,7 +3,7 @@
 #include <bsp_sockets/TcpServer.hpp>
 #include <bsp_sockets/BspSocketException.hpp>
 #include <bsp_sockets/ConfigReader.hpp>
-#include "TcpConn.hpp"
+#include "TcpConnection.hpp"
 
 
 #include <stdio.h>
@@ -21,13 +21,6 @@
 namespace bsp_sockets
 {
 using namespace bsp_perf::shared;
-
-static void accepterCb(std::shared_ptr<EventLoop> loop, int fd, std::any args)
-{
-    std::shared_ptr<TcpServer> server = std::any_cast<std::shared_ptr<TcpServer>>(args);
-    server->doAccept();
-}
-
 
 TcpServer::TcpServer(std::shared_ptr<EventLoop> loop, bsp_perf::shared::ArgParser&& args):
     m_loop(loop),
@@ -99,7 +92,6 @@ TcpServer::TcpServer(std::shared_ptr<EventLoop> loop, bsp_perf::shared::ArgParse
         throw BspSocketException("listen()");
     }
 
-    info_log("server on %s:%u is running...", m_server_params.ipaddr.c_str(), m_server_params.port);
     m_logger->printStdoutLog(BspLogger::LogLevel::Debug, "server on {}:{} is running...", m_server_params.ipaddr.c_str(), m_server_params.port);
 
     if (m_server_params.thread_num > 0)
@@ -120,6 +112,11 @@ TcpServer::TcpServer(std::shared_ptr<EventLoop> loop, bsp_perf::shared::ArgParse
         conn.reset(); // 或者 conn = nullptr;
     }
 
+    auto accepterCb = [](std::shared_ptr<EventLoop> loop, int fd, std::any args)
+    {
+        std::shared_ptr<TcpServer> server = std::any_cast<std::shared_ptr<TcpServer>>(args);
+        server->doAccept();
+    };
     m_loop->addIoEvent(m_sockfd, accepterCb, EPOLLIN, std::make_any<std::shared_ptr<TcpServer>>(shared_from_this()));
 }
 
