@@ -3,60 +3,71 @@
 
 #include <stdint.h>
 #include <vector>
-#include <ext/hash_map>
+#include <unordered_map>
+#include <functional>
+#include <any>
+
+#include <shared/BspLogger.hpp>
+
+namespace bsp_sockets
+{
 
 class EventLoop;
 
-
-typedef void timer_callback(EventLoop& loop, std::any usr_data);//Timer事件回调函数
-
-struct timer_event//注册的Timer事件
+using timerCallback = std::function<void(EventLoop& loop, std::any usr_data)>; //Timer事件回调函数
+using timerEvent  = struct timerEvent//注册的Timer事件
 {
-    timer_event(timer_callback* timer_cb, void* data, uint64_t arg_ts, uint32_t arg_interval = 0):
+    timerEvent(timerCallback timer_cb, std::any data, uint64_t arg_ts, uint32_t arg_interval = 0):
     cb(timer_cb), cb_data(data), ts(arg_ts), interval(arg_interval)
     {
     }
 
-    timer_callback* cb;
-    void* cb_data;
+    timerCallback cb;
+    std::any cb_data;
     uint64_t ts;
-    uint32_t interval;//interval millis
+    uint32_t interval; //interval millis
     int timer_id;
 };
 
-class timer_queue
+class TimerQueue
 {
 public:
-    timer_queue();
-    ~timer_queue();
+    TimerQueue();
+    ~TimerQueue();
 
-    int add_timer(timer_event& te);
+    int addTimer(timerEvent& te);
 
-    void del_timer(int timer_id);
+    void delTimer(int timer_id);
 
-    int notifier() const { return _timerfd; }
-    int size() const { return _count; }
+    int getNotifier() const { return m_timer_fd; }
 
-    void get_timo(std::vector<timer_event>& fired_evs);
+    int size() const { return m_count; }
+
+    void getFiredTimerEvents(std::vector<timerEvent>& fired_evs);
+
+    void resetTimerQueue();
+
 private:
-    void reset_timo();
-
     //heap operation
-    void heap_add(timer_event& te);
-    void heap_del(int pos);
-    void heap_pop();
-    void heap_hold(int pos);
+    void heapAdd(timerEvent& te);
+    void heapDel(int pos);
+    void heapPop();
+    void heapHold(int pos);
 
-    std::vector<timer_event> _event_lst;
-    typedef std::vector<timer_event>::iterator vit;
+private:
+    std::vector<timerEvent> m_event_list{};
+    using vectorIterator = std::vector<timerEvent>::iterator;
 
-    __gnu_cxx::hash_map<int, int> _position;
+    std::unordered_map<int, int> m_position{};
+    using mapIterator = std::unordered_map<int, int>::iterator;
+    int m_count{0};
+    int m_next_timer_id{0};
+    int m_timer_fd{-1};
+    uint64_t m_pioneer{-1}; //recent timer's millis
 
-    typedef __gnu_cxx::hash_map<int, int>::iterator mit;
-    int _count;
-    int _next_timer_id;
-    int _timerfd;
-    uint64_t _pioneer;//recent timer's millis
+    std::unique_ptr<bsp_perf::shared::BspLogger> m_logger;
 };
+
+}
 
 #endif

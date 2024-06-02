@@ -6,7 +6,7 @@
 #include "UdpServer.hpp"
 #include "UdpClient.hpp"
 #include "TcpClient.hpp"
-#include "NetCommu.hpp"
+#include "ISocketConnection.hpp"
 #include "MsgHead.hpp"
 #include "ThreadQueue.hpp"
 #include "ConfigReader.hpp"

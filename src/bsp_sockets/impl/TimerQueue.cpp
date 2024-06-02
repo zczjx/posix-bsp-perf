@@ -2,189 +2,201 @@
 #include <strings.h>
 #include <pthread.h>
 #include <sys/timerfd.h>
-#include "timer_queue.h"
-#include "print_error.h"
+#include <algorithm>
 
-timer_queue::timer_queue(): _count(0), _next_timer_id(0), _pioneer(-1/*= uint32_t max*/)
+#include "TimerQueue.hpp"
+#include <bsp_sockets/BspSocketException.hpp>
+
+namespace bsp_sockets
 {
-    _timerfd = ::timerfd_create(CLOCK_REALTIME, TFD_NONBLOCK | TFD_CLOEXEC);
-    exit_if(_timerfd == -1, "timerfd_create()");
-}
+using namespace bsp_perf::shared;
 
-timer_queue::~timer_queue()
+TimerQueue::TimerQueue():
+    m_timer_fd{::timerfd_create(CLOCK_REALTIME, TFD_NONBLOCK | TFD_CLOEXEC)}
 {
-    ::close(_timerfd);
-}
-
-int timer_queue::add_timer(timer_event& te)
-{
-    te.timer_id = _next_timer_id++;
-    heap_add(te);
-
-    if (_event_lst[0].ts < _pioneer)
+    if (m_timer_fd == -1)
     {
-        _pioneer = _event_lst[0].ts;
-        reset_timo();
+        throw BspSocketException("timerfd_create");
     }
-    return te.timer_id;
 }
 
-void timer_queue::del_timer(int timer_id)
+TimerQueue::~TimerQueue()
 {
-    mit it = _position.find(timer_id);
-    if (it == _position.end())
+    ::close(m_timer_fd);
+}
+
+int TimerQueue::addTimer(timerEvent& te)
+{
+    te.timer_id = m_next_timer_id++;
+    heapAdd(te);
+
+    if (m_event_list[0].ts < m_pioneer)
     {
-        error_log("no such a timerid %d", timer_id);
-        return ;
+        m_pioneer = m_event_list[0].ts;
+        resetTimerQueue();
+    }
+
+    return te.timer_id;
+
+}
+
+void TimerQueue::delTimer(int timer_id)
+{
+    mapIterator it = m_position.find(timer_id);
+    if (it == m_position.end())
+    {
+        m_logger->printStdoutLog(BspLogger::LogLevel::Error, "no such a timerid {}", timer_id);
+        return;
     }
     int pos = it->second;
-    heap_del(pos);
+    heapDel(pos);
 
-    if (_count == 0)
+    if (m_count == 0)
     {
-        _pioneer = -1;
-        reset_timo();
+        m_pioneer = -1;
+        resetTimerQueue();
     }
-    else if (_event_lst[0].ts < _pioneer)
+    else if (m_event_list[0].ts < m_pioneer)
     {
-        _pioneer = _event_lst[0].ts;
-        reset_timo();
+        m_pioneer = m_event_list[0].ts;
+        resetTimerQueue();
     }
+
 }
 
-void timer_queue::get_timo(std::vector<timer_event>& fired_evs)
+void TimerQueue::getFiredTimerEvents(std::vector<timerEvent>& fired_evs)
 {
-    std::vector<timer_event> _reuse_lst;
-    while (_count != 0 && _pioneer == _event_lst[0].ts)
+    std::vector<timerEvent> reuse_lst;
+    while (m_count != 0 && m_pioneer == m_event_list[0].ts)
     {
-        timer_event te = _event_lst[0];
+        timerEvent te = m_event_list[0];
         fired_evs.push_back(te);
         if (te.interval)
         {
             te.ts += te.interval;
-            _reuse_lst.push_back(te);
+            reuse_lst.push_back(te);
         }
-        heap_pop();
+        heapPop();
     }
-    for (vit it = _reuse_lst.begin(); it != _reuse_lst.end(); ++it)
+    for (vectorIterator it = reuse_lst.begin(); it != reuse_lst.end(); ++it)
     {
-        add_timer(*it);
+        addTimer(*it);
     }
     //reset timeout
-    if (_count == 0)
+    if (m_count == 0)
     {
-        _pioneer = -1;
-        reset_timo();
+        m_pioneer = -1;
+        resetTimerQueue();
     }
-    else//_pioneer != _event_lst[0].ts
+    else//m_pioneer != m_event_list[0].ts
     {
-        _pioneer = _event_lst[0].ts;
-        reset_timo();
+        m_pioneer = m_event_list[0].ts;
+        resetTimerQueue();
     }
 }
 
-void timer_queue::reset_timo()
+void TimerQueue::resetTimerQueue()
 {
     struct itimerspec old_ts, new_ts;
     ::bzero(&new_ts, sizeof(new_ts));
 
-    if (_pioneer != (uint64_t)-1)
+    if (m_pioneer != (uint64_t)-1)
     {
-        new_ts.it_value.tv_sec = _pioneer / 1000;
-        new_ts.it_value.tv_nsec = (_pioneer % 1000) * 1000000;
+        new_ts.it_value.tv_sec = m_pioneer / 1000;
+        new_ts.it_value.tv_nsec = (m_pioneer % 1000) * 1000000;
     }
-    //when _pioneer = -1, new_ts = 0 will disarms the timer
-    ::timerfd_settime(_timerfd, TFD_TIMER_ABSTIME, &new_ts, &old_ts);
+    //when m_pioneer = -1, new_ts = 0 will disarms the timer
+    ::timerfd_settime(m_timer_fd, TFD_TIMER_ABSTIME, &new_ts, &old_ts);
 }
 
-void timer_queue::heap_add(timer_event& te)
+void TimerQueue::heapAdd(timerEvent& te)
 {
-    _event_lst.push_back(te);
+    m_event_list.push_back(te);
     //update position
-    _position[te.timer_id] = _count;
+    m_position[te.timer_id] = m_count;
 
-    int curr_pos = _count;
-    _count++;
+    int curr_pos = m_count;
+    m_count++;
+    int previous_pos = (curr_pos - 1) / 2;
 
-    int prt_pos = (curr_pos - 1) / 2;
-    while (prt_pos >= 0 && _event_lst[curr_pos].ts < _event_lst[prt_pos].ts)
+    while (previous_pos >= 0 && m_event_list[curr_pos].ts < m_event_list[previous_pos].ts)
     {
-        timer_event tmp = _event_lst[curr_pos];
-        _event_lst[curr_pos] = _event_lst[prt_pos];
-        _event_lst[prt_pos] = tmp;
+        std::swap(m_event_list[curr_pos], m_event_list[previous_pos]);
         //update position
-        _position[_event_lst[curr_pos].timer_id] = curr_pos;
-        _position[tmp.timer_id] = prt_pos;
+        m_position[m_event_list[curr_pos].timer_id] = curr_pos;
+        m_position[m_event_list[previous_pos].timer_id] = previous_pos;
 
-        curr_pos = prt_pos;
-        prt_pos = (curr_pos - 1) / 2;
+        curr_pos = previous_pos;
+        previous_pos = (curr_pos - 1) / 2;
     }
 }
 
-void timer_queue::heap_del(int pos)
+void TimerQueue::heapDel(int pos)
 {
-    timer_event to_del = _event_lst[pos];
-    
+    timerEvent to_del = m_event_list[pos];
     //rear item
-    timer_event tmp = _event_lst[_count - 1];
-    _event_lst[pos] = tmp;
+    timerEvent tmp = m_event_list[m_count - 1];
+    m_event_list[pos] = tmp;
     //update position
-
-    _position[tmp.timer_id] = pos;
-
+    m_position[tmp.timer_id] = pos;
     //update position
-    _position.erase(to_del.timer_id);
+    m_position.erase(to_del.timer_id);
 
-    _count--;
-    _event_lst.pop_back();
-
-    heap_hold(pos);
+    m_count--;
+    m_event_list.pop_back();
+    heapHold(pos);
 }
 
-void timer_queue::heap_pop()
+void TimerQueue::heapPop()
 {
-    if (_count <= 0) return ;
+    if (m_count <= 0)
+        return ;
     //update position
-    _position.erase(_event_lst[0].timer_id);
-    if (_count > 1)
-    {
-        timer_event tmp = _event_lst[_count - 1];
-        _event_lst[0] = tmp;
-        //update position
-        _position[tmp.timer_id] = 0;
+    m_position.erase(m_event_list[0].timer_id);
 
-        _event_lst.pop_back();
-        _count--;
-        heap_hold(0);
-    }
-    else if (_count == 1)
+    if (m_count > 1)
     {
-        _event_lst.clear();
-        _count = 0;
+        timerEvent tmp = m_event_list[m_count - 1];
+        m_event_list[0] = tmp;
+        //update position
+        m_position[tmp.timer_id] = 0;
+
+        m_event_list.pop_back();
+        m_count--;
+        heapHold(0);
     }
+    else if (m_count == 1)
+    {
+        m_event_list.clear();
+        m_count = 0;
+    }
+
 }
 
-void timer_queue::heap_hold(int pos)
+void TimerQueue::heapHold(int pos)
 {
     int left = 2 * pos + 1, right = 2 * pos + 2;
     int min_pos = pos;
-    if (left < _count && _event_lst[min_pos].ts > _event_lst[left].ts)
+
+    if (left < m_count && m_event_list[min_pos].ts > m_event_list[left].ts)
     {
         min_pos = left;
     }
-    if (right < _count && _event_lst[min_pos].ts > _event_lst[right].ts)
+
+    if (right < m_count && m_event_list[min_pos].ts > m_event_list[right].ts)
     {
         min_pos = right;
     }
+
     if (min_pos != pos)
     {
-        timer_event tmp = _event_lst[min_pos];
-        _event_lst[min_pos] = _event_lst[pos];
-        _event_lst[pos] = tmp;
+        std::swap(m_event_list[min_pos], m_event_list[pos]);
         //update position
-        _position[_event_lst[min_pos].timer_id] = min_pos;
-        _position[tmp.timer_id] = pos;
+        m_position[m_event_list[min_pos].timer_id] = min_pos;
+        m_position[m_event_list[pos].timer_id] = pos;
 
-        heap_hold(min_pos);
+        heapHold(min_pos);
     }
 }
+
+} // namespace bsp_sockets

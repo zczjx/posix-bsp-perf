@@ -11,6 +11,8 @@
 #include <iostream>
 #include <memory>
 
+namespace bsp_sockets
+{
 constexpr int max_events = 10;
 
 using ioCallback = std::function<void(EventLoop& loop, int fd, std::any args)>;
@@ -44,11 +46,11 @@ public:
     void addTask(pendingFunc func, std::any args);
     void runTask();
 
-    std::unique_ptr<timer_queue>& getTimerQueue() { return m_timer_que; }
+    std::unique_ptr<TimerQueue>& getTimerQueue() { return m_timer_que; }
     //operator for timer event
-    int runAt(timer_callback cb, std::any args, time_t ts);
-    int runAfter(timer_callback cb, std::any args, int sec, int millis = 0);
-    int runEvery(timer_callback cb, std::any args, int sec, int millis = 0);
+    int runAt(timerCallback cb, std::any args, time_t ts);
+    int runAfter(timerCallback cb, std::any args, int sec, int millis = 0);
+    int runEvery(timerCallback cb, std::any args, int sec, int millis = 0);
     void delTimer(int timer_id);
 
 private:
@@ -57,7 +59,7 @@ private:
     //map: fd->IOEvent
     std::unordered_map<int, IOEvent> m_io_events;
     using ioevIterator = std::unordered_map<int, IOEvent>::iterator;
-    std::unique_ptr<timer_queue> m_timer_que;
+    std::unique_ptr<TimerQueue> m_timer_que;
     //此队列用于:暂存将要执行的任务
     std::vector<std::pair<pendingFunc, std::any> > m_pending_factors;
 
@@ -67,5 +69,7 @@ private:
 
     friend void timerQueueCallback(EventLoop& loop, int fd, std::any args);
 };
+
+}
 
 #endif

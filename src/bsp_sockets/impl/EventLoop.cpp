@@ -16,10 +16,10 @@ using namespace bsp_perf::shared;
 
 void timerQueueCallback(EventLoop& loop, int fd, std::any args)
 {
-    std::vector<timer_event> fired_evs;
+    std::vector<timerEvent> fired_evs;
     auto& tq = loop.getTimerQueue();
-    tq->get_timo(fired_evs);
-    for (std::vector<timer_event>::iterator it = fired_evs.begin();
+    tq->getFiredTimerEvents(fired_evs);
+    for (std::vector<timerEvent>::iterator it = fired_evs.begin();
         it != fired_evs.end(); ++it)
     {
         it->cb(loop, it->cb_data);
@@ -42,7 +42,7 @@ EventLoop::EventLoop():
         throw BspSocketException("new TimerQueue");
     }
 
-    addIoEvent(m_timer_que->notifier(), timerQueueCallback, EPOLLIN, m_timer_que);
+    addIoEvent(m_timer_que->getNotifier(), timerQueueCallback, EPOLLIN, m_timer_que);
 }
 
 void EventLoop::processEvents()
@@ -182,13 +182,13 @@ void EventLoop::delIoEvent(int fd)
     }
 }
 
-int EventLoop::runAt(timer_callback cb, std::any args, time_t ts)
+int EventLoop::runAt(timerCallback cb, std::any args, time_t ts)
 {
-    timer_event te(cb, args, ts);
-    return m_timer_que->add_timer(te);
+    timerEvent te(cb, args, ts);
+    return m_timer_que->addTimer(te);
 }
 
-int EventLoop::runAfter(timer_callback cb, std::any args, int sec, int millis = 0)
+int EventLoop::runAfter(timerCallback cb, std::any args, int sec, int millis = 0)
 {
     struct timespec tpc;
     clock_gettime(CLOCK_REALTIME, &tpc);
@@ -197,19 +197,19 @@ int EventLoop::runAfter(timer_callback cb, std::any args, int sec, int millis = 
     runAt(cb, args, ts);
 }
 
-int EventLoop::runEvery(timer_callback cb, std::any args, int sec, int millis = 0)
+int EventLoop::runEvery(timerCallback cb, std::any args, int sec, int millis = 0)
 {
     uint32_t interval = sec * 1000 + millis;
     struct timespec tpc;
     clock_gettime(CLOCK_REALTIME, &tpc);
     uint64_t ts = tpc.tv_sec * 1000 + tpc.tv_nsec / 1000000UL + interval;
-    timer_event te(cb, args, ts, interval);
-    return m_timer_que->add_timer(te);
+    timerEvent te(cb, args, ts, interval);
+    return m_timer_que->addTimer(te);
 }
 
 void EventLoop::delTimer(int timer_id)
 {
-    m_timer_que->del_timer(timer_id);
+    m_timer_que->delTimer(timer_id);
 }
 
 void EventLoop::addTask(pendingFunc func, std::any args)
@@ -230,6 +230,5 @@ void EventLoop::runTask()
     m_pending_factors.clear();
 }
 
-}
-}
+} //namespace bsp_sockets
 
