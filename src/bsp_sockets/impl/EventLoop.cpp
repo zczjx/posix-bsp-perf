@@ -1,5 +1,5 @@
 #include <bsp_sockets/EventLoop.hpp>
-#include <bsp_sockets/BspSocketException.hpp>
+#include "BspSocketException.hpp"
 #include "TimerQueue.hpp"
 
 #include <sys/epoll.h>

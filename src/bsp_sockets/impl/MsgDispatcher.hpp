@@ -3,39 +3,46 @@
 
 #include <assert.h>
 #include <pthread.h>
-#include <ext/hash_map>
-#include "NetCommu.hpp"
+#include <unordered_map>
+#include <bsp_sockets/ISocketConnection.hpp>
 #include <functional>
+#include <any>
+#include <span>
+#include <memory>
 
-using msgCallback = std::function<void(const char* data, uint32_t len, int cmdid, net_commu* commu, void* usr_data)>;
-
+using msgCallback = std::function<void(std::span<const uint8_t> data, uint32_t len, int cmd_id, std::shared_ptr<ISocketConnection> connection, std::any usr_data)>;
 
 class MsgDispatcher
 {
 public:
     MsgDispatcher() {}
 
-    int add_msg_cb(int cmdid, msgCallback msg_cb, void* usr_data)
+    int addMsgCallback(int cmd_id, msgCallback msg_cb, std::any usr_data)
     {
-        if (_dispatcher.find(cmdid) != _dispatcher.end()) return -1;
-        _dispatcher[cmdid] = msg_cb;
-        _args[cmdid] = usr_data;
+        if (m_dispatcher.find(cmd_id) != m_dispatcher.end())
+        {
+            return -1;
+        }
+
+        m_dispatcher[msg_cb] = msg_cb;
+        m_args[msg_cb] = usr_data;
         return 0;
     }
 
-    bool exist(int cmdid) const { return _dispatcher.find(cmdid) != _dispatcher.end(); }
+    bool exist(int cmd_id) const { return m_dispatcher.find(cmd_id) != m_dispatcher.end(); }
 
-    void cb(const char* data, uint32_t len, int cmdid, net_commu* commu)
+    void callbackFunc(std::span<const uint8_t> data, uint32_t len, int cmd_id, std::shared_ptr<ISocketConnection> connection)
     {
-        assert(exist(cmdid));
-        msgCallback* func = _dispatcher[cmdid];
-        void* usr_data = _args[cmdid];
-        func(data, len, cmdid, commu, usr_data);
+        assert(exist(cmd_id));
+
+        auto func = m_dispatcher[cmd_id];
+        auto usr_data = m_args[cmd_id];
+        func(data, len, cmd_id, connection, usr_data);
     }
 
 private:
-    __gnu_cxx::hash_map<int, msgCallback*> _dispatcher;
-    __gnu_cxx::hash_map<int, void*> _args;
+    std::unordered_map<int, msgCallback> m_dispatcher;
+    std::unordered_map<int, std::any> m_args;
 };
 
 #endif

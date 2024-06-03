@@ -1,8 +1,8 @@
 
 #include "TcpConnection.hpp"
+#include "MsgHead.hpp"
 #include <bsp_sockets/TcpServer.hpp>
-#include <bsp_sockets/MsgHead.hpp>
-#include <bsp_sockets/BspSocketException.hpp>
+#include "BspSocketException.hpp"
 
 #include <fcntl.h>
 #include <unistd.h>
@@ -73,7 +73,7 @@ void TcpConnection::handleRead()
         cleanConnection();
         return ;
     }
-    commu_head head;
+    msgHead head;
     while (m_in_buf.length() >= COMMU_HEAD_LENGTH)
     {
         ::memcpy(&head, m_in_buf.data(), COMMU_HEAD_LENGTH);
@@ -95,7 +95,7 @@ void TcpConnection::handleRead()
         {
             std::shared_ptr<TcpServer> server = m_tcp_server.lock();
             auto& dispatcher = server->getMsgDispatcher();
-            if (!dispatcher.exist(head.cmdid))
+            if (!dispatcher.exist(head.cmd_id))
             {
                 //data format is messed up
                 m_logger->printStdoutLog(BspLogger::LogLevel::Error, "this message has no corresponding callback, close connection");
@@ -104,7 +104,7 @@ void TcpConnection::handleRead()
             }
             m_in_buf.pop(COMMU_HEAD_LENGTH);
             //domain: call user callback
-            dispatcher.cb(m_in_buf.data(), head.length, head.cmdid, this);
+            dispatcher.callbackFunc(m_in_buf.data(), head.length, head.cmdid, this);
             m_in_buf.pop(head.length);
         }
         else

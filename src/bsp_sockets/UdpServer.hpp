@@ -1,7 +1,6 @@
 #ifndef __UDP_SERVER_H__
 #define __UDP_SERVER_H__
 
-#include "MsgHead.hpp"
 #include "NetCommu.hpp"
 
 #include "impl/EventLoop.hpp"

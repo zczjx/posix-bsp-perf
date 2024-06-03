@@ -5,7 +5,7 @@
 #include <algorithm>
 
 #include "TimerQueue.hpp"
-#include <bsp_sockets/BspSocketException.hpp>
+#include "BspSocketException.hpp"
 
 namespace bsp_sockets
 {

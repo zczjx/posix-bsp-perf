@@ -2,7 +2,7 @@
 #define __TCP_SERVER_H__
 
 #include "impl/ThreadPool.hpp"
-#include "impl/TcpConn.hpp"
+#include "impl/TcpConnection.hpp"
 #include "EventLoop.hpp"
 #include "ISocketConnection.hpp"
 
@@ -44,7 +44,7 @@ public:
 
     void doAccept();
 
-    void addMsgCallback(int cmdid, msgCallback msg_cb, std::any usr_data) { g_dispatcher.add_msg_cb(cmdid, msg_cb, usr_data); }
+    void addMsgCallback(int cmd_id, msgCallback msg_cb, std::any usr_data) { m_msg_dispatcher.addMsgCallback(cmd_id, msg_cb, usr_data); }
 
     void incConnection();
     size_t getConnectionNum();

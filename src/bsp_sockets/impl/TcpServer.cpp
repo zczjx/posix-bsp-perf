@@ -1,10 +1,9 @@
 
-#include <bsp_sockets/MsgHead.hpp>
+#include "MsgHead.hpp"
 #include <bsp_sockets/TcpServer.hpp>
-#include <bsp_sockets/BspSocketException.hpp>
 #include <bsp_sockets/ConfigReader.hpp>
 #include "TcpConnection.hpp"
-
+#include "BspSocketException.hpp"
 
 #include <stdio.h>
 #include <fcntl.h>

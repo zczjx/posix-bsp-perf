@@ -7,8 +7,4 @@
 #include "UdpClient.hpp"
 #include "TcpClient.hpp"
 #include "ISocketConnection.hpp"
-#include "MsgHead.hpp"
-#include "ThreadQueue.hpp"
-#include "ConfigReader.hpp"
-
 #endif
