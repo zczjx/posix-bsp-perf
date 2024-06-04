@@ -24,7 +24,7 @@ using namespace bsp_perf::shared;
 TcpServer::TcpServer(std::shared_ptr<EventLoop> loop, bsp_perf::shared::ArgParser&& args):
     m_loop(loop),
     m_args{std::move(args)},
-    m_logger{std::make_unique<BspLogger>()}
+    m_logger{std::make_unique<BspLogger>("TcpServer")}
 {
     m_args.getOptionVal("--ip", m_server_params.ipaddr);
     m_args.getOptionVal("--port", m_server_params.port);
