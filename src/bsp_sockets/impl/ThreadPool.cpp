@@ -1,21 +1,28 @@
-#include "thread_pool.h"
-#include "tcp_conn.h"
-#include "msg_head.h"
-#include "event_loop.h"
-#include "print_error.h"
-#include "tcp_server.h"
+#include "ThreadPool.hpp"
+#include "TcpConnection.hpp"
+#include "BspSocketException.hpp"
 
-void msg_comming_cb(event_loop* loop, int fd, void *args)
+#include <bsp_sockets/EventLoop.hpp>
+#include <bsp_sockets/TcpServer.hpp>
+
+
+namespace bsp_sockets
 {
-    thread_queue<queue_msg>* queue = (thread_queue<queue_msg>*)args;
-    std::queue<queue_msg> msgs;
-    queue->recv_msg(msgs);
+using namespace bsp_perf::shared;
+
+static void onMsgComing(std::shared_ptr<EventLoop> loop, int fd, std::any args)
+{
+    auto queue = std::any_cast<std::shared_ptr<ThreadQueue<queueMsg>>>(args);
+    std::queue<queueMsg> msgs;
+    queue->recvMsg(msgs);
+
     while (!msgs.empty())
     {
-        queue_msg msg = msgs.front();
+        auto msg = msgs.front();
         msgs.pop();
-        if (msg.cmd_type == queue_msg::NEW_CONN)
+        if (msg.cmd_type == queueMsg::MSG_TYPE::NEW_CONN)
         {
+            // toDo: new connection
             tcp_conn* conn = tcp_server::conns[msg.connfd];
             if (conn)
             {
@@ -38,55 +45,80 @@ void msg_comming_cb(event_loop* loop, int fd, void *args)
     }
 }
 
-void* thread_domain(void* args)
+static std::any threadDomain(std::any args)
 {
-    thread_queue<queue_msg>* queue = (thread_queue<queue_msg>*)args;
-    event_loop* loop = new event_loop();
-    exit_if(loop == NULL, "new event_loop()");
-    //set loop and install message comming event's callback: msg_comming_cb
-    queue->set_loop(loop, msg_comming_cb, queue);
-    loop->process_evs();
-    return NULL;
+    auto queue = std::any_cast<std::shared_ptr<ThreadQueue<queueMsg>>>(args);
+    std::shared_ptr<EventLoop> loop = std::make_shared<EventLoop>();
+
+    loop->setLoop(func, queue);
+    loop->processEvents();
+
+    auto func = [](std::shared_ptr<EventLoop> loop, int fd, std::any args)
+    {
+        onMsgComing(loop, fd, args);
+    };
+
+    queue->setLoop(loop, func, queue);
+    loop->processEvents();
 }
 
-thread_pool::thread_pool(int thread_cnt): _curr_index(0), _thread_cnt(thread_cnt)
+ThreadPool::ThreadPool(int thread_cnt):
+    m_thread_cnt(thread_cnt)
 {
-    exit_if(thread_cnt <= 0 || thread_cnt > 30, "error thread_cnt %d", thread_cnt);
-    _pool = new thread_queue<queue_msg>*[thread_cnt];
-    _tids = new pthread_t[thread_cnt];
-    int ret;
-    for (int i = 0;i < thread_cnt; ++i)
+    if ((m_thread_cnt <=0) || (m_thread_cnt > 30))
     {
-        _pool[i] = new thread_queue<queue_msg>();
-        ret = ::pthread_create(&_tids[i], NULL, thread_domain, _pool[i]);
-        exit_if(ret == -1, "pthread_create");
+        throw BspSocketException("error thread_cnt");
+    }
 
-        ret = ::pthread_detach(_tids[i]);
-        error_if(ret == -1, "pthread_detach");
+    for (int i = 0; i < m_thread_cnt; ++i)
+    {
+        m_pool.push_back(std::make_shared<ThreadQueue<queue_msg>>());
+
+        auto func = [](std::any args)
+        {
+            threadDomain(args);
+        };
+
+        auto thd = std::thread(func, m_pool[i]);
+
+        if (thd.joinable() == false)
+        {
+            throw BspSocketException("std::thread create failed");
+        }
+        m_tids.push_back(std::move(thd));
+        m_tids[i].detach();
     }
 }
 
-thread_queue<queue_msg>* thread_pool::get_next_thread()
+std::shared_ptr<ThreadQueue<queueMsg>> ThreadPool::getNextThread()
 {
-    if (_curr_index == _thread_cnt)
-        _curr_index = 0;
-    return _pool[_curr_index++];
+    if (m_curr_index >= m_thread_cnt)
+    {
+        m_curr_index = 0;
+    }
+
+    return m_pool[m_curr_index++];
 }
 
-void thread_pool::run_task(int thd_index, pendingFunc task, void* args)
+void ThreadPool::runTask(int thd_index, pendingFunc task, std::any args)
 {
-    queue_msg msg;
-    msg.cmd_type = queue_msg::NEW_TASK;
+    queueMsg msg;
+    msg.cmd_type = queueMsg::MSG_TYPE::NEW_TASK;
     msg.task = task;
     msg.args = args;
-    thread_queue<queue_msg>* cq = _pool[thd_index];
-    cq->send_msg(msg);
+    auto thread_queue = m_pool[thd_index];
+    thread_queue->sendMsg(msg);
 }
 
-void thread_pool::run_task(pendingFunc task, void* args)
+void ThreadPool::runTask(pendingFunc task, std::any args)
 {
-    for (int i = 0;i < _thread_cnt; ++i)
+    for (int i = 0; i < m_thread_cnt; ++i)
     {
-        run_task(i, task);
+        runTask(i, task);
     }
 }
+
+}
+
+
+

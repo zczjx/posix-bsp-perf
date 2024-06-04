@@ -113,7 +113,7 @@ TcpServer::TcpServer(std::shared_ptr<EventLoop> loop, bsp_perf::shared::ArgParse
 
     auto accepterCb = [](std::shared_ptr<EventLoop> loop, int fd, std::any args)
     {
-        std::shared_ptr<TcpServer> server = std::any_cast<std::shared_ptr<TcpServer>>(args);
+        auto server = std::any_cast<std::shared_ptr<TcpServer>>(args);
         server->doAccept();
     };
     m_loop->addIoEvent(m_sockfd, accepterCb, EPOLLIN, std::make_any<std::shared_ptr<TcpServer>>(shared_from_this()));

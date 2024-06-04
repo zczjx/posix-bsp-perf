@@ -1,31 +1,60 @@
+// MIT License
+//
+// Copyright (c) 2024 Clarence Zhou<287334895@qq.com>
+//
+// Permission is hereby granted, free of charge, to any person obtaining a copy
+// of this software and associated documentation files (the "Software"), to deal
+// in the Software without restriction, including without limitation the rights
+// to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+// copies of the Software, and to permit persons to whom the Software is
+// furnished to do so, subject to the following conditions:
+//
+// The above copyright notice and this permission notice shall be included in all
+// copies or substantial portions of the Software.
+//
+// THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+// IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+// FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+// AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+// LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+// OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+// SOFTWARE.
+
 #ifndef __THREAD_POOL_H__
 #define __THREAD_POOL_H__
 
-#include "msg_head.h"
-#include "thread_queue.h"
-#include <pthread.h>
+#include "MsgHead.hpp"
+#include "ThreadQueue.hpp"
+#include <queue>
+#include <memory>
+#include <any>
+#include <vector>
 
-extern void* thread_domain(void* args);
+#include <thread>
 
-class thread_pool
+namespace bsp_sockets
+{
+using namespace bsp_perf::shared;
+class ThreadPool
 {
 public:
-    thread_pool(int thread_cnt);
+    ThreadPool(int thread_cnt);
 
-    //~thread_pool();
-    //由于thread_pool是给tcp_server类使用的，而tcp_server类使用时往往具有程序的完全生命周期，即程序退出时会自动释放内存,不需要析构函数去delete内存
+    virtual ~ThreadPool();
 
-    thread_queue<queue_msg>* get_next_thread();
+    std::shared_ptr<ThreadQueue<queueMsg>> getNextThread();
 
-    void run_task(int thd_index, pendingFunc task, void* args = NULL);
+    void runTask(int thd_index, pendingFunc task, std::any args);
 
-    void run_task(pendingFunc task, void* args = NULL);
+    void runTask(pendingFunc task, std::any args);
 
 private:
-    int _curr_index;
-    int _thread_cnt;
-    thread_queue<queue_msg>** _pool;
-    pthread_t* _tids;
+    int m_curr_index{0};
+    int m_thread_cnt{0};
+    std::vector<std::shared_ptr<ThreadQueue<queueMsg>>> m_pool{};
+    std::vector<std::thread> m_threads{};
 };
+
+} // namespace bsp_sockets
 
 #endif
