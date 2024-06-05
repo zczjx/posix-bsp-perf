@@ -15,9 +15,9 @@ namespace bsp_sockets
 {
 constexpr int max_events = 10;
 
-using ioCallback = std::function<void(EventLoop& loop, int fd, std::any args)>;
+using ioCallback = std::function<void(std::shared_ptr<EventLoop> loop, int fd, std::any args)>;
 //让当前loop在一次poll循环后执行指定任务
-using pendingFunc = std::function<void(EventLoop&, std::any)>;
+using pendingFunc = std::function<void(std::shared_ptr<EventLoop>, std::any)>;
 
 struct IOEvent//注册的IO事件
 {

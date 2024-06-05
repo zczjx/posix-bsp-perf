@@ -14,7 +14,7 @@ namespace bsp_sockets
 {
 using namespace bsp_perf::shared;
 
-TcpConnection::TcpConnection(int conn_fd, std::shared_ptr<EventLoop> loop, std::shared_ptr<TcpServer> server):
+TcpConnection::TcpConnection(int conn_fd, std::shared_ptr<EventLoop> loop, std::weak_ptr<TcpServer> server):
     m_connection_fd(conn_fd),
     m_loop(loop),
     m_tcp_server(server),

@@ -35,10 +35,11 @@
 namespace bsp_sockets
 {
 using namespace bsp_perf::shared;
+class TcpServer;
 class ThreadPool
 {
 public:
-    ThreadPool(int thread_cnt);
+    ThreadPool(int thread_cnt, std::weak_ptr<TcpServer> server);
 
     virtual ~ThreadPool();
 
@@ -49,10 +50,16 @@ public:
     void runTask(pendingFunc task, std::any args);
 
 private:
+    void threadDomain(std::any args);
+
+    void onMsgComing(std::shared_ptr<EventLoop> loop, int fd, std::any args);
+
+private:
     int m_curr_index{0};
     int m_thread_cnt{0};
     std::vector<std::shared_ptr<ThreadQueue<queueMsg>>> m_pool{};
     std::vector<std::thread> m_threads{};
+    std::weak_ptr<TcpServer> m_tcp_server{nullptr};
 };
 
 } // namespace bsp_sockets

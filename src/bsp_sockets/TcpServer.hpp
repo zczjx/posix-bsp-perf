@@ -47,8 +47,14 @@ public:
     void addMsgCallback(int cmd_id, msgCallback msg_cb, std::any usr_data) { m_msg_dispatcher.addMsgCallback(cmd_id, msg_cb, usr_data); }
 
     void incConnection();
-    size_t getConnectionNum();
+
     void decConnection();
+
+    size_t getConnectionNum();
+
+    std::weak_ptr<tcp_conn> getConnectionFromPool(int connection_fd);
+
+    void insertConnectionToPool(std::shared_ptr<tcp_conn> conn, int connection_fd);
 
     std::shared_ptr<EventLoop> loop() { return m_loop; }
 

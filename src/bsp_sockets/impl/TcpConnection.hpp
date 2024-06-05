@@ -16,7 +16,7 @@ class TcpServer;
 class TcpConnection: public ISocketConnection
 {
 public:
-    TcpConnection(int conn_fd, std::shared_ptr<EventLoop> loop, std::shared_ptr<TcpServer> server);
+    TcpConnection(int conn_fd, std::shared_ptr<EventLoop> loop, std::weak_ptr<TcpServer> server);
 
     void activate(int conn_fd, std::shared_ptr<EventLoop> loop);
 

@@ -1,6 +1,5 @@
 #include "ThreadPool.hpp"
 #include "TcpConnection.hpp"
-#include "BspSocketException.hpp"
 
 #include <bsp_sockets/EventLoop.hpp>
 #include <bsp_sockets/TcpServer.hpp>
@@ -8,62 +7,55 @@
 
 namespace bsp_sockets
 {
-using namespace bsp_perf::shared;
-
-static void onMsgComing(std::shared_ptr<EventLoop> loop, int fd, std::any args)
+void ThreadPool::onMsgComing(std::shared_ptr<EventLoop> loop, int fd, std::any args)
 {
     auto queue = std::any_cast<std::shared_ptr<ThreadQueue<queueMsg>>>(args);
     std::queue<queueMsg> msgs;
     queue->recvMsg(msgs);
 
-    while (!msgs.empty())
+    while (!msgs.empty() && !m_tcp_server.expired())
     {
         auto msg = msgs.front();
         msgs.pop();
         if (msg.cmd_type == queueMsg::MSG_TYPE::NEW_CONN)
         {
             // toDo: new connection
-            tcp_conn* conn = tcp_server::conns[msg.connfd];
-            if (conn)
+            auto conn = m_tcp_server.lock()->getConnectionFromPool(msg.connection_fd);
+
+            if (!conn.expired())
             {
-                conn->init(msg.connfd, loop);
+                conn->activate(msg.connection_fd, loop);
             }
             else
             {
-                tcp_server::conns[msg.connfd] = new tcp_conn(msg.connfd, loop);
-                exit_if(tcp_server::conns[msg.connfd] == NULL, "new tcp_conn");
+                m_tcp_server.lock()->insertConnectionToPool(std::make_shared<TcpConnection>(msg.connection_fd, loop, m_tcp_server),
+                                                            msg.connection_fd);
             }
         }
-        else if (msg.cmd_type == queue_msg::NEW_TASK)
+        else if (msg.cmd_type == queueMsg::MSG_TYPE::NEW_TASK)
         {
-            loop->add_task(msg.task, msg.args);
+            loop->addTask(msg.task, msg.args);
         }
         else
         {
             //TODO: other message between threads
+            continue;
         }
     }
 }
 
-static std::any threadDomain(std::any args)
+std::any ThreadPool::threadDomain(std::any args)
 {
     auto queue = std::any_cast<std::shared_ptr<ThreadQueue<queueMsg>>>(args);
     std::shared_ptr<EventLoop> loop = std::make_shared<EventLoop>();
 
-    loop->setLoop(func, queue);
-    loop->processEvents();
-
-    auto func = [](std::shared_ptr<EventLoop> loop, int fd, std::any args)
-    {
-        onMsgComing(loop, fd, args);
-    };
-
-    queue->setLoop(loop, func, queue);
+    queue->setLoop(loop, onMsgComing, queue);
     loop->processEvents();
 }
 
-ThreadPool::ThreadPool(int thread_cnt):
-    m_thread_cnt(thread_cnt)
+ThreadPool::ThreadPool(int thread_cnt, std::weak_ptr<TcpServer> server):
+    m_thread_cnt(thread_cnt),
+    m_tcp_server(server)
 {
     if ((m_thread_cnt <=0) || (m_thread_cnt > 30))
     {
@@ -72,14 +64,9 @@ ThreadPool::ThreadPool(int thread_cnt):
 
     for (int i = 0; i < m_thread_cnt; ++i)
     {
-        m_pool.push_back(std::make_shared<ThreadQueue<queue_msg>>());
+        m_pool.push_back(std::make_shared<ThreadQueue<queueMsg>>());
 
-        auto func = [](std::any args)
-        {
-            threadDomain(args);
-        };
-
-        auto thd = std::thread(func, m_pool[i]);
+        auto thd = std::thread(threadDomain, m_pool[i]);
 
         if (thd.joinable() == false)
         {
