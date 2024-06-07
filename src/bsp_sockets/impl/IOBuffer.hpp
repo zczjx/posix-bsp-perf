@@ -1,138 +1,97 @@
 #ifndef __IO_BUFFER_H__
 #define __IO_BUFFER_H__
 
-#include <list>
-#include <string.h>
-#include <assert.h>
-#include <stdint.h>
-#include <pthread.h>
-#include <ext/hash_map>
+#include <queue>
+#include <string>
+#include <mutex>
+#include <vector>
+#include <utility>
+#include <cstdint>
 
-struct io_buffer
+#include <shared/BspLogger.hpp>
+
+
+namespace bsp_sockets
 {
-    io_buffer(int size): 
-    capacity(size), length(0), head(0), next(NULL)
-    {
-        data = new char[size];
-        assert(data);
-    }
-
-    void clear()
-    {
-        length = head = 0;
-    }
-
-    void adjust()//move data to head
-    {
-        if (head)
-        {
-            if (length)
-            {
-                ::memmove(data, data + head, length);
-            }
-            head = 0;
-        }
-    }
-
-    void copy(const io_buffer* other)
-    {
-        //only copy data to myself
-        ::memcpy(data, other->data + other->head, other->length);
-        head = 0;
-        length = other->length;
-    }
-
-    void pop(int len)
-    {
-        length -= len;
-        head += len;
-    }
-
-    int capacity;
-    int length;
-    int head;
-    io_buffer* next;
-    char* data;
-};
-
-class buffer_pool
+using namespace bsp_perf::shared;
+class IOBufferQueue
 {
 public:
-    enum MEM_CAP
-    {
-        u4K   = 4096,
-        u16K  = 16384,
-        u64K  = 65536,
-        u256K = 262144,
-        u1M   = 1048576,
-        u4M   = 4194304,
-        u8M   = 8388608
-    };
+    IOBufferQueue() = default;
+    virtual ~IOBufferQueue() = default;
+    IOBufferQueue(const IOBufferQueue&) = delete;
+    IOBufferQueue& operator=(const IOBufferQueue&) = delete;
+    IOBufferQueue(IOBufferQueue&&) = delete;
+    IOBufferQueue& operator=(IOBufferQueue&&) = delete;
 
-    static void init()
+    virtual int getBuffersCount()
     {
-        _ins = new buffer_pool();
-        assert(_ins);
+        std::lock_guard<std::mutex> lock(m_mutex);
+        return m_buffers.size();
     }
-
-    static buffer_pool* ins()
+    virtual void appendBuffer(const std::vector<uint8_t>& buffer)
     {
-        pthread_once(&_once, init);
-        return _ins;
+        std::lock_guard<std::mutex> lock(m_mutex);
+        m_buffers.push(buffer);
     }
+    virtual std::vector<uint8_t>& getFrontBuffer()
+    {
+        std::lock_guard<std::mutex> lock(m_mutex);
+        return m_buffers.front();
+    }
+    virtual void popBuffer(int len , int index)
+    {
+        std::lock_guard<std::mutex> lock(m_mutex);
+        m_buffers.front().erase(m_buffers.front().begin(), m_buffers.front().begin() + len);
+    }
+    virtual void clearBuffers()
+    {
+        std::lock_guard<std::mutex> lock(m_mutex);
+        std::queue<std::vector<uint8_t>> empty;
 
-    io_buffer* alloc(int N);
-
-    io_buffer* alloc() { return alloc(u4K); }
-
-    void revert(io_buffer* buffer);
+        std::swap(m_buffers, empty);
+    }
 
 private:
-    buffer_pool();
-
-    buffer_pool(const buffer_pool&);
-    const buffer_pool& operator=(const buffer_pool&);
-
-    typedef __gnu_cxx::hash_map<int, io_buffer*> pool_t;
-    pool_t _pool;
-    uint64_t _total_mem;
-    static buffer_pool* _ins;
-    static pthread_mutex_t _mutex;
-    static pthread_once_t _once;
+    std::queue<std::vector<uint8_t>> m_buffers{};
+    std::mutex m_mutex{};
 };
 
-struct tcp_buffer
-{
-    tcp_buffer(): _buf(NULL) { }
-
-    ~tcp_buffer() { clear(); }
-
-    const int length() const { return _buf? _buf->length: 0; }
-
-    void pop(int len);
-
-    void clear();
-
-protected:
-    io_buffer* _buf;
-};
-
-class input_buffer: public tcp_buffer
+class InputBufferQueue: public IOBufferQueue
 {
 public:
-    int read_data(int fd);
+    InputBufferQueue(): m_logger(std::make_unique<BspLogger>("InputBufferQueue")) {}
+    ~InputBufferQueue() = default;
+    InputBufferQueue(const InputBufferQueue&) = delete;
+    InputBufferQueue& operator=(const InputBufferQueue&) = delete;
+    InputBufferQueue(InputBufferQueue&&) = delete;
+    InputBufferQueue& operator=(InputBufferQueue&&) = delete;
 
-    const char* data() const { return _buf? _buf->data + _buf->head: NULL; }
+    int readData(int fd);
 
-    void adjust() { if (_buf) _buf->adjust(); }
+private:
+    std::unique_ptr<BspLogger> m_logger;
 };
 
-class output_buffer: public tcp_buffer
+
+class OutputBufferQueue: public IOBufferQueue
 {
 public:
-    int send_data(const char* data, int datlen);
+    OutputBufferQueue(): m_logger(std::make_unique<BspLogger>("OutputBufferQueue")) {}
+    ~OutputBufferQueue() = default;
+    OutputBufferQueue(const OutputBufferQueue&) = delete;
+    OutputBufferQueue& operator=(const OutputBufferQueue&) = delete;
+    OutputBufferQueue(OutputBufferQueue&&) = delete;
+    OutputBufferQueue& operator=(OutputBufferQueue&&) = delete;
 
-    int write_fd(int fd);
+    int sendData(const std::vector<uint8_t>& buffer);
+    int writeFd(int fd);
+
+private:
+    std::unique_ptr<BspLogger> m_logger;
 };
 
-#endif
+
+} // namespace bsp_sockets
+
+#endif // __IO_BUFFER_H__

@@ -8,8 +8,8 @@
 namespace bsp_sockets
 {
 class EventLoop;
-constexpr int msg_head_length = 8;
-constexpr int msg_length_limit = 65536 - msg_head_length;
+static constexpr int MSG_HEAD_LENGTH = 8;
+static constexpr int MSG_LENGTH_LIMIT = 65536 - MSG_HEAD_LENGTH;
 
 using msgHead = struct msgHead
 {
