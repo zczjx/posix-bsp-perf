@@ -38,6 +38,12 @@ public:
         return m_buffers.size() >= MAX_BUFFER_NUM;
     }
 
+    virtual bool isEmpty()
+    {
+        std::lock_guard<std::mutex> lock(m_mutex);
+        return m_buffers.empty();
+    }
+
     virtual void appendBuffer(const std::vector<uint8_t>& buffer)
     {
         std::lock_guard<std::mutex> lock(m_mutex);

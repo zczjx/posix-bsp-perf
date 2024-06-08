@@ -13,7 +13,7 @@ namespace bsp_sockets
 
 class TcpServer;
 
-class TcpConnection: public ISocketConnection
+class TcpConnection: public ISocketConnection, public std::enable_shared_from_this<TcpConnection>
 {
 public:
     TcpConnection(int conn_fd, std::shared_ptr<EventLoop> loop, std::weak_ptr<TcpServer> server);
@@ -24,7 +24,7 @@ public:
 
     void handleWrite();
 
-    virtual int sendData(std::span<const uint8_t> data, int datlen, int cmdid) override;
+    virtual int sendData(std::span<const uint8_t> data, int datlen, int cmd_id) override;
 
     virtual int getFd() override { return m_connection_fd; }
 
@@ -41,6 +41,5 @@ private:
 };
 
 }
-
 
 #endif

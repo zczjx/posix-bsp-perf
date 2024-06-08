@@ -4,10 +4,10 @@
 #include <bsp_sockets/TcpServer.hpp>
 #include "BspSocketException.hpp"
 
+#include <cstring>
+
 #include <fcntl.h>
 #include <unistd.h>
-#include <string.h>
-#include <pthread.h>
 #include <netinet/tcp.h>
 
 namespace bsp_sockets
@@ -58,25 +58,30 @@ void TcpConnection::activate(int conn_fd, std::shared_ptr<EventLoop> loop)
 
 void TcpConnection::handleRead()
 {
-    int ret = m_in_buf.readData(m_connection_fd);
-    if (ret == -1)
+    int ret = m_inbuf_queue.readData(m_connection_fd);
+
+    if (ret < 0)
     {
         //read data error
         m_logger->printStdoutLog(BspLogger::LogLevel::Error, "read data from socket");
         cleanConnection();
-        return ;
+        return;
     }
     else if (ret == 0)
     {
         //The peer is closed, return -2
         m_logger->printStdoutLog(BspLogger::LogLevel::Debug, "connection closed by peer");
         cleanConnection();
-        return ;
+        return;
     }
+
     msgHead head;
-    while (m_in_buf.length() >= COMMU_HEAD_LENGTH)
+
+    while (m_inbuf_queue.getBuffersCount() >= 0)
     {
-        ::memcpy(&head, m_in_buf.data(), COMMU_HEAD_LENGTH);
+        auto& in_buffer = m_inbuf_queue.getFrontBuffer();
+        std::memcpy(&head, m_in_buf.data(), sizeof(msgHead);
+
         if (head.length > MSG_LENGTH_LIMIT || head.length < 0)
         {
             //data format is messed up
@@ -85,7 +90,7 @@ void TcpConnection::handleRead()
             break;
         }
 
-        if (m_in_buf.length() < COMMU_HEAD_LENGTH + head.length)
+        if (in_buffer.size() < MSG_HEAD_LENGTH + head.length)
         {
             //this is half-package
             break;
@@ -95,6 +100,7 @@ void TcpConnection::handleRead()
         {
             std::shared_ptr<TcpServer> server = m_tcp_server.lock();
             auto& dispatcher = server->getMsgDispatcher();
+
             if (!dispatcher.exist(head.cmd_id))
             {
                 //data format is messed up
@@ -102,10 +108,10 @@ void TcpConnection::handleRead()
                 cleanConnection();
                 break;
             }
-            m_in_buf.pop(COMMU_HEAD_LENGTH);
+
             //domain: call user callback
-            dispatcher.callbackFunc(m_in_buf.data(), head.length, head.cmdid, this);
-            m_in_buf.pop(head.length);
+            dispatcher.callbackFunc(in_buffer.data() + sizeof(msgHead), head.length, head.cmd_id, shared_from_this());
+            m_inbuf_queue.popBuffer();
         }
         else
         {
@@ -114,15 +120,13 @@ void TcpConnection::handleRead()
             break;
         }
     }
-
-    m_in_buf.adjust();
 }
 
 void TcpConnection::handleWrite()
 {
-    while (m_out_buf.length())
+    while (m_outbuf_queue.getBuffersCount() > 0)
     {
-        int ret = m_out_buf.writeData(m_connection_fd);
+        int ret = m_outbuf_queue.writeFd(m_connection_fd);
         if (ret == -1)
         {
             m_logger->printStdoutLog(BspLogger::LogLevel::Error, "write data to socket");
@@ -136,41 +140,34 @@ void TcpConnection::handleWrite()
         }
     }
 
-    if (!m_out_buf.length())
+    if (m_outbuf_queue.isEmpty())
     {
         m_loop->delIoEvent(m_connection_fd, EPOLLOUT);
     }
 
 }
 
-int TcpConnection::sendData(std::span<const uint8_t> data, int datlen, int cmdid)
+int TcpConnection::sendData(std::span<const uint8_t> data, int datlen, int cmd_id)
 {
     bool need_listen = false;
 
-    if (!m_out_buf.length())
+    if (m_outbuf_queue.isEmpty() == 0)
     {
         need_listen = true;
     }
 
+    std::vector<uint8_t> buffer(sizeof(msgHead) + datlen);
     //write rsp head first
-    commu_head head;
-    head.cmdid = cmdid;
+    msgHead head;
+    head.cmd_id = cmd_id;
     head.length = datlen;
+    std::memcpy(buffer.data(), &head, sizeof(msgHead));
+    std::memcpy(buffer.data() + sizeof(msgHead), data.data(), datlen);
     //write head
-    auto ret = m_out_buf.sendData(reinterpret_cast<const uint8_t*>(&head), COMMU_HEAD_LENGTH);
+    auto ret = m_outbuf_queue.sendData(buffer);
 
     if (ret != 0)
     {
-        return -1;
-    }
-
-    //write content
-    ret = m_out_buf.sendData(data.data(), datlen);
-
-    if (ret != 0)
-    {
-        //只好取消写入的消息头
-        m_out_buf.pop(COMMU_HEAD_LENGTH);
         return -1;
     }
 
@@ -198,8 +195,8 @@ void TcpConnection::cleanConnection()
     }
 
     m_loop->delIoEvent(m_connection_fd);
-    m_in_buf.clear();
-    m_out_buf.clear();
+    m_inbuf_queue.clearBuffers();
+    m_outbuf_queue.clearBuffers();
     ::close(m_connection_fd);
     m_connection_fd = -1;
 }

@@ -36,7 +36,7 @@ class ISocketConnection
 public:
     ISocketConnection(): parameter(NULL) {}
 
-    virtual int sendData(std::span<const uint8_t> data, int datlen, int cmdid) = 0;
+    virtual int sendData(std::span<const uint8_t> data, int datlen, int cmd_id) = 0;
     virtual int getFd() = 0;
 
     std::any parameter;//每个TCP客户端连接类可以使用此参数设置自己的连接内变量
