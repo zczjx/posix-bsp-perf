@@ -17,6 +17,8 @@ using namespace bsp_perf::shared;
 class IOBufferQueue
 {
 public:
+    constexpr static size_t MAX_BUFFER_NUM = 256;
+
     IOBufferQueue() = default;
     virtual ~IOBufferQueue() = default;
     IOBufferQueue(const IOBufferQueue&) = delete;
@@ -29,6 +31,13 @@ public:
         std::lock_guard<std::mutex> lock(m_mutex);
         return m_buffers.size();
     }
+
+    virtual bool isFull()
+    {
+        std::lock_guard<std::mutex> lock(m_mutex);
+        return m_buffers.size() >= MAX_BUFFER_NUM;
+    }
+
     virtual void appendBuffer(const std::vector<uint8_t>& buffer)
     {
         std::lock_guard<std::mutex> lock(m_mutex);
@@ -39,10 +48,10 @@ public:
         std::lock_guard<std::mutex> lock(m_mutex);
         return m_buffers.front();
     }
-    virtual void popBuffer(int len , int index)
+    virtual void popBuffer()
     {
         std::lock_guard<std::mutex> lock(m_mutex);
-        m_buffers.front().erase(m_buffers.front().begin(), m_buffers.front().begin() + len);
+        m_buffers.pop();
     }
     virtual void clearBuffers()
     {

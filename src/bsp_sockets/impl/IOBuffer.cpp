@@ -4,7 +4,6 @@
 #include <errno.h>
 #include <sys/uio.h>
 #include <sys/ioctl.h>
-#include "BspSocketException.hpp"
 #include "IOBuffer.hpp"
 
 namespace bsp_sockets
@@ -17,6 +16,12 @@ int InputBufferQueue::readData(int fd)
 {
     //一次性读出来所有数据
     int rn, ret;
+
+    if (isFull())
+    {
+        m_logger->printStdoutLog(BspLogger::LogLevel::Error, "InputBufferQueue is full");
+        return -1;
+    }
 
     if (::ioctl(fd, FIONREAD, &rn) == -1)
     {
@@ -36,65 +41,40 @@ int InputBufferQueue::readData(int fd)
     }
     else
     {
-        throw BspSocketException("readData error");
+        m_logger->printStdoutLog(BspLogger::LogLevel::Error, "readData error");
     }
 
     return ret;
-
 }
 
 int OutputBufferQueue::sendData(const std::vector<uint8_t>& buffer)
 {
-    if (!_buf)
-    {
-        _buf = buffer_pool::ins()->alloc(datlen);
-        if (!_buf)
-        {
-            error_log("no idle for alloc io_buffer");
-            return -1;
-        }
-    }
-    else
-    {
-        assert(_buf->head == 0);
-        if (_buf->capacity - _buf->length < datlen)
-        {
-            //get new
-            io_buffer* new_buf = buffer_pool::ins()->alloc(datlen + _buf->length);
-            if (!new_buf)
-            {
-                error_log("no idle for alloc io_buffer");
-                return -1;
-            }
-            new_buf->copy(_buf);
-            buffer_pool::ins()->revert(_buf);
-            _buf = new_buf;
-        }
-    }
-
-    ::memcpy(_buf->data + _buf->length, data, datlen);
-    _buf->length += datlen;
+    appendBuffer(buffer);
     return 0;
 
 }
 
 int OutputBufferQueue::writeFd(int fd)
 {
-    assert(_buf && _buf->head == 0);
+    if (getBuffersCount() == 0)
+    {
+        m_logger->printStdoutLog(BspLogger::LogLevel::Debug, "OutputBufferQueue is empty");
+        return 0;
+    }
+
+    auto& buffer = getFrontBuffer();
     int writed;
     do
     {
-        writed = ::write(fd, _buf->data, _buf->length);
-    } while (writed == -1 && errno == EINTR);
-    if (writed > 0)
-    {
-        _buf->pop(writed);
-        _buf->adjust();
+        writed = ::write(fd, buffer.data(), buffer.size());
     }
-    if (writed == -1 && errno == EAGAIN)
+    while (writed == -1 && errno == EINTR);
+
+    if (writed >= 0)
     {
-        writed = 0;//不是错误，仅返回为0表示此时不可继续写
+        popBuffer();
     }
+
     return writed;
 }
 

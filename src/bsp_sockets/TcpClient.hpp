@@ -65,6 +65,8 @@ public:
     struct sockaddr_in servaddr;
 private:
     int _sockfd;
+    IOBufferQueue m_inbuf_queue{};
+    IOBufferQueue m_outbuf_queue{};
     event_loop* _loop;
     socklen_t _addrlen;
     msg_dispatcher _dispatcher;

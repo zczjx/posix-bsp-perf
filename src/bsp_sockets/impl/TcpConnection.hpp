@@ -34,8 +34,8 @@ private:
     int m_connection_fd{-1};
     std::shared_ptr<EventLoop> m_loop{nullptr};
     std::weak_ptr<TcpServer> m_tcp_server{nullptr};
-    input_buffer m_in_buf{};
-    output_buffer m_out_buf{};
+    InputBufferQueue m_inbuf_queue{};
+    OutputBufferQueue m_outbuf_queue{};
 
     std::unique_ptr<bsp_perf::shared::BspLogger> m_logger;
 };
