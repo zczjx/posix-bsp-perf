@@ -2,81 +2,119 @@
 #define __TCP_CLIENT_H__
 
 #include <unistd.h>
-#include "NetCommu.hpp"
+#include <sys/socket.h>
+#include <netinet/in.h>
 
+#include "EventLoop.hpp"
+#include "ISocketConnection.hpp"
 #include "impl/IOBuffer.hpp"
-#include "impl/EventLoop.hpp"
 #include "impl/MsgDispatcher.hpp"
 
-class tcp_client: public net_commu
+
+#include <shared/BspLogger.hpp>
+#include <shared/ArgParser.hpp>
+
+#include <any>
+#include <functional>
+#include <memory>
+
+namespace bsp_sockets
+{
+
+using bsp_perf::shared;
+
+using ClientParams = struct ClientParams
+{
+    std::string ip_addr{""};
+    int port{-1};
+    std::string name{""};
+};
+class TcpClient: public ISocketConnection, public std::enable_shared_from_this<TcpClient>
 {
 public:
-    tcp_client(event_loop* loop, const char* ip, unsigned short port, const char* name = NULL);
+    TcpClient(std::shared_ptr<EventLoop> loop, ArgParser&& args);
+    virtual ~TcpClient() { ::close(_sockfd); }
 
-    typedef void onconn_func(tcp_client* client, void* args);
-    typedef void oncls_func(tcp_client* client, void* args);
+    TcpClient(const TcpClient&) = delete;
+    TcpClient& operator=(const TcpClient&) = delete;
+    TcpClient(TcpClient&&) = delete;
+    TcpClient& operator=(TcpClient&&) = delete;
+
+    using onConnectFunc = std::function<void(std::shared_ptr<TcpClient> client, std::any args)>;
+    using onCloseFunc = std::function<void(std::shared_ptr<TcpClient> client, std::any args)>;
 
     //set up function after connection ok
-    void onConnection(onconn_func* func, void *args = NULL)
+    void setOnConnection(onConnectFunc func, std::any args = nullptr)
     {
-        _onconnection = func;
-        _onconn_args = args;
+        m_on_connection_func = func;
+        m_on_connection_args = args;
     }
 
     //set up function after connection closed
-    void onClose(oncls_func* func, void *args = NULL)
+    void setOnClose(onCloseFunc func, std::any args = nullptr)
     {
-        _onclose = func;
-        _onclose_args = args;
+        m_on_close_func = func;
+        m_on_close_args = args;
     }
 
-    void call_onconnect()
+    void onConnect()
     {
-        if (_onconnection)
-            _onconnection(this, _onconn_args);
+        if (m_on_connection_func)
+        {
+            m_on_connection_func(shared_from_this(), m_on_connection_args);
+        }
     }
 
-    void call_onclose()
+    void onClose()
     {
-        if (_onclose)
-            _onclose(this, _onclose_args);
+        if (m_on_close_func)
+        {
+            m_on_close_func(shared_from_this(), m_on_close_args);
+        }
     }
 
-    void add_msg_cb(int cmdid, msg_callback* msg_cb, void* usr_data = NULL) { _dispatcher.add_msg_cb(cmdid, msg_cb, usr_data); }
+    void addMsgCallback(int cmd_id, msgCallback msg_cb, std::any usr_data)
+    { m_msg_dispatcher.addMsgCallback(cmd_id, msg_cb, usr_data); }
 
-    void do_connect();
+    void doConnect();
 
-    virtual int send_data(const char* data, int datlen, int cmdid);
+    int sendData(std::span<const uint8_t> data, int datlen, int cmd_id) override;
 
-    virtual int get_fd() { return _sockfd; }
+    int getFd() override { return m_sockfd; }
 
-    int handle_read();
+    int handleRead();
 
-    int handle_write();
+    int handleWrite();
 
-    ~tcp_client() { ::close(_sockfd); }
+    void cleanConnection();
 
-    void clean_conn();
+    std::shared_ptr<EventLoop> getEventLoop() { return m_loop; }
 
-    event_loop* loop() { return _loop; }
 
-    bool net_ok;
-    io_buffer ibuf, obuf;
-    struct sockaddr_in servaddr;
 private:
-    int _sockfd;
+    struct sockaddr_in m_server_addr;
+    bool m_net_ok{false};
+
+    ClientParams m_client_params;
+    int m_sockfd;
+    std::shared_ptr<EventLoop> m_loop{nullptr};
+    socklen_t m_addrlen{sizeof(struct sockaddr_in)};
+    MsgDispatcher m_msg_dispatcher{};
+    //when connection success, call _onconnection(_onconn_args)
+    onConnectFunc m_on_connection_func{nullptr};
+    std::any m_on_connection_args{nullptr};
+    //when connection close, call _onclose(_onclose_args)
+    onCloseFunc m_on_close_func{nullptr};
+    std::any m_on_close_args{nullptr};
+
     IOBufferQueue m_inbuf_queue{};
     IOBufferQueue m_outbuf_queue{};
-    event_loop* _loop;
-    socklen_t _addrlen;
-    msg_dispatcher _dispatcher;
-    //when connection success, call _onconnection(_onconn_args)
-    onconn_func* _onconnection;
-    void* _onconn_args;
-    //when connection close, call _onclose(_onclose_args)
-    oncls_func* _onclose;
-    void* _onclose_args;
-    const char* _name;
+
+    std::unique_ptr<BspLogger> m_logger;
+    ArgParser m_args;
 };
+}
+
+
 
 #endif

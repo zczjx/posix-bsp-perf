@@ -29,7 +29,10 @@ public:
         return 0;
     }
 
-    bool exist(int cmd_id) const { return m_dispatcher.find(cmd_id) != m_dispatcher.end(); }
+    bool exist(int cmd_id) const
+    {
+        return m_dispatcher.find(cmd_id) != m_dispatcher.end();
+    }
 
     void callbackFunc(std::span<const uint8_t> data, uint32_t len, int cmd_id, std::shared_ptr<ISocketConnection> connection)
     {

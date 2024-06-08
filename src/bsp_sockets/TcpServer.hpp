@@ -21,6 +21,7 @@
 namespace bsp_sockets
 {
 
+using bsp_perf::shared;
 using ServerParams = struct ServerParams
 {
     std::string ipaddr{""};
@@ -31,7 +32,7 @@ using ServerParams = struct ServerParams
 class TcpServer
 {
 public:
-    TcpServer(std::shared_ptr<EventLoop> loop, bsp_perf::shared::ArgParser&& args);
+    TcpServer(std::shared_ptr<EventLoop> loop, ArgParser&& args);
 
     virtual ~TcpServer();//TcpServer类使用时往往具有程序的完全生命周期，其实并不需要析构函数
 
@@ -81,8 +82,8 @@ private:
     int m_conns_size{0};
     int m_curr_conns{0};
     std::mutex m_mutex{}; // Default initialization
-    std::unique_ptr<bsp_perf::shared::BspLogger> m_logger;
-    bsp_perf::shared::ArgParser m_args;
+    std::unique_ptr<BspLogger> m_logger;
+    ArgParser m_args;
 
     std::vector<std::shared_ptr<tcp_conn>> m_connections_pool{};//连接池
     MsgDispatcher m_msg_dispatcher{};
