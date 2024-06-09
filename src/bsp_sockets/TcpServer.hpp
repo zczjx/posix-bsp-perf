@@ -22,7 +22,7 @@ namespace bsp_sockets
 {
 
 using bsp_perf::shared;
-using ServerParams = struct ServerParams
+using TcpServerParams = struct TcpServerParams
 {
     std::string ipaddr{""};
     int port{-1};
@@ -57,7 +57,7 @@ public:
 
     void insertConnectionToPool(std::shared_ptr<tcp_conn> conn, int connection_fd);
 
-    std::shared_ptr<EventLoop> loop() { return m_loop; }
+    std::shared_ptr<EventLoop> getEventLoop() { return m_loop; }
 
     std::shared_ptr<ThreadPool> getThreadPool() { return m_thread_pool; }
 
@@ -70,7 +70,7 @@ public:
     void onConnectionClose(connectionCallback cb) { connCloseCb = cb; }
 
 private:
-    ServerParams m_server_params;
+    TcpServerParams m_server_params;
     int m_sockfd{-1};
     int m_reservfd{-1};
     std::shared_ptr<EventLoop> m_loop{nullptr};

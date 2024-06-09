@@ -1,39 +1,66 @@
 #ifndef __UDP_SERVER_H__
 #define __UDP_SERVER_H__
 
-#include "NetCommu.hpp"
-
-#include "impl/EventLoop.hpp"
+#include "ISocketConnection.hpp"
+#include "EventLoop.hpp"
 #include "impl/MsgDispatcher.hpp"
+#include <shared/BspLogger.hpp>
+#include <shared/ArgParser.hpp>
 
 #include <netinet/in.h>
 
-class udp_server: public net_commu
+#include <any>
+#include <functional>
+#include <memory>
+#include <string>
+#include <vector>
+
+
+namespace bsp_socket
+{
+
+using bsp_perf::shared;
+using UdpServerParams = struct UdpServerParams
+{
+    std::string ipaddr{""};
+    int port{-1};
+};
+class UdpServer: public ISocketConnection
 {
 public:
-    udp_server(event_loop* loop, const char* ip, uint16_t port);
+    UdpServer(std::shared_ptr<EventLoop> loop, ArgParser&& args);
 
-    ~udp_server();
+    virtual ~UdpServer();
 
-    void add_msg_cb(int cmdid, msg_callback* msg_cb, void* usr_data = NULL) { _dispatcher.add_msg_cb(cmdid, msg_cb, usr_data); }
+    UdpServer(const UdpServer&) = delete;
+    UdpServer& operator=(const UdpServer&) = delete;
+    UdpServer(UdpServer&&) = delete;
+    UdpServer& operator=(UdpServer&&) = delete;
 
-    event_loop* loop() { return _loop; }
+    void addMsgCallback(int cmd_id, msgCallback msg_cb, std::any usr_data) { m_msg_dispatcher.addMsgCallback(cmd_id, msg_cb, usr_data); }
 
-    void handle_read();
+    std::shared_ptr<EventLoop> getEventLoop() { return m_loop; }
 
-    virtual int send_data(const char* data, int datlen, int cmdid);
+    void handleRead();
 
-    virtual int get_fd() { return _sockfd; }
+    virtual int sendData(const char* data, int datlen, int cmd_id) override;
+
+    virtual int getFd() override { return _sockfd; }
 
 private:
-    int _sockfd;
-    char _rbuf[MSG_LENGTH_LIMIT];
-    char _wbuf[MSG_LENGTH_LIMIT];
-    event_loop* _loop;
+    int m_sockfd;
+    std::vector<uint8_t> m_rbuf(MSG_LENGTH_LIMIT);
+    std::vector<uint8_t> m_wbuf(MSG_LENGTH_LIMIT);
+    std::shared_ptr<EventLoop> m_loop;
 
-    struct sockaddr_in _srcaddr;
-    socklen_t _addrlen;
-    msg_dispatcher _dispatcher;
+    struct sockaddr_in m_server_addr{};
+    socklen_t m_addrlen{sizeof(struct sockaddr_in)};
+
+    MsgDispatcher m_msg_dispatcher{};
+    std::unique_ptr<BspLogger> m_logger;
+    ArgParser m_args;
 };
+
+}
 
 #endif

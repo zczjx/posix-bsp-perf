@@ -22,7 +22,7 @@ namespace bsp_sockets
 {
 
 using bsp_perf::shared;
-using ClientParams = struct ClientParams
+using TcpClientParams = struct TcpClientParams
 {
     std::string ip_addr{""};
     int port{-1};
@@ -82,7 +82,7 @@ public:
     std::shared_ptr<EventLoop> getEventLoop() { return m_loop; }
 
 private:
-    ClientParams m_client_params;
+    TcpClientParams m_client_params;
     struct sockaddr_in m_remote_server_addr;
     socklen_t m_addrlen{sizeof(struct sockaddr_in)};
     bool m_net_connected{false};

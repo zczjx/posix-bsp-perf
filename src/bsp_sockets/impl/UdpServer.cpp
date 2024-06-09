@@ -8,8 +8,11 @@
 #include <arpa/inet.h>
 #include <sys/types.h>
 #include <sys/socket.h>
-#include "udp_server.h"
-#include "print_error.h"
+#include <bsp_sockets/UdpServer.hpp>
+
+namespace bsp_sockets
+{
+using namespace bsp_perf::shared;
 
 void read_cb(event_loop* loop, int fd, void *args)
 {
@@ -111,3 +114,8 @@ int udp_server::send_data(const char* data, int datlen, int cmdid)
     }
     return ret;
 }
+
+} //namespace bsp_sockets
+
+
+
