@@ -1,236 +1,291 @@
-#include <errno.h>
 #include <fcntl.h>
-#include <assert.h>
 #include <signal.h>
 #include <unistd.h>
 #include <string.h>
 #include <strings.h>
-#include <arpa/inet.h>
 #include <sys/ioctl.h>
 #include <sys/types.h>
 #include <sys/socket.h>
 #include <netinet/in.h>
-#include "msg_head.h"
-#include "tcp_client.h"
-#include "print_error.h"
+#include "MsgHead.hpp"
+#include <bsp_sockets/TcpClient.hpp>
+#include "BspSocketException.hpp"
 
-static void read_cb(event_loop* loop, int fd, void* args)
+namespace bsp_sockets
 {
-    tcp_client* cli = (tcp_client*)args;
-    cli->handle_read();
+
+using bsp_perf::shared;
+
+static void readCallback(std::shared_ptr<EventLoop> loop, int fd, std::any args)
+{
+    std::shared_ptr<TcpClient> client = std::any_cast<std::shared_ptr<TcpClient>>(args);
+    client->handleRead();
 }
 
-static void write_cb(event_loop* loop, int fd, void* args)
+static void writeCallback(std::shared_ptr<EventLoop> loop, int fd, std::any args)
 {
-    tcp_client* cli = (tcp_client*)args;
-    cli->handle_write();
+    std::shared_ptr<TcpClient> client = std::any_cast<std::shared_ptr<TcpClient>>(args);
+    client->handleWrite();
 }
 
-static void reconn_cb(event_loop* loop, void* usr_data)
+static void reConnectCallback(std::shared_ptr<EventLoop> loop, std::any usr_data)
 {
-    tcp_client* cli = (tcp_client*)usr_data;
-    cli->do_connect();
+    std::shared_ptr<TcpClient> client = std::any_cast<std::shared_ptr<TcpClient>>(usr_data);
+    client->doConnect();
 }
 
-static void connection_cb(event_loop* loop, int fd, void* args)
+static void connectEventCallback(std::shared_ptr<EventLoop> loop, int fd, std::any args)
 {
-    tcp_client* cli = (tcp_client*)args;
-    loop->del_ioev(fd);
+    std::shared_ptr<TcpClient> client = std::any_cast<std::shared_ptr<TcpClient>>(args);
+    loop->delIoEvent(fd);
     int result;
     socklen_t result_len = sizeof(result);
     getsockopt(fd, SOL_SOCKET, SO_ERROR, &result, &result_len);
+
     if (result == 0)
     {
         //connect build success!
-        cli->net_ok = true;
-        info_log("connect %s:%d successfully", ::inet_ntoa(cli->servaddr.sin_addr), ntohs(cli->servaddr.sin_port));
-
+        client->setNetConnected(true);
+        std::string ip = client->getIpAddr();
         //call on connection callback(if has)
-        cli->call_onconnect();
+        client->onConnect();
 
-        loop->add_ioev(fd, read_cb, EPOLLIN, cli);
-        if (cli->obuf.length)
+        loop->addIoEvent(fd, readCallback, EPOLLIN, client);
+
+        if (!client->isOutputBufferEmpty())
         {
-            loop->add_ioev(fd, write_cb, EPOLLOUT, cli);
+            loop->addIoEvent(fd, writeCallback, EPOLLOUT, client);
         }
     }
     else
     {
         //connect build error!
         //reconnection after 2s
-        info_log("connect %s:%d error, retry after 2s", ::inet_ntoa(cli->servaddr.sin_addr), ntohs(cli->servaddr.sin_port));
-        loop->run_after(reconn_cb, cli, 2);
+        loop->runAfter(reConnectCallback, client, 2);
     }
 }
 
-tcp_client::tcp_client(event_loop* loop, const char* ip, unsigned short port, const char* name):
-    net_ok(false), 
-    ibuf(4194304),
-    obuf(4194304),
-    _sockfd(-1),
-    _loop(loop),
-    _onconnection(NULL),
-    _onconn_args(NULL),
-    _onclose(NULL),
-    _onclose_args(NULL),
-    _name(name)
+TcpClient::TcpClient(std::shared_ptr<EventLoop> loop, ArgParser&& args):
+    m_loop(loop),
+    m_args{std::move(args)},
+    m_logger{std::make_unique<BspLogger>("TcpClient")}
 {
+    m_args.getOptionVal("--ip", m_client_params.ip_addr);
+    m_args.getOptionVal("--port", m_client_params.port);
+    m_args.getOptionVal("--name", m_client_params.name);
+
+    m_logger->setPattern();
+
     //construct server address
-    ::bzero(&servaddr, sizeof (servaddr));
-    servaddr.sin_family = AF_INET;
-    int ret = ::inet_aton(ip, &servaddr.sin_addr);
-    exit_if(ret == 0, "ip format %s", ip);
-    servaddr.sin_port = htons(port);
-    _addrlen = sizeof servaddr;
-
-    //connect
-    do_connect();
-}
-
-void tcp_client::do_connect()
-{
-    if (_sockfd != -1)
-        ::close(_sockfd);
-    //create socket
-    _sockfd = ::socket(AF_INET, SOCK_STREAM | SOCK_CLOEXEC | SOCK_NONBLOCK, IPPROTO_TCP);
-    exit_if(_sockfd == -1, "socket()");
-
-    int ret = ::connect(_sockfd, (const struct sockaddr*)&servaddr, _addrlen);
+    ::bzero(&m_remote_server_addr, sizeof(struct sockaddr_in));
+    m_remote_server_addr.sin_family = AF_INET;
+    int ret = ::inet_aton(m_client_params.ip_addr, &m_remote_server_addr.sin_addr);
     if (ret == 0)
     {
-        net_ok = true;
-        //call on connection callback(if has)
-        call_onconnect();
+        throw BspSocketException("ip format");
+    }
+    m_remote_server_addr.sin_port = htons(m_client_params.port);
 
-        info_log("connect %s:%d successfully", ::inet_ntoa(servaddr.sin_addr), ntohs(servaddr.sin_port));
+    //connect
+    doConnect();
+}
+
+void TcpClient::onConnect()
+{
+    m_logger->printStdoutLog(BspLogger::INFO, "connect {}:{} successfully",
+            ::inet_ntoa(m_remote_server_addr.sin_addr), ntohs(m_remote_server_addr.sin_port));
+
+    if (m_on_connection_func)
+    {
+        m_on_connection_func(shared_from_this(), m_on_connection_args);
+    }
+}
+
+void TcpClient::onClose()
+{
+    if (m_on_close_func)
+    {
+        m_on_close_func(shared_from_this(), m_on_close_args);
+    }
+}
+
+void TcpClient::doConnect()
+{
+    if (m_sockfd != -1)
+    {
+        ::close(m_sockfd);
+    }
+    //create socket
+    m_sockfd = ::socket(AF_INET, SOCK_STREAM | SOCK_CLOEXEC | SOCK_NONBLOCK, IPPROTO_TCP);
+    if (m_sockfd == -1)
+    {
+        throw BspSocketException("socket()");
+    }
+
+    int ret = ::connect(m_sockfd, static_cast<const struct sockaddr*>(&m_remote_server_addr), m_addrlen);
+
+    if (ret == 0)
+    {
+        m_net_connected = true;
+        //call on connection callback(if has)
+        onConnect();
+        m_logger->printStdoutLog(BspLogger::LogLevel::Info, "connect {}:{} successfully",
+                ::inet_ntoa(m_remote_server_addr.sin_addr), ntohs(m_remote_server_addr.sin_port));
     }
     else
     {
         if (errno == EINPROGRESS)
         {
             //add connection event
-            _loop->add_ioev(_sockfd, connection_cb, EPOLLOUT, this);
+            m_loop->addIoEvent(m_sockfd, connectEventCallback, EPOLLOUT, shared_from_this());
         }
         else
         {
-            exit_log("connect()");
+            throw BspSocketException("connect()");
         }
     }
 }
 
-int tcp_client::send_data(const char* data, int datlen, int cmdid)//call by user
+int TcpClient::sendData(std::span<const uint8_t> data, int datlen, int cmd_id) //call by user
 {
-    if (!net_ok)
-        return -1;
-    bool need = (obuf.length == 0) ? true: false;//if need to add to event loop
-    if (datlen + COMMU_HEAD_LENGTH > obuf.capacity - obuf.length)
+    if (!m_net_connected)
     {
-        error_log("no more space to write socket");
         return -1;
     }
-    commu_head head;
-    head.cmdid = cmdid;
+
+    bool need = (m_outbuf_queue.isEmpty()) ? true: false;//if need to add to event loop
+
+    if (m_outbuf_queue.isFull())
+    {
+        m_logger->printStdoutLog(BspLogger::LogLevel::Error, "no more space to write socket");
+        return -1;
+    }
+
+    std::vector<uint8_t> buffer(sizeof(msgHead) + datlen);
+    //write rsp head first
+    msgHead head;
+    head.cmd_id = cmd_id;
     head.length = datlen;
+    std::memcpy(buffer.data(), &head, sizeof(msgHead));
+    std::memcpy(buffer.data() + sizeof(msgHead), data.data(), datlen);
+    auto ret = m_outbuf_queue.sendData(buffer);
 
-    ::memcpy(obuf.data + obuf.length, &head, COMMU_HEAD_LENGTH);
-    obuf.length += COMMU_HEAD_LENGTH;
-
-    ::memcpy(obuf.data + obuf.length, data, datlen);
-    obuf.length += datlen;
+    if (ret != 0)
+    {
+        return -1;
+    }
 
     if (need)
     {
-        _loop->add_ioev(_sockfd, write_cb, EPOLLOUT, this);
+        m_loop->addIoEvent(m_sockfd, writeCallback, EPOLLOUT, shared_from_this());
     }
+
     return 0;
+
 }
 
-int tcp_client::handle_read()
+int TcpClient::handleRead()
 {
     //一次性读出来所有数据
-    assert(net_ok);
-    int rn;
-    if (::ioctl(_sockfd, FIONREAD, &rn) == -1)
+    if (!m_net_connected)
     {
-        error_log("ioctl FIONREAD");
         return -1;
     }
-    assert(rn <= ibuf.capacity - ibuf.length);
+
+    int rn;
+
+    if (::ioctl(m_sockfd, FIONREAD, &rn) == -1)
+    {
+        m_logger->printStdoutLog(BspLogger::LogLevel::Error, "ioctl FIONREAD");
+        return -1;
+    }
+
     int ret;
+    std::vector<uint8_t> buffer(rn);
+
     do
     {
-        ret = ::read(_sockfd, ibuf.data + ibuf.length, rn);
-    } while (ret == -1 && errno == EINTR);
+        ret = ::read(m_sockfd, buffer.data(), rn);
+    }
+    while (ret == -1 && errno == EINTR);
 
-    if (ret == 0)
+    if ((ret > 0) && (ret == rn))
+    {
+        msgHead head;
+
+        std::memcpy(&head, buffer.data(), sizeof(msgHead));
+
+        if (!m_msg_dispatcher.exist(head.cmd_id))
+        {
+            m_logger->printStdoutLog(BspLogger::LogLevel::Error, "this message has no corresponding callback, close connection");
+            cleanConnection();
+            return -1;
+        }
+
+        m_msg_dispatcher.callbackFunc(buffer.data() + sizeof(msgHead), head.length, head.cmd_id, shared_from_this());
+
+    }
+    else if (ret == 0)
     {
         //peer close connection
-        if (_name)
-            info_log("%s client: connection closed by peer", _name);
+        if (m_client_params.name)
+        {
+            m_logger->printStdoutLog(BspLogger::LogLevel::Info, "{} client: connection closed by peer", m_client_params.name);
+        }
         else
-            info_log("client: connection closed by peer");
-        clean_conn();
+        {
+            m_logger->printStdoutLog(BspLogger::LogLevel::Info, "client: connection closed by peer");
+        }
+        cleanConnection();
         return -1;
     }
     else if (ret == -1)
     {
         assert(errno != EAGAIN);
-        error_log("read()");
-        clean_conn();
+        m_logger->printStdoutLog(BspLogger::LogLevel::Error, "read()");
+        cleanConnection();
         return -1;
     }
-    assert(ret == rn);
-    ibuf.length += ret;
-
-    commu_head head;
-    int cmdid, length;
-    while (ibuf.length >= COMMU_HEAD_LENGTH)
+    else
     {
-        ::memcpy(&head, ibuf.data + ibuf.head, COMMU_HEAD_LENGTH);
-        cmdid = head.cmdid;
-        length = head.length;
-
-        if (length + COMMU_HEAD_LENGTH < ibuf.length)
-        {
-            //sub-package
-            break;
-        }
-
-        ibuf.pop(COMMU_HEAD_LENGTH);
-
-        if (!_dispatcher.exist(cmdid))
-        {
-            error_log("this message has no corresponding callback, close connection");
-            clean_conn();
-            return -1;
-        }
-        _dispatcher.cb(ibuf.data + ibuf.head, length, cmdid, this);
-
-        ibuf.pop(length);
+        m_logger->printStdoutLog(BspLogger::LogLevel::Error, "read() error");
+        return -1;
     }
-    ibuf.adjust();
+
     return 0;
 }
 
-int tcp_client::handle_write()
+int TcpClient::handleWrite()
 {
-    assert(obuf.head == 0 && obuf.length);
-    int ret;
-    while (obuf.length)
+    if (!m_net_connected)
     {
+        return -1;
+    }
+
+    if (m_outbuf_queue.isEmpty())
+    {
+        return 0;
+    }
+
+    int ret;
+
+    while (!m_outbuf_queue.isEmpty())
+    {
+        auto& buffer = m_outbuf_queue.getFrontBuffer();
         do
         {
-            ret = ::write(_sockfd, obuf.data, obuf.length);
-        } while (ret == -1 && errno == EINTR);
+            auto ret = ::write(m_sockfd, buffer.data(), buffer.size());
+        }
+        while (ret == -1 && errno == EINTR);
+
         if (ret > 0)
         {
-            obuf.pop(ret);
-            obuf.adjust();
+            m_outbuf_queue.popBuffer();
         }
         else if (ret == -1 && errno != EAGAIN)
         {
-            error_log("write()");
-            clean_conn();
+            m_logger->printStdoutLog(BspLogger::LogLevel::Error, "write()");
+            cleanConnection();
             return -1;
         }
         else
@@ -240,25 +295,28 @@ int tcp_client::handle_write()
         }
     }
 
-    if (!obuf.length)
+    if (m_outbuf_queue.isEmpty())
     {
-        _loop->del_ioev(_sockfd, EPOLLOUT);
+        m_loop->delIoEvent(m_sockfd, EPOLLOUT);
     }
     return 0;
 }
 
-void tcp_client::clean_conn()
+void TcpClient::cleanConnection()
 {
-    if (_sockfd != -1)
+    if (m_sockfd != -1)
     {
-        _loop->del_ioev(_sockfd);
-        ::close(_sockfd);
+        m_loop->delIoEvent(m_sockfd);
+        ::close(m_sockfd);
     }
-    net_ok = false;
+    setNetConnected(false);
 
     //call callback when on connection close
-    call_onclose();
+    onClose();
 
     //connect
-    do_connect();
+    doConnect();
 }
+
+} // namespace bsp_sockets
+

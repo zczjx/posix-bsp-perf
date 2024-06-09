@@ -27,7 +27,7 @@ struct IOEvent//注册的IO事件
     std::any rcb_args{nullptr};   //extra arguments for read_cb
     std::any wcb_args{nullptr};  //extra arguments for write_cb
 };
-class EventLoop
+class EventLoop : public std::enable_shared_from_this<EventLoop>
 {
 public:
     EventLoop();

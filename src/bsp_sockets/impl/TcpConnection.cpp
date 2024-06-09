@@ -163,7 +163,7 @@ int TcpConnection::sendData(std::span<const uint8_t> data, int datlen, int cmd_i
     head.length = datlen;
     std::memcpy(buffer.data(), &head, sizeof(msgHead));
     std::memcpy(buffer.data() + sizeof(msgHead), data.data(), datlen);
-    //write head
+
     auto ret = m_outbuf_queue.sendData(buffer);
 
     if (ret != 0)

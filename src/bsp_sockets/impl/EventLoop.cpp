@@ -30,10 +30,10 @@ EventLoop::EventLoop():
         throw BspSocketException("new TimerQueue");
     }
 
-    auto timerQueueCallback = [](EventLoop& loop, int fd, std::any args)
+    auto timerQueueCallback = [](std::shared_ptr<EventLoop> loop, int fd, std::any args)
     {
         std::vector<timerEvent> fired_evs;
-        auto& tq = loop.getTimerQueue();
+        auto& tq = loop->getTimerQueue();
         tq->getFiredTimerEvents(fired_evs);
         for (std::vector<timerEvent>::iterator it = fired_evs.begin();
             it != fired_evs.end(); ++it)
@@ -49,35 +49,35 @@ void EventLoop::processEvents()
 {
     while (true)
     {
-        int nfds = ::epoll_wait(m_epoll_fd, m_fired_events, max_events, 10);
+        int nfds = ::epoll_wait(m_epoll_fd, m_fired_events, MAX_EVENTS, 10);
         for (int i = 0; i < nfds; ++i)
         {
             ioevIterator it = m_io_events.find(m_fired_events[i].data.fd);
             assert(it != m_io_events.end());
-            std::unique_ptr<IOEvent> ev;
+            std::unique_ptr<bsp_sockets::IOEvent> ev;
             ev.reset(&(it->second));
 
             if (m_fired_events[i].events & EPOLLIN)
             {
                 std::any args = ev->rcb_args;
-                ev->read_callback(*this, m_fired_events[i].data.fd, args);
+                ev->read_callback(shared_from_this(), m_fired_events[i].data.fd, args);
             }
             else if (m_fired_events[i].events & EPOLLOUT)
             {
                 std::any args = ev->wcb_args;
-                ev->write_callback(*this, m_fired_events[i].data.fd, args);
+                ev->write_callback(shared_from_this(), m_fired_events[i].data.fd, args);
             }
             else if (m_fired_events[i].events & (EPOLLHUP | EPOLLERR))
             {
                 if (ev->read_callback)
                 {
                     std::any args = ev->rcb_args;
-                    ev->read_callback(*this, m_fired_events[i].data.fd, args);
+                    ev->read_callback(shared_from_this(), m_fired_events[i].data.fd, args);
                 }
                 else if (ev->write_callback)
                 {
                     std::any args = ev->wcb_args;
-                    ev->write_callback(*this, m_fired_events[i].data.fd, args);
+                    ev->write_callback(shared_from_this(), m_fired_events[i].data.fd, args);
                 }
                 else
                 {

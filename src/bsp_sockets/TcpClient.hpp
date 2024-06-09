@@ -22,7 +22,6 @@ namespace bsp_sockets
 {
 
 using bsp_perf::shared;
-
 using ClientParams = struct ClientParams
 {
     std::string ip_addr{""};
@@ -57,26 +56,12 @@ public:
         m_on_close_args = args;
     }
 
-    void onConnect()
-    {
-        if (m_on_connection_func)
-        {
-            m_on_connection_func(shared_from_this(), m_on_connection_args);
-        }
-    }
+    void onConnect();
 
-    void onClose()
-    {
-        if (m_on_close_func)
-        {
-            m_on_close_func(shared_from_this(), m_on_close_args);
-        }
-    }
+    void onClose();
 
     void addMsgCallback(int cmd_id, msgCallback msg_cb, std::any usr_data)
     { m_msg_dispatcher.addMsgCallback(cmd_id, msg_cb, usr_data); }
-
-    void doConnect();
 
     int sendData(std::span<const uint8_t> data, int datlen, int cmd_id) override;
 
@@ -88,17 +73,22 @@ public:
 
     void cleanConnection();
 
+    void doConnect();
+
+    bool isOutputBufferEmpty() { return m_outbuf_queue.isEmpty(); }
+
+    void setNetConnected(bool connected) { m_net_connected = connected; }
+
     std::shared_ptr<EventLoop> getEventLoop() { return m_loop; }
 
-
 private:
-    struct sockaddr_in m_server_addr;
-    bool m_net_ok{false};
-
     ClientParams m_client_params;
-    int m_sockfd;
-    std::shared_ptr<EventLoop> m_loop{nullptr};
+    struct sockaddr_in m_remote_server_addr;
     socklen_t m_addrlen{sizeof(struct sockaddr_in)};
+    bool m_net_connected{false};
+    int m_sockfd;
+
+    std::shared_ptr<EventLoop> m_loop{nullptr};
     MsgDispatcher m_msg_dispatcher{};
     //when connection success, call _onconnection(_onconn_args)
     onConnectFunc m_on_connection_func{nullptr};
@@ -107,7 +97,6 @@ private:
     onCloseFunc m_on_close_func{nullptr};
     std::any m_on_close_args{nullptr};
 
-    IOBufferQueue m_inbuf_queue{};
     IOBufferQueue m_outbuf_queue{};
 
     std::unique_ptr<BspLogger> m_logger;
