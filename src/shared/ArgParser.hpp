@@ -22,18 +22,17 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 */
 
-#ifndef ARG_m_parser_HPP
-#define ARG_m_parser_HPP
+#ifndef ARG_PARSER_HPP
+#define ARG_PARSER_HPP
 
 #include <CLI/CLI.hpp>
 #include <memory>
 #include <string>
 
-// Your code here
 namespace bsp_perf {
 namespace shared {
-
-class ArgParser {
+class ArgParser
+{
 public:
     ArgParser(const std::string& description = ""): m_parser{std::make_unique<CLI::App>(description)} {}
     virtual ~ArgParser() = default;
@@ -98,5 +97,5 @@ private:
 } // namespace shared
 } // namespace bsp_perf
 
-#endif // ARG_m_parser_HPP
+#endif // ARG_PARSER_HPP
 

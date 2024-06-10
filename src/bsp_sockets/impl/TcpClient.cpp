@@ -92,7 +92,7 @@ TcpClient::TcpClient(std::shared_ptr<EventLoop> loop, ArgParser&& args):
 
 void TcpClient::onConnect()
 {
-    m_logger->printStdoutLog(BspLogger::INFO, "connect {}:{} successfully",
+    m_logger->printStdoutLog(BspLogger::LogLevel::INFO, "connect {}:{} successfully",
             ::inet_ntoa(m_remote_server_addr.sin_addr), ntohs(m_remote_server_addr.sin_port));
 
     if (m_on_connection_func)

@@ -1,69 +1,89 @@
+
+#include <bsp_sockets/UdpServer.hpp>
+#include "BspSocketException.hpp"
+#include "MsgHead.hpp"
+
 #include <stdio.h>
 #include <fcntl.h>
 #include <errno.h>
-#include <unistd.h>
 #include <signal.h>
 #include <strings.h>
-#include <pthread.h>
-#include <arpa/inet.h>
 #include <sys/types.h>
 #include <sys/socket.h>
-#include <bsp_sockets/UdpServer.hpp>
 
 namespace bsp_sockets
 {
+
 using namespace bsp_perf::shared;
 
-void read_cb(event_loop* loop, int fd, void *args)
+static void readCallback(std::shared_ptr<EventLoop> loop, int fd, std::any args)
 {
-    udp_server* server = (udp_server*)args;
-    server->handle_read();
+    std::shared_ptr<UdpServer> server = std::any_cast<std::shared_ptr<UdpServer>>(args);
+    server->handleRead();
 }
 
-udp_server::udp_server(event_loop* loop, const char* ip, uint16_t port)
+UdpServer::UdpServer(std::shared_ptr<EventLoop> loop, ArgParser&& args):
+    m_rbuf(MSG_LENGTH_LIMIT),
+    m_wbuf(MSG_LENGTH_LIMIT),
+    m_loop(loop),
+    m_args{std::move(args)},
+    m_logger{std::make_unique<BspLogger>("UdpServer")}
 {
-    //ignore SIGHUP and SIGPIPE
+    m_args.getOptionVal("--ip", m_server_params.ipaddr);
+    m_args.getOptionVal("--port", m_server_params.port);
+    m_logger->setPattern();
+
+        //ignore SIGHUP and SIGPIPE
     if (::signal(SIGHUP, SIG_IGN) == SIG_ERR)
     {
-        error_log("signal ignore SIGHUP");
+        m_logger->printStdoutLog(BspLogger::LogLevel::Error, "signal ignore SIGHUP");
     }
 
     //create socket
-    _sockfd = ::socket(AF_INET, SOCK_DGRAM | SOCK_NONBLOCK | SOCK_CLOEXEC, IPPROTO_UDP);
-    exit_if(_sockfd == -1, "socket()");
+    m_sockfd = ::socket(AF_INET, SOCK_DGRAM | SOCK_NONBLOCK | SOCK_CLOEXEC, IPPROTO_UDP);
 
-    struct sockaddr_in servaddr;
-    ::bzero(&servaddr, sizeof (servaddr));
-    servaddr.sin_family = AF_INET;
-    int ret = ::inet_aton(ip, &servaddr.sin_addr);
-    exit_if(ret == 0, "ip format %s", ip);
-    servaddr.sin_port = htons(port);
+    if (m_sockfd == -1)
+    {
+        throw BspSocketException("socket()");
+    }
 
-    ret = ::bind(_sockfd, (const struct sockaddr*)&servaddr, sizeof servaddr);
-    exit_if(ret == -1, "bind()");
+    struct sockaddr_in serv_addr;
+    ::bzero(&serv_addr, sizeof(struct sockaddr_in));
 
-    _loop = loop;
+    serv_addr.sin_family = AF_INET;
+    int ret = ::inet_aton(m_server_params.ipaddr.c_str(), &serv_addr.sin_addr);
+    if (ret == 0)
+    {
+        throw BspSocketException("ip format {}", m_server_params.ipaddr.c_str());
+    }
+    serv_addr.sin_port = htons(m_server_params.port);
 
-    ::bzero(&_srcaddr, sizeof (_srcaddr));
-    _addrlen = sizeof (struct sockaddr_in);
+    ret = ::bind(m_sockfd, (const struct sockaddr *)&serv_addr, sizeof(struct sockaddr_in));
 
-    info_log("server on %s:%u is running...", ip, port);
+    if (ret == -1)
+    {
+        throw BspSocketException("bind()");
+    }
 
-    //add accepter event
-    _loop->add_ioev(_sockfd, read_cb, EPOLLIN, this);
+    m_logger->printStdoutLog(BspLogger::LogLevel::Info, "UdpServer on {}:{} is running...", m_server_params.ipaddr.c_str(), m_server_params.port);
+
+    m_loop->addIoEvent(m_sockfd, readCallback, EPOLLIN, shared_from_this());
+
+
+
 }
 
-udp_server::~udp_server()
+UdpServer::~UdpServer()
 {
-    _loop->del_ioev(_sockfd);
-    ::close(_sockfd);
+    m_loop->delIoEvent(m_sockfd);
+    ::close(m_sockfd);
 }
 
-void udp_server::handle_read()
+void UdpServer::handleRead()
 {
     while (true)
     {
-        int pkg_len = ::recvfrom(_sockfd, _rbuf, sizeof _rbuf, 0, (struct sockaddr *)&_srcaddr, &_addrlen);
+        int pkg_len = ::recvfrom(m_sockfd, m_rbuf.data(), m_rbuf.size(), 0, static_cast<struct sockaddr*> (&m_src_addr), &m_addrlen);
         if (pkg_len == -1)
         {
             if (errno == EINTR)
@@ -76,41 +96,45 @@ void udp_server::handle_read()
             }
             else
             {
-                error_log("recfrom()");
+                m_logger->printStdoutLog(BspLogger::LogLevel::Error, "recfrom()");
                 break;
             }
         }
         //handle package _rbuf[0:pkg_len)
-        commu_head head;
-        ::memcpy(&head, _rbuf, COMMU_HEAD_LENGTH);
-        if (head.length > MSG_LENGTH_LIMIT || head.length < 0 || head.length + COMMU_HEAD_LENGTH != pkg_len)
+        msgHead head;
+        ::memcpy(&head, m_rbuf.data(), sizeof(msgHead));
+        if ((head.length > MSG_LENGTH_LIMIT) || (head.length < 0) || (head.length + sizeof(msgHead) != pkg_len))
         {
             //data format is messed up
-            error_log("data format error in data head, head[%d,%d], pkg_len %d", head.length, head.cmdid, pkg_len);
+            m_logger->printStdoutLog(BspLogger::LogLevel::Error, "data format error in data head, head[%d,%d], pkg_len %d", head.length, head.cmd_id, pkg_len);
             continue;
         }
-        _dispatcher.cb(_rbuf + COMMU_HEAD_LENGTH, head.length, head.cmdid, this);
+
+        m_msg_dispatcher.callbackFunc(m_rbuf.data() + sizeof(msgHead), head.length, head.cmd_id, shared_from_this());
     }
+
 }
 
-int udp_server::send_data(const char* data, int datlen, int cmdid)
+int UdpServer::sendData(std::span<const uint8_t> data, int datlen, int cmd_id)
 {
     if (datlen > MSG_LENGTH_LIMIT)
     {
-        error_log("udp response length too large");
+        m_logger->printStdoutLog(BspLogger::LogLevel::Error, "udp response length too large");
         return -1;
     }
-    commu_head head;
+
+    msgHead head;
     head.length = datlen;
-    head.cmdid = cmdid;
+    head.cmd_id = cmd_id;
 
-    ::memcpy(_wbuf, &head, COMMU_HEAD_LENGTH);
-    ::memcpy(_wbuf + COMMU_HEAD_LENGTH, data, datlen);
+    ::memcpy(m_wbuf.data(), &head, sizeof(msgHead));
+    ::memcpy(m_wbuf.data() + sizeof(msgHead), data.data(), datlen);
 
-    int ret = ::sendto(_sockfd, _wbuf, datlen + COMMU_HEAD_LENGTH, 0, (struct sockaddr *)&_srcaddr, _addrlen);
+    int ret = ::sendto(m_sockfd, m_wbuf.data(), m_wbuf.size(), 0, static_cast<struct sockaddr*> (&m_src_addr), &m_addrlen);
+
     if (ret == -1)
     {
-        error_log("sendto()");
+        m_logger->printStdoutLog(BspLogger::LogLevel::Error, "sendto()");
     }
     return ret;
 }
