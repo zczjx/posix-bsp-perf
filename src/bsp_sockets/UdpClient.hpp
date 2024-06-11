@@ -1,36 +1,57 @@
 #ifndef __UDP_CLIENT_H__
 #define __UDP_CLIENT_H__
 
-#include "NetCommu.hpp"
+#include "ISocketConnection.hpp"
+#include "impl/MsgDispatcher.hpp"
+#include "EventLoop.hpp"
+#include <shared/BspLogger.hpp>
+#include <shared/ArgParser.hpp>
 
 #include <netinet/in.h>
 
-#include "impl/EventLoop.hpp"
-#include "impl/MsgDispatcher.hpp"
+namespace bsp_socket
+{
+using bsp_perf::shared;
 
-class udp_client: public net_commu
+using UdpClientParams = struct UdpClientParams
+{
+    std::string ipaddr{""};
+    int port{-1};
+};
+
+class UdpClient: public ISocketConnection, public std::enable_shared_from_this<UdpClient>
 {
 public:
-    udp_client(event_loop* loop, const char* ip, uint16_t port);
+    UdpClient(std::shared_ptr<EventLoop> loop, ArgParser&& args);
 
-    ~udp_client();
+    virtual ~UdpClient();
 
-    void add_msg_cb(int cmdid, msg_callback* msg_cb, void* usr_data = NULL) { _dispatcher.add_msg_cb(cmdid, msg_cb, usr_data); }
+    UdpClient(const UdpClient&) = delete;
+    UdpClient& operator=(const UdpClient&) = delete;
+    UdpClient(UdpClient&&) = delete;
+    UdpClient& operator=(UdpClient&&) = delete;
 
-    event_loop* loop() { return _loop; }
+    void addMsgCallback(int cmd_id, msgCallback msg_cb, std::any usr_data) { m_msg_dispatcher.addMsgCallback(cmd_id, msg_cb, usr_data); }
 
-    void handle_read();
+    std::shared_ptr<EventLoop> getEventLoop() { return m_loop; }
 
-    virtual int send_data(const char* data, int datlen, int cmdid);
+    void handleRead();
 
-    virtual int get_fd() { return _sockfd; }
+    virtual int sendData(std::span<const uint8_t> data, int datlen, int cmd_id) override;
+
+    virtual int getFd() override { return m_sockfd; }
 
 private:
-    int _sockfd;
-    char _rbuf[MSG_LENGTH_LIMIT];
-    char _wbuf[MSG_LENGTH_LIMIT];
-    event_loop* _loop;
-    msg_dispatcher _dispatcher;
+    std::unique_ptr<BspLogger> m_logger;
+    ArgParser m_args;
+
+    int m_sockfd;
+    std::vector<uint8_t> m_rbuf{};
+    std::vector<uint8_t> m_wbuf{};
+    std::shared_ptr<EventLoop> m_loop{nullptr};
+    MsgDispatcher m_msg_dispatcher{};
 };
+
+} // namespace bsp_socket
 
 #endif

@@ -102,7 +102,7 @@ void UdpServer::handleRead()
         }
         //handle package _rbuf[0:pkg_len)
         msgHead head;
-        ::memcpy(&head, m_rbuf.data(), sizeof(msgHead));
+        std::memcpy(&head, m_rbuf.data(), sizeof(msgHead));
         if ((head.length > MSG_LENGTH_LIMIT) || (head.length < 0) || (head.length + sizeof(msgHead) != pkg_len))
         {
             //data format is messed up
@@ -127,8 +127,8 @@ int UdpServer::sendData(std::span<const uint8_t> data, int datlen, int cmd_id)
     head.length = datlen;
     head.cmd_id = cmd_id;
 
-    ::memcpy(m_wbuf.data(), &head, sizeof(msgHead));
-    ::memcpy(m_wbuf.data() + sizeof(msgHead), data.data(), datlen);
+    std::memcpy(m_wbuf.data(), &head, sizeof(msgHead));
+    std::memcpy(m_wbuf.data() + sizeof(msgHead), data.data(), datlen);
 
     int ret = ::sendto(m_sockfd, m_wbuf.data(), m_wbuf.size(), 0, static_cast<struct sockaddr*> (&m_src_addr), &m_addrlen);
 

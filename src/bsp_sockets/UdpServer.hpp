@@ -47,7 +47,7 @@ public:
 
     virtual int sendData(std::span<const uint8_t> data, int datlen, int cmd_id) override;
 
-    virtual int getFd() override { return _sockfd; }
+    virtual int getFd() override { return m_sockfd; }
 
 private:
     std::unique_ptr<BspLogger> m_logger;
