@@ -30,12 +30,13 @@ SOFTWARE.
 #include <string>
 #include <iostream>
 #include <string>
+#include <memory>
+#include <string_view>
 #include <spdlog/spdlog.h>
 
 namespace bsp_perf {
 namespace shared {
 
-using string_view_t = spdlog::string_view_t;
 using namespace std::string_literals;
 
 class BspLogger {
@@ -62,48 +63,48 @@ public:
     }
 
     template<typename... Args>
-    void printStdoutLog(LogLevel level, string_view_t fmt, const Args &... args)
+    void printStdoutLog(LogLevel level, std::string_view sv, const Args &... args)
     {
         // Print the log message to stdout
-        printLogger(m_stdout_logger, level, fmt, args...);
+        printLogger(m_stdout_logger, level, sv, args...);
     }
 
     template<typename... Args>
-    void printFileLog(LogLevel level, string_view_t fmt, const Args &... args)
+    void printFileLog(LogLevel level, std::string_view sv, const Args &... args)
     {
         // Print the log message to a file
-        printLogger(m_file_logger, level, fmt, args...);
+        printLogger(m_file_logger, level, sv, args...);
     }
 
 
     template<typename... Args>
-    void printAsyncFileLog(LogLevel level, string_view_t fmt, const Args &... args)
+    void printAsyncFileLog(LogLevel level, std::string_view sv, const Args &... args)
     {
         // Print the log message to a file asynchronously
-        printLogger(m_async_file_logger, level, fmt, args...);
+        printLogger(m_async_file_logger, level, sv, args...);
     }
 
 protected:
     template<typename... Args>
-    void printLogger(std::shared_ptr<spdlog::logger> &logger, LogLevel level, string_view_t fmt, const Args &... args)
+    void printLogger(std::shared_ptr<spdlog::logger> &logger, LogLevel level, std::string_view sv, const Args &... args)
     {
         // Print the log message to the logger
         switch (level)
         {
         case LogLevel::Info:
-            logger->info(fmt, args...);
+            logger->info(sv, args...);
             break;
         case LogLevel::Debug:
-            logger->debug(fmt, args...);
+            logger->debug(sv, args...);
             break;
         case LogLevel::Warn:
-            logger->warn(fmt, args...);
+            logger->warn(sv, args...);
             break;
         case LogLevel::Critical:
-            logger->critical(fmt, args...);
+            logger->critical(sv, args...);
             break;
         case LogLevel::Error:
-            logger->error(fmt, args...);
+            logger->error(sv, args...);
             break;
         default:
             break;
