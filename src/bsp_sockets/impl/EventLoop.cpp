@@ -188,7 +188,7 @@ int EventLoop::runAt(timerCallback cb, std::any args, time_t ts)
     return m_timer_que->addTimer(te);
 }
 
-int EventLoop::runAfter(timerCallback cb, std::any args, int sec, int millis = 0)
+int EventLoop::runAfter(timerCallback cb, std::any args, int sec, int millis)
 {
     struct timespec tpc;
     clock_gettime(CLOCK_REALTIME, &tpc);
@@ -197,7 +197,7 @@ int EventLoop::runAfter(timerCallback cb, std::any args, int sec, int millis = 0
     runAt(cb, args, ts);
 }
 
-int EventLoop::runEvery(timerCallback cb, std::any args, int sec, int millis = 0)
+int EventLoop::runEvery(timerCallback cb, std::any args, int sec, int millis)
 {
     uint32_t interval = sec * 1000 + millis;
     struct timespec tpc;
@@ -225,7 +225,7 @@ void EventLoop::runTask()
     {
         pendingFunc func = it->first;
         std::any args = it->second;
-        func(*this, args);
+        func(shared_from_this(), args);
     }
     m_pending_factors.clear();
 }

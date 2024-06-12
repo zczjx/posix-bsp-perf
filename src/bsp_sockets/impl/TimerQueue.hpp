@@ -64,7 +64,7 @@ private:
     int m_count{0};
     int m_next_timer_id{0};
     int m_timer_fd{-1};
-    uint64_t m_pioneer{-1}; //recent timer's millis
+    uint64_t m_pioneer{0}; //recent timer's millis
 
     std::unique_ptr<bsp_perf::shared::BspLogger> m_logger;
 };

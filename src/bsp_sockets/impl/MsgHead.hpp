@@ -17,6 +17,12 @@ using msgHead = struct msgHead
     int length;
 };
 
+using msgTask = struct msgTask
+{
+    std::function<void(std::shared_ptr<EventLoop>, std::any)> task;
+    std::any args;
+ };//for NEW_TASK, 向sub-thread下发待执行任务
+
 //for accepter communicate with connections
 //for give task to sub-thread
 using queueMsg = struct queueMsg
@@ -28,15 +34,8 @@ using queueMsg = struct queueMsg
         NEW_TASK,
     } cmd_type;
 
-    union
-    {
-        int connection_fd;//for NEW_CONN, 向sub-thread下发新连接
-        struct
-        {
-            std::function<void(std::shared_ptr<EventLoop>, std::any)> task;
-            std::any args;
-        };//for NEW_TASK, 向sub-thread下发待执行任务
-    };
+    int connection_fd;//for NEW_CONN, 向sub-thread下发新连接
+    std::unique_ptr<msgTask> task_handle{nullptr};
 };
 }
 

@@ -10,15 +10,14 @@ set(CMAKE_CXX_STANDARD 17)
 
 # Add the source files
 set(SOURCES
-  impl/ConfigReader.cpp
-  impl/IOBuffer.cpp
-  impl/TcpConn.cpp
-  impl/ThreadPool.cpp
-  impl/UdpClient.cpp
   impl/EventLoop.cpp
+  impl/IOBuffer.cpp
   impl/TcpClient.cpp
+  impl/TcpConnection.cpp
   impl/TcpServer.cpp
+  impl/ThreadPool.cpp
   impl/TimerQueue.cpp
+  impl/UdpClient.cpp
   impl/UdpServer.cpp
     # Add more source files here if needed
 )
