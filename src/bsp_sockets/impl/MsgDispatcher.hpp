@@ -7,13 +7,14 @@
 
 #include <functional>
 #include <any>
-#include <span>
 #include <memory>
+#include <vector>
 
-namespace bsp_socket
+namespace bsp_sockets
 {
 
-using msgCallback = std::function<void(std::span<const uint8_t> data, uint32_t len, int cmd_id, std::shared_ptr<ISocketConnection> connection, std::any usr_data)>;
+
+using msgCallback = std::function<void(std::vector<uint8_t>& data, int cmd_id, std::shared_ptr<bsp_sockets::ISocketConnection> connection, std::any usr_data)>;
 
 class MsgDispatcher
 {
@@ -27,8 +28,8 @@ public:
             return -1;
         }
 
-        m_dispatcher[msg_cb] = msg_cb;
-        m_args[msg_cb] = usr_data;
+        m_dispatcher[cmd_id] = msg_cb;
+        m_args[cmd_id] = usr_data;
         return 0;
     }
 
@@ -37,7 +38,7 @@ public:
         return m_dispatcher.find(cmd_id) != m_dispatcher.end();
     }
 
-    void callbackFunc(std::span<const uint8_t> data, uint32_t len, int cmd_id, std::shared_ptr<ISocketConnection> connection)
+    void callbackFunc(std::vector<uint8_t>& data, int cmd_id, std::shared_ptr<bsp_sockets::ISocketConnection> connection)
     {
         if(!exist(cmd_id))
         {
@@ -46,7 +47,7 @@ public:
 
         auto func = m_dispatcher[cmd_id];
         auto usr_data = m_args[cmd_id];
-        func(data, len, cmd_id, connection, usr_data);
+        func(data, cmd_id, connection, usr_data);
     }
 
 private:

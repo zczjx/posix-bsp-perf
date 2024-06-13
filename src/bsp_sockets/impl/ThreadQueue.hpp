@@ -56,7 +56,7 @@ public:
     {
         if (m_event_fd == -1)
         {
-            throw BspSocketException("eventfd(0, EFD_NONBLOCK)");
+            throw BspSocketException("m_event_fd(0, EFD_NONBLOCK)");
         }
     }
 

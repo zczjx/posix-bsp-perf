@@ -39,9 +39,9 @@ public:
     ISocketConnection(const ISocketConnection&) = delete;
     ISocketConnection& operator=(const ISocketConnection&) = delete;
     ISocketConnection(ISocketConnection&&) = delete;
-    ISocketConnection& operator=(ISocketConnection&&) = delete;s
+    ISocketConnection& operator=(ISocketConnection&&) = delete;
 
-    virtual int sendData(std::vector<const uint8_t>& data, int cmd_id) = 0;
+    virtual int sendData(std::vector<uint8_t>& data, int cmd_id) = 0;
     virtual int getFd() = 0;
 
 private:

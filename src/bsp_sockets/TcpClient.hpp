@@ -21,7 +21,7 @@
 namespace bsp_sockets
 {
 
-using bsp_perf::shared;
+using namespace bsp_perf::shared;
 using TcpClientParams = struct TcpClientParams
 {
     std::string ip_addr{""};
@@ -32,7 +32,7 @@ class TcpClient: public ISocketConnection, public std::enable_shared_from_this<T
 {
 public:
     TcpClient(std::shared_ptr<EventLoop> loop, ArgParser&& args);
-    virtual ~TcpClient() { ::close(_sockfd); }
+    virtual ~TcpClient() { ::close(m_sockfd); }
 
     TcpClient(const TcpClient&) = delete;
     TcpClient& operator=(const TcpClient&) = delete;
@@ -63,7 +63,7 @@ public:
     void addMsgCallback(int cmd_id, msgCallback msg_cb, std::any usr_data)
     { m_msg_dispatcher.addMsgCallback(cmd_id, msg_cb, usr_data); }
 
-    int sendData(std::span<const uint8_t> data, int datlen, int cmd_id) override;
+    int sendData(std::vector<uint8_t>& data, int cmd_id) override;
 
     int getFd() override { return m_sockfd; }
 

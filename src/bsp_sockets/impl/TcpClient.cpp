@@ -10,11 +10,12 @@
 #include "MsgHead.hpp"
 #include <bsp_sockets/TcpClient.hpp>
 #include "BspSocketException.hpp"
+#include <vector>
 
 namespace bsp_sockets
 {
 
-using bsp_perf::shared;
+using namespace bsp_perf::shared;
 
 static void readCallback(std::shared_ptr<EventLoop> loop, int fd, std::any args)
 {
@@ -146,7 +147,7 @@ void TcpClient::doConnect()
     }
 }
 
-int TcpClient::sendData(std::span<const uint8_t> data, int datlen, int cmd_id) //call by user
+int TcpClient::sendData(std::vector<uint8_t>& data, int cmd_id) //call by user
 {
     if (!m_net_connected)
     {

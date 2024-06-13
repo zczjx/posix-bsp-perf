@@ -15,15 +15,14 @@
 #include <memory>
 #include <string>
 #include <vector>
-#include <span>
 
-namespace bsp_socket
+namespace bsp_sockets
 {
 
-using bsp_perf::shared;
+using namespace bsp_perf::shared;
 using UdpServerParams = struct UdpServerParams
 {
-    std::string ipaddr{""};
+    std::string ip_addr{""};
     int port{-1};
 };
 
@@ -45,11 +44,12 @@ public:
 
     void handleRead();
 
-    virtual int sendData(std::span<const uint8_t> data, int datlen, int cmd_id) override;
+    virtual int sendData(std::vector<uint8_t>& data, int cmd_id) override;
 
     virtual int getFd() override { return m_sockfd; }
 
 private:
+    UdpServerParams m_server_params{};
     std::unique_ptr<BspLogger> m_logger;
     ArgParser m_args;
 
@@ -65,6 +65,6 @@ private:
     std::vector<uint8_t> m_wbuf{};
 };
 
-} // namespace bsp_socket
+} // namespace bsp_sockets
 
 #endif

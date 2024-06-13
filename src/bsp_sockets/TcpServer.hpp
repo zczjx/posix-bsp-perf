@@ -1,5 +1,5 @@
-#ifndef __TCP_SERVER_H__
-#define __TCP_SERVER_H__
+#ifndef __TCP_SERVER_HPP__
+#define __TCP_SERVER_HPP__
 
 #include "impl/ThreadPool.hpp"
 #include "impl/TcpConnection.hpp"
@@ -21,7 +21,7 @@
 namespace bsp_sockets
 {
 
-using bsp_perf::shared;
+using namespace bsp_perf::shared;
 using TcpServerParams = struct TcpServerParams
 {
     std::string ipaddr{""};
@@ -53,9 +53,9 @@ public:
 
     size_t getConnectionNum();
 
-    std::weak_ptr<tcp_conn> getConnectionFromPool(int connection_fd);
+    std::weak_ptr<TcpConnection> getConnectionFromPool(int connection_fd);
 
-    void insertConnectionToPool(std::shared_ptr<tcp_conn> conn, int connection_fd);
+    void insertConnectionToPool(std::shared_ptr<TcpConnection> conn, int connection_fd);
 
     std::shared_ptr<EventLoop> getEventLoop() { return m_loop; }
 
@@ -64,12 +64,13 @@ public:
 public:
     MsgDispatcher& getMsgDispatcher() { return m_msg_dispatcher; }
     using connectionCallback = std::function<void(ISocketConnection& conn)>;
-    connectionCallback connectionEstablishCb{nullptr};//用户设置连接建立后的回调函数
-    connectionCallback connectionCloseCb{nullptr};//用户设置连接释放后的回调函数
-    void onConnectionEstablish(connectionCallback cb) { connBuildCb = cb; }
-    void onConnectionClose(connectionCallback cb) { connCloseCb = cb; }
+    void onConnectionEstablish(connectionCallback cb) { connectionEstablishCb = cb; }
+    void onConnectionClose(connectionCallback cb) { connectionCloseCb = cb; }
 
 private:
+    connectionCallback connectionEstablishCb{nullptr};//用户设置连接建立后的回调函数
+    connectionCallback connectionCloseCb{nullptr};//用户设置连接释放后的回调函数
+
     TcpServerParams m_server_params;
     int m_sockfd{-1};
     int m_reservfd{-1};
@@ -85,10 +86,10 @@ private:
     std::unique_ptr<BspLogger> m_logger;
     ArgParser m_args;
 
-    std::vector<std::shared_ptr<tcp_conn>> m_connections_pool{};//连接池
+    std::vector<std::shared_ptr<TcpConnection>> m_connections_pool{};//连接池
     MsgDispatcher m_msg_dispatcher{};
 };
 
 }
 
-#endif
+#endif // __TCP_SERVER_HPP__

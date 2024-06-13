@@ -5,6 +5,8 @@
 #include "BspSocketException.hpp"
 
 #include <cstring>
+#include <memory>
+#include <vector>
 
 #include <fcntl.h>
 #include <unistd.h>
@@ -147,7 +149,7 @@ void TcpConnection::handleWrite()
 
 }
 
-int TcpConnection::sendData(std::span<const uint8_t> data, int datlen, int cmd_id)
+int TcpConnection::sendData(std::vector<uint8_t>& data, int cmd_id)
 {
     bool need_listen = false;
 

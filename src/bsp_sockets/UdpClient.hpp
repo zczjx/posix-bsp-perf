@@ -9,13 +9,13 @@
 
 #include <netinet/in.h>
 
-namespace bsp_socket
+namespace bsp_sockets
 {
-using bsp_perf::shared;
+using namespace bsp_perf::shared;
 
 using UdpClientParams = struct UdpClientParams
 {
-    std::string ipaddr{""};
+    std::string ip_addr{""};
     int port{-1};
 };
 
@@ -37,11 +37,12 @@ public:
 
     void handleRead();
 
-    virtual int sendData(std::span<const uint8_t> data, int datlen, int cmd_id) override;
+    virtual int sendData(std::vector<uint8_t>& data, int cmd_id) override;
 
     virtual int getFd() override { return m_sockfd; }
 
 private:
+    UdpClientParams m_client_params{};
     std::unique_ptr<BspLogger> m_logger;
     ArgParser m_args;
 
@@ -52,6 +53,6 @@ private:
     MsgDispatcher m_msg_dispatcher{};
 };
 
-} // namespace bsp_socket
+} // namespace bsp_sockets
 
 #endif

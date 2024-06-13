@@ -30,7 +30,7 @@ UdpClient::UdpClient(std::shared_ptr<EventLoop> loop, ArgParser&& args):
     m_logger{std::make_unique<BspLogger>("UdpClient")}
 
 {
-    m_args.getOptionVal("--ip", m_client_params.ipaddr);
+    m_args.getOptionVal("--ip", m_client_params.ip_addr);
     m_args.getOptionVal("--port", m_client_params.port);
     m_logger->setPattern();
 
@@ -108,7 +108,7 @@ void UdpClient::handleRead()
 }
 
 
-int UdpClient::sendData(std::span<const uint8_t> data, int datlen, int cmd_id)
+int UdpClient::sendData(std::vector<uint8_t>& data, int cmd_id)
 {
     if (datlen > MSG_LENGTH_LIMIT)
     {

@@ -29,7 +29,7 @@ UdpServer::UdpServer(std::shared_ptr<EventLoop> loop, ArgParser&& args):
     m_args{std::move(args)},
     m_logger{std::make_unique<BspLogger>("UdpServer")}
 {
-    m_args.getOptionVal("--ip", m_server_params.ipaddr);
+    m_args.getOptionVal("--ip", m_server_params.ip_addr);
     m_args.getOptionVal("--port", m_server_params.port);
     m_logger->setPattern();
 
@@ -51,10 +51,10 @@ UdpServer::UdpServer(std::shared_ptr<EventLoop> loop, ArgParser&& args):
     ::bzero(&serv_addr, sizeof(struct sockaddr_in));
 
     serv_addr.sin_family = AF_INET;
-    int ret = ::inet_aton(m_server_params.ipaddr.c_str(), &serv_addr.sin_addr);
+    int ret = ::inet_aton(m_server_params.ip_addr.c_str(), &serv_addr.sin_addr);
     if (ret == 0)
     {
-        throw BspSocketException("ip format {}", m_server_params.ipaddr.c_str());
+        throw BspSocketException("ip format {}", m_server_params.ip_addr.c_str());
     }
     serv_addr.sin_port = htons(m_server_params.port);
 
@@ -65,7 +65,7 @@ UdpServer::UdpServer(std::shared_ptr<EventLoop> loop, ArgParser&& args):
         throw BspSocketException("bind()");
     }
 
-    m_logger->printStdoutLog(BspLogger::LogLevel::Info, "UdpServer on {}:{} is running...", m_server_params.ipaddr.c_str(), m_server_params.port);
+    m_logger->printStdoutLog(BspLogger::LogLevel::Info, "UdpServer on {}:{} is running...", m_server_params.ip_addr.c_str(), m_server_params.port);
 
     m_loop->addIoEvent(m_sockfd, readCallback, EPOLLIN, shared_from_this());
 
@@ -115,7 +115,7 @@ void UdpServer::handleRead()
 
 }
 
-int UdpServer::sendData(std::span<const uint8_t> data, int datlen, int cmd_id)
+int UdpServer::sendData(std::vector<uint8_t>& data, int cmd_id)
 {
     if (datlen > MSG_LENGTH_LIMIT)
     {
