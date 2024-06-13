@@ -117,7 +117,7 @@ private:
 
         {
             auto begin = m_profiler->getCurrentTimePoint();
-            smartPtrWritingPerf(m_test_arr, m_rw_cnt);
+            smartPtrReadingPerf(m_test_arr, m_rw_cnt);
             auto end = m_profiler->getCurrentTimePoint();
             auto smart_ptr_read_latency = m_profiler->getLatencyUs(begin, end);
             m_smart_read_bw_mb = getDDRBandwidthMB(smart_ptr_read_latency);
