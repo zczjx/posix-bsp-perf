@@ -46,10 +46,10 @@ UdpClient::UdpClient(std::shared_ptr<EventLoop> loop, ArgParser&& args):
     ::bzero(&serv_addr, sizeof(struct sockaddr_in));
 
     serv_addr.sin_family = AF_INET;
-    int ret = ::inet_aton(m_client_params.ipaddr.c_str(), &serv_addr.sin_addr);
+    int ret = ::inet_aton(m_client_params.ip_addr.c_str(), &serv_addr.sin_addr);
     if (ret == 0)
     {
-        throw BspSocketException("ip format {}", m_client_params.ipaddr.c_str());
+        throw BspSocketException(std::string("ip format ") + m_client_params.ip_addr);
     }
     serv_addr.sin_port = htons(m_client_params.port);
 
@@ -102,7 +102,8 @@ void UdpClient::handleRead()
             m_logger->printStdoutLog(BspLogger::LogLevel::Error, "data format error in data head");
             continue;
         }
-        m_msg_dispatcher.callbackFunc(m_rbuf.data() + sizeof(msgHead), head.length, head.cmd_id, shared_from_this());
+        std::vector<uint8_t> data_buffer(m_rbuf.begin() + sizeof(msgHead), m_rbuf.end());
+        m_msg_dispatcher.callbackFunc(data_buffer, head.cmd_id, shared_from_this());
     }
 
 }
@@ -110,20 +111,20 @@ void UdpClient::handleRead()
 
 int UdpClient::sendData(std::vector<uint8_t>& data, int cmd_id)
 {
-    if (datlen > MSG_LENGTH_LIMIT)
+    if (data.size() > MSG_LENGTH_LIMIT)
     {
         m_logger->printStdoutLog(BspLogger::LogLevel::Error, "udp response length too large");
         return -1;
     }
 
     msgHead head;
-    head.length = datlen;
+    head.length = data.size();
     head.cmd_id = cmd_id;
 
     std::memcpy(m_wbuf.data(), &head, sizeof(msgHead));
-    std::memcpy(m_wbuf.data() + sizeof(msgHead), data.data(), datlen);
+    m_wbuf.insert(m_wbuf.end(), data.begin(), data.end());
 
-    int ret = ::sendto(m_sockfd, m_wbuf.data(), m_wbuf.size(), 0, static_cast<struct sockaddr*> (&m_src_addr), &m_addrlen);
+    int ret = ::sendto(m_sockfd, m_wbuf.data(), m_wbuf.size(), 0, reinterpret_cast<struct sockaddr*> (&m_src_addr), &m_addrlen);
 
     if (ret == -1)
     {

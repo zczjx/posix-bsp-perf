@@ -97,7 +97,7 @@ private:
     onCloseFunc m_on_close_func{nullptr};
     std::any m_on_close_args{nullptr};
 
-    IOBufferQueue m_outbuf_queue{};
+    OutputBufferQueue m_outbuf_queue{};
 
     std::unique_ptr<BspLogger> m_logger;
     ArgParser m_args;

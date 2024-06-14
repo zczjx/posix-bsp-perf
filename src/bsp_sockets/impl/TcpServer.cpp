@@ -1,7 +1,6 @@
 
 #include "MsgHead.hpp"
 #include <bsp_sockets/TcpServer.hpp>
-#include <bsp_sockets/ConfigReader.hpp>
 #include "TcpConnection.hpp"
 #include "BspSocketException.hpp"
 
@@ -16,6 +15,8 @@
 #include <sys/types.h>
 #include <sys/socket.h>
 #include <sys/epoll.h>
+
+#include <memory>
 
 namespace bsp_sockets
 {
@@ -95,7 +96,7 @@ TcpServer::TcpServer(std::shared_ptr<EventLoop> loop, bsp_perf::shared::ArgParse
 
     if (m_server_params.thread_num > 0)
     {
-        m_thread_pool = std::make_shared<ThreadPool>(m_server_params.thread_num);
+        m_thread_pool = std::make_shared<ThreadPool>(m_server_params.thread_num, shared_from_this());
         if (nullptr == m_thread_pool)
         {
             throw BspSocketException("new thread_pool");
@@ -172,8 +173,8 @@ void TcpServer::doAccept()
         else
         {
             //connfd and max connections
-            int curr_conns;
-            get_conn_num(curr_conns);
+            auto curr_conns = getConnectionNum();
+
             if (curr_conns >= m_server_params.max_connections)
             {
                 m_logger->printStdoutLog(BspLogger::LogLevel::Error, "connection exceeds the maximum connection count {}", m_server_params.max_connections);
@@ -195,23 +196,23 @@ void TcpServer::doAccept()
                 //multi-thread reactor model: round-robin a event loop and give message to it
                 if (m_thread_pool != nullptr)
                 {
-                    thread_queue<queue_msg>* cq = m_thread_pool->get_next_thread();
-                    queue_msg msg;
-                    msg.cmd_type = queue_msg::NEW_CONN;
-                    msg.connfd = connfd;
-                    cq->send_msg(msg);
+                    auto cq = m_thread_pool->getNextThread();
+                    queueMsg msg;
+                    msg.cmd_type = queueMsg::MSG_TYPE::NEW_CONN;
+                    msg.connection_fd = connfd;
+                    cq->sendMsg(msg);
                 }
                 else//register in self thread
                 {
+                    std::weak_ptr<TcpConnection> conn = m_connections_pool[connfd];
 
-                    std::weak_ptr<tcp_conn> conn = m_connections_pool[connfd];
                     if (!conn.expired())
                     {
-                        conn->init(connfd, m_loop);
+                        conn.lock()->activate(connfd, m_loop);
                     }
                     else
                     {
-                        m_connections_pool[connfd] = std::shared_ptr<tcp_conn>(connfd, m_loop);
+                        m_connections_pool[connfd] = std::make_shared<TcpConnection>(connfd, m_loop, shared_from_this());
                     }
                 }
             }

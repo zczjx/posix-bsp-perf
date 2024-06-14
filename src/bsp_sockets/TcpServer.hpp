@@ -29,7 +29,7 @@ using TcpServerParams = struct TcpServerParams
     int thread_num{0};
     int max_connections{0};
 };
-class TcpServer
+class TcpServer: public std::enable_shared_from_this<TcpServer>
 {
 public:
     TcpServer(std::shared_ptr<EventLoop> loop, ArgParser&& args);
@@ -63,13 +63,13 @@ public:
 
 public:
     MsgDispatcher& getMsgDispatcher() { return m_msg_dispatcher; }
-    using connectionCallback = std::function<void(ISocketConnection& conn)>;
+    using connectionCallback = std::function<void(std::shared_ptr<ISocketConnection> conn)>;
     void onConnectionEstablish(connectionCallback cb) { connectionEstablishCb = cb; }
     void onConnectionClose(connectionCallback cb) { connectionCloseCb = cb; }
-
-private:
     connectionCallback connectionEstablishCb{nullptr};//用户设置连接建立后的回调函数
     connectionCallback connectionCloseCb{nullptr};//用户设置连接释放后的回调函数
+
+private:
 
     TcpServerParams m_server_params;
     int m_sockfd{-1};

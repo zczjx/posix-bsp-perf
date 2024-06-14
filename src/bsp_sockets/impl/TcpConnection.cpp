@@ -44,7 +44,7 @@ void TcpConnection::activate(int conn_fd, std::shared_ptr<EventLoop> loop)
     if (!m_tcp_server.expired())
     {
         std::shared_ptr<TcpServer> server = m_tcp_server.lock();
-        server->connectionEstablishCb(this);
+        server->connectionEstablishCb(shared_from_this());
         server->incConnection();
     }
 
@@ -82,7 +82,7 @@ void TcpConnection::handleRead()
     while (m_inbuf_queue.getBuffersCount() >= 0)
     {
         auto& in_buffer = m_inbuf_queue.getFrontBuffer();
-        std::memcpy(&head, m_in_buf.data(), sizeof(msgHead);
+        std::memcpy(&head, in_buffer.data(), sizeof(msgHead));
 
         if (head.length > MSG_LENGTH_LIMIT || head.length < 0)
         {
@@ -111,8 +111,9 @@ void TcpConnection::handleRead()
                 break;
             }
 
+            std::vector<uint8_t> data_buffer(in_buffer.begin() + sizeof(msgHead), in_buffer.end());
             //domain: call user callback
-            dispatcher.callbackFunc(in_buffer.data() + sizeof(msgHead), head.length, head.cmd_id, shared_from_this());
+            dispatcher.callbackFunc(data_buffer, head.cmd_id, shared_from_this());
             m_inbuf_queue.popBuffer();
         }
         else
@@ -158,13 +159,13 @@ int TcpConnection::sendData(std::vector<uint8_t>& data, int cmd_id)
         need_listen = true;
     }
 
-    std::vector<uint8_t> buffer(sizeof(msgHead) + datlen);
+    std::vector<uint8_t> buffer(sizeof(msgHead));
     //write rsp head first
     msgHead head;
     head.cmd_id = cmd_id;
-    head.length = datlen;
+    head.length = data.size();
     std::memcpy(buffer.data(), &head, sizeof(msgHead));
-    std::memcpy(buffer.data() + sizeof(msgHead), data.data(), datlen);
+    buffer.insert(buffer.end(), data.begin(), data.end());
 
     auto ret = m_outbuf_queue.sendData(buffer);
 
@@ -192,7 +193,7 @@ void TcpConnection::cleanConnection()
     if (!m_tcp_server.expired())
     {
         std::shared_ptr<TcpServer> server = m_tcp_server.lock();
-        server->connectionCloseCb(this);
+        server->connectionCloseCb(shared_from_this());
         server->decConnection();
     }
 

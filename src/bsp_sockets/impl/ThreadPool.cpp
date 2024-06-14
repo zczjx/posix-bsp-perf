@@ -4,37 +4,47 @@
 #include <bsp_sockets/EventLoop.hpp>
 #include <bsp_sockets/TcpServer.hpp>
 
+#include <memory>
+#include <thread>
+#include <queue>
+#include <any>
+#include <utility>
+
 
 namespace bsp_sockets
 {
-void ThreadPool::onMsgComing(std::shared_ptr<EventLoop> loop, int fd, std::any args)
+
+static void onMsgComing(std::shared_ptr<EventLoop> loop, int fd, std::any args)
 {
-    auto queue = std::any_cast<std::shared_ptr<ThreadQueue<queueMsg>>>(args);
+    auto params = std::any_cast<std::pair<std::shared_ptr<ThreadQueue<queueMsg>>, std::weak_ptr<TcpServer>>>(args);
+    auto queue = params.first;
+    auto tcp_server = params.second;
     std::queue<queueMsg> msgs;
+
     queue->recvMsg(msgs);
 
-    while (!msgs.empty() && !m_tcp_server.expired())
+    while (!msgs.empty() && !tcp_server.expired())
     {
         auto msg = msgs.front();
         msgs.pop();
         if (msg.cmd_type == queueMsg::MSG_TYPE::NEW_CONN)
         {
             // toDo: new connection
-            auto conn = m_tcp_server.lock()->getConnectionFromPool(msg.connection_fd);
+            auto conn = tcp_server.lock()->getConnectionFromPool(msg.connection_fd);
 
             if (!conn.expired())
             {
-                conn->activate(msg.connection_fd, loop);
+                conn.lock()->activate(msg.connection_fd, loop);
             }
             else
             {
-                m_tcp_server.lock()->insertConnectionToPool(std::make_shared<TcpConnection>(msg.connection_fd, loop, m_tcp_server),
+                tcp_server.lock()->insertConnectionToPool(std::make_shared<TcpConnection>(msg.connection_fd, loop, tcp_server),
                                                             msg.connection_fd);
             }
         }
         else if (msg.cmd_type == queueMsg::MSG_TYPE::NEW_TASK)
         {
-            loop->addTask(msg.task, msg.args);
+            loop->addTask(msg.task_handle->task, msg.task_handle->args);
         }
         else
         {
@@ -44,12 +54,11 @@ void ThreadPool::onMsgComing(std::shared_ptr<EventLoop> loop, int fd, std::any a
     }
 }
 
-std::any ThreadPool::threadDomain(std::any args)
+static std::any threadDomain(std::shared_ptr<ThreadQueue<queueMsg>> t_queue, std::weak_ptr<TcpServer> server)
 {
-    auto queue = std::any_cast<std::shared_ptr<ThreadQueue<queueMsg>>>(args);
     std::shared_ptr<EventLoop> loop = std::make_shared<EventLoop>();
 
-    queue->setLoop(loop, onMsgComing, queue);
+    t_queue->setLoop(loop, onMsgComing, std::make_pair(t_queue, server));
     loop->processEvents();
 }
 
@@ -64,16 +73,21 @@ ThreadPool::ThreadPool(int thread_cnt, std::weak_ptr<TcpServer> server):
 
     for (int i = 0; i < m_thread_cnt; ++i)
     {
-        m_pool.push_back(std::make_shared<ThreadQueue<queueMsg>>());
+        auto thread_queue = std::make_shared<ThreadQueue<queueMsg>>();
+        m_pool.push_back(thread_queue);
 
-        auto thd = std::thread(threadDomain, m_pool[i]);
+        auto thread_func = [](std::shared_ptr<ThreadQueue<queueMsg>> t_queue, std::weak_ptr<TcpServer> server){
+            threadDomain(t_queue, server);
+        };
+
+        auto thd = std::thread(thread_func, m_pool[i], m_tcp_server);
 
         if (thd.joinable() == false)
         {
             throw BspSocketException("std::thread create failed");
         }
-        m_tids.push_back(std::move(thd));
-        m_tids[i].detach();
+        m_threads.push_back(std::move(thd));
+        m_threads[i].detach();
     }
 }
 
@@ -91,8 +105,7 @@ void ThreadPool::runTask(int thd_index, pendingFunc task, std::any args)
 {
     queueMsg msg;
     msg.cmd_type = queueMsg::MSG_TYPE::NEW_TASK;
-    msg.task = task;
-    msg.args = args;
+    msg.task_handle = std::make_shared<msgTask>(task, args);
     auto thread_queue = m_pool[thd_index];
     thread_queue->sendMsg(msg);
 }
@@ -101,7 +114,7 @@ void ThreadPool::runTask(pendingFunc task, std::any args)
 {
     for (int i = 0; i < m_thread_cnt; ++i)
     {
-        runTask(i, task);
+        runTask(i, task, args);
     }
 }
 

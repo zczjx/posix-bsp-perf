@@ -7,6 +7,7 @@
 #include <sys/types.h>
 #include <sys/socket.h>
 #include <netinet/in.h>
+#include <arpa/inet.h>
 #include "MsgHead.hpp"
 #include <bsp_sockets/TcpClient.hpp>
 #include "BspSocketException.hpp"
@@ -47,7 +48,6 @@ static void connectEventCallback(std::shared_ptr<EventLoop> loop, int fd, std::a
     {
         //connect build success!
         client->setNetConnected(true);
-        std::string ip = client->getIpAddr();
         //call on connection callback(if has)
         client->onConnect();
 
@@ -80,7 +80,7 @@ TcpClient::TcpClient(std::shared_ptr<EventLoop> loop, ArgParser&& args):
     //construct server address
     ::bzero(&m_remote_server_addr, sizeof(struct sockaddr_in));
     m_remote_server_addr.sin_family = AF_INET;
-    int ret = ::inet_aton(m_client_params.ip_addr, &m_remote_server_addr.sin_addr);
+    int ret = ::inet_aton(m_client_params.ip_addr.c_str(), &m_remote_server_addr.sin_addr);
     if (ret == 0)
     {
         throw BspSocketException("ip format");
@@ -93,7 +93,7 @@ TcpClient::TcpClient(std::shared_ptr<EventLoop> loop, ArgParser&& args):
 
 void TcpClient::onConnect()
 {
-    m_logger->printStdoutLog(BspLogger::LogLevel::INFO, "connect {}:{} successfully",
+    m_logger->printStdoutLog(BspLogger::LogLevel::Info, "connect {}:{} successfully",
             ::inet_ntoa(m_remote_server_addr.sin_addr), ntohs(m_remote_server_addr.sin_port));
 
     if (m_on_connection_func)
@@ -123,7 +123,7 @@ void TcpClient::doConnect()
         throw BspSocketException("socket()");
     }
 
-    int ret = ::connect(m_sockfd, static_cast<const struct sockaddr*>(&m_remote_server_addr), m_addrlen);
+    int ret = ::connect(m_sockfd, reinterpret_cast<const struct sockaddr*>(&m_remote_server_addr), m_addrlen);
 
     if (ret == 0)
     {
@@ -162,13 +162,13 @@ int TcpClient::sendData(std::vector<uint8_t>& data, int cmd_id) //call by user
         return -1;
     }
 
-    std::vector<uint8_t> buffer(sizeof(msgHead) + datlen);
+    std::vector<uint8_t> buffer(sizeof(msgHead));
     //write rsp head first
     msgHead head;
     head.cmd_id = cmd_id;
-    head.length = datlen;
+    head.length = data.size();
     std::memcpy(buffer.data(), &head, sizeof(msgHead));
-    std::memcpy(buffer.data() + sizeof(msgHead), data.data(), datlen);
+    buffer.insert(buffer.end(), data.begin(), data.end());
     auto ret = m_outbuf_queue.sendData(buffer);
 
     if (ret != 0)
@@ -223,20 +223,14 @@ int TcpClient::handleRead()
             return -1;
         }
 
-        m_msg_dispatcher.callbackFunc(buffer.data() + sizeof(msgHead), head.length, head.cmd_id, shared_from_this());
+        std::vector<uint8_t> data_buffer(buffer.begin() + sizeof(msgHead), buffer.end());
+        m_msg_dispatcher.callbackFunc(data_buffer, head.cmd_id, shared_from_this());
 
     }
     else if (ret == 0)
     {
         //peer close connection
-        if (m_client_params.name)
-        {
-            m_logger->printStdoutLog(BspLogger::LogLevel::Info, "{} client: connection closed by peer", m_client_params.name);
-        }
-        else
-        {
-            m_logger->printStdoutLog(BspLogger::LogLevel::Info, "client: connection closed by peer");
-        }
+        m_logger->printStdoutLog(BspLogger::LogLevel::Info, "{} client: connection closed by peer", m_client_params.name);
         cleanConnection();
         return -1;
     }
