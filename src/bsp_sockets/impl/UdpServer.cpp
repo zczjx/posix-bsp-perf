@@ -6,9 +6,9 @@
 #include <stdio.h>
 #include <fcntl.h>
 #include <errno.h>
+#include <unistd.h>
 #include <signal.h>
-#include <strings.h>
-#include <sys/types.h>
+#include <arpa/inet.h>
 #include <sys/socket.h>
 
 namespace bsp_sockets
@@ -54,11 +54,11 @@ UdpServer::UdpServer(std::shared_ptr<EventLoop> loop, ArgParser&& args):
     int ret = ::inet_aton(m_server_params.ip_addr.c_str(), &serv_addr.sin_addr);
     if (ret == 0)
     {
-        throw BspSocketException("ip format {}", m_server_params.ip_addr.c_str());
+        throw BspSocketException(std::string("ip format ") + m_server_params.ip_addr);
     }
     serv_addr.sin_port = htons(m_server_params.port);
 
-    ret = ::bind(m_sockfd, (const struct sockaddr *)&serv_addr, sizeof(struct sockaddr_in));
+    ret = ::bind(m_sockfd, reinterpret_cast<const struct sockaddr *>(&serv_addr), sizeof(struct sockaddr_in));
 
     if (ret == -1)
     {
@@ -83,7 +83,7 @@ void UdpServer::handleRead()
 {
     while (true)
     {
-        int pkg_len = ::recvfrom(m_sockfd, m_rbuf.data(), m_rbuf.size(), 0, static_cast<struct sockaddr*> (&m_src_addr), &m_addrlen);
+        int pkg_len = ::recvfrom(m_sockfd, m_rbuf.data(), m_rbuf.size(), 0, reinterpret_cast<struct sockaddr*>(&m_src_addr), &m_addrlen);
         if (pkg_len == -1)
         {
             if (errno == EINTR)
@@ -110,27 +110,28 @@ void UdpServer::handleRead()
             continue;
         }
 
-        m_msg_dispatcher.callbackFunc(m_rbuf.data() + sizeof(msgHead), head.length, head.cmd_id, shared_from_this());
+        std::vector<uint8_t> data_buffer(m_rbuf.begin() + sizeof(msgHead), m_rbuf.end());
+        m_msg_dispatcher.callbackFunc(data_buffer, head.cmd_id, shared_from_this());
     }
 
 }
 
 int UdpServer::sendData(std::vector<uint8_t>& data, int cmd_id)
 {
-    if (datlen > MSG_LENGTH_LIMIT)
+    if (data.size() > MSG_LENGTH_LIMIT)
     {
         m_logger->printStdoutLog(BspLogger::LogLevel::Error, "udp response length too large");
         return -1;
     }
 
     msgHead head;
-    head.length = datlen;
+    head.length = data.size();
     head.cmd_id = cmd_id;
 
     std::memcpy(m_wbuf.data(), &head, sizeof(msgHead));
-    std::memcpy(m_wbuf.data() + sizeof(msgHead), data.data(), datlen);
+    m_wbuf.insert(m_wbuf.end(), data.begin(), data.end());
 
-    int ret = ::sendto(m_sockfd, m_wbuf.data(), m_wbuf.size(), 0, static_cast<struct sockaddr*> (&m_src_addr), &m_addrlen);
+    int ret = ::sendto(m_sockfd, m_wbuf.data(), m_wbuf.size(), 0, reinterpret_cast<struct sockaddr*>(&m_src_addr), m_addrlen);
 
     if (ret == -1)
     {

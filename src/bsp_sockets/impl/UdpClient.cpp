@@ -1,7 +1,5 @@
 #include <fcntl.h>
 #include <errno.h>
-#include <unistd.h>
-#include <signal.h>
 #include <arpa/inet.h>
 #include <sys/types.h>
 #include <sys/socket.h>
@@ -124,7 +122,7 @@ int UdpClient::sendData(std::vector<uint8_t>& data, int cmd_id)
     std::memcpy(m_wbuf.data(), &head, sizeof(msgHead));
     m_wbuf.insert(m_wbuf.end(), data.begin(), data.end());
 
-    int ret = ::sendto(m_sockfd, m_wbuf.data(), m_wbuf.size(), 0, reinterpret_cast<struct sockaddr*> (&m_src_addr), &m_addrlen);
+    int ret = ::sendto(m_sockfd, m_wbuf.data(), m_wbuf.size(), 0, NULL, 0);
 
     if (ret == -1)
     {
