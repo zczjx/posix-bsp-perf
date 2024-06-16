@@ -6,7 +6,7 @@
 #include <netinet/in.h>
 
 #include "EventLoop.hpp"
-#include "ISocketConnection.hpp"
+#include "impl/ISocketHelper.hpp"
 #include "impl/IOBuffer.hpp"
 #include "impl/MsgDispatcher.hpp"
 
@@ -28,7 +28,7 @@ using TcpClientParams = struct TcpClientParams
     int port{-1};
     std::string name{""};
 };
-class TcpClient: public ISocketConnection, public std::enable_shared_from_this<TcpClient>
+class TcpClient: public ISocketHelper, public std::enable_shared_from_this<TcpClient>
 {
 public:
     TcpClient(std::shared_ptr<EventLoop> loop, ArgParser&& args);

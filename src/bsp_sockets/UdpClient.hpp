@@ -1,7 +1,7 @@
 #ifndef __UDP_CLIENT_H__
 #define __UDP_CLIENT_H__
 
-#include "ISocketConnection.hpp"
+#include "impl/ISocketHelper.hpp"
 #include "impl/MsgDispatcher.hpp"
 #include "EventLoop.hpp"
 #include <shared/BspLogger.hpp>
@@ -19,7 +19,7 @@ using UdpClientParams = struct UdpClientParams
     int port{-1};
 };
 
-class UdpClient: public ISocketConnection, public std::enable_shared_from_this<UdpClient>
+class UdpClient: public ISocketHelper, public std::enable_shared_from_this<UdpClient>
 {
 public:
     UdpClient(std::shared_ptr<EventLoop> loop, ArgParser&& args);

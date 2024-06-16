@@ -3,8 +3,8 @@
 
 #include "impl/ThreadPool.hpp"
 #include "impl/TcpConnection.hpp"
+#include "impl/ISocketHelper.hpp"
 #include "EventLoop.hpp"
-#include "ISocketConnection.hpp"
 
 #include "impl/MsgDispatcher.hpp"
 #include <shared/BspLogger.hpp>
@@ -63,7 +63,7 @@ public:
 
 public:
     MsgDispatcher& getMsgDispatcher() { return m_msg_dispatcher; }
-    using connectionCallback = std::function<void(std::shared_ptr<ISocketConnection> conn)>;
+    using connectionCallback = std::function<void(std::shared_ptr<ISocketHelper> conn)>;
     void onConnectionEstablish(connectionCallback cb) { connectionEstablishCb = cb; }
     void onConnectionClose(connectionCallback cb) { connectionCloseCb = cb; }
     connectionCallback connectionEstablishCb{nullptr};//用户设置连接建立后的回调函数

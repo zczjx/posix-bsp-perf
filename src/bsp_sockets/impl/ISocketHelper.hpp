@@ -22,8 +22,8 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 */
 
-#ifndef ISOCKETCONNECTION_HPP
-#define ISOCKETCONNECTION_HPP
+#ifndef __ISOCKET_HELPER_HPP__
+#define __ISOCKET_HELPER_HPP__
 
 #include <stdint.h>
 #include <any>
@@ -31,23 +31,21 @@ SOFTWARE.
 
 namespace bsp_sockets
 {
-class ISocketConnection
+class ISocketHelper
 {
 public:
-    ISocketConnection(): parameter(nullptr) {}
-    virtual ~ISocketConnection() = default;
-    ISocketConnection(const ISocketConnection&) = delete;
-    ISocketConnection& operator=(const ISocketConnection&) = delete;
-    ISocketConnection(ISocketConnection&&) = delete;
-    ISocketConnection& operator=(ISocketConnection&&) = delete;
+    ISocketHelper() = default;
+    virtual ~ISocketHelper() = default;
+    ISocketHelper(const ISocketHelper&) = delete;
+    ISocketHelper& operator=(const ISocketHelper&) = delete;
+    ISocketHelper(ISocketHelper&&) = delete;
+    ISocketHelper& operator=(ISocketHelper&&) = delete;
 
     virtual int sendData(std::vector<uint8_t>& data, int cmd_id) = 0;
     virtual int getFd() = 0;
 
-private:
-    std::any parameter;//每个TCP客户端连接类可以使用此参数设置自己的连接内变量
 };
+} // namespace bsp_sockets
 
-}
+#endif // __ISOCKET_HELPER_HPP__
 
-#endif // ISOCKETCONNECTION_HPP

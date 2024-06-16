@@ -2,7 +2,7 @@
 #define TCP_CONNECTION_HPP
 
 #include <bsp_sockets/EventLoop.hpp>
-#include <bsp_sockets/ISocketConnection.hpp>
+#include "ISocketHelper.hpp"
 #include <shared/BspLogger.hpp>
 #include "IOBuffer.hpp"
 
@@ -13,7 +13,7 @@ namespace bsp_sockets
 
 class TcpServer;
 
-class TcpConnection: public ISocketConnection, public std::enable_shared_from_this<TcpConnection>
+class TcpConnection: public ISocketHelper, public std::enable_shared_from_this<TcpConnection>
 {
 public:
     TcpConnection(int conn_fd, std::shared_ptr<EventLoop> loop, std::weak_ptr<TcpServer> server);

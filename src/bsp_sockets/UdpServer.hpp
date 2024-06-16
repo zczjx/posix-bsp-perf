@@ -1,7 +1,7 @@
 #ifndef __UDP_SERVER_HPP__
 #define __UDP_SERVER_HPP__
 
-#include "ISocketConnection.hpp"
+#include "impl/ISocketHelper.hpp"
 #include "impl/MsgDispatcher.hpp"
 
 #include "EventLoop.hpp"
@@ -26,7 +26,7 @@ using UdpServerParams = struct UdpServerParams
     int port{-1};
 };
 
-class UdpServer: public ISocketConnection, public std::enable_shared_from_this<UdpServer>
+class UdpServer: public ISocketHelper, public std::enable_shared_from_this<UdpServer>
 {
 public:
     UdpServer(std::shared_ptr<EventLoop> loop, ArgParser&& args);

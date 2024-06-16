@@ -6,6 +6,5 @@
 #include "UdpServer.hpp"
 #include "UdpClient.hpp"
 #include "TcpClient.hpp"
-#include "ISocketConnection.hpp"
 
 #endif // __BSP_SOCKET_HPP__

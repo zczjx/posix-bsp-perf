@@ -2,7 +2,7 @@
 #define __MSG_DISPATCHER_H__
 
 #include <unordered_map>
-#include <bsp_sockets/ISocketConnection.hpp>
+#include "ISocketHelper.hpp"
 #include "BspSocketException.hpp"
 
 #include <functional>
@@ -13,8 +13,7 @@
 namespace bsp_sockets
 {
 
-
-using msgCallback = std::function<void(std::vector<uint8_t>& data, int cmd_id, std::shared_ptr<bsp_sockets::ISocketConnection> connection, std::any usr_data)>;
+using msgCallback = std::function<void(std::vector<uint8_t>& data, int cmd_id, std::shared_ptr<ISocketHelper> socket_helper, std::any usr_data)>;
 
 class MsgDispatcher
 {
@@ -38,7 +37,7 @@ public:
         return m_dispatcher.find(cmd_id) != m_dispatcher.end();
     }
 
-    void callbackFunc(std::vector<uint8_t>& data, int cmd_id, std::shared_ptr<bsp_sockets::ISocketConnection> connection)
+    void callbackFunc(std::vector<uint8_t>& data, int cmd_id, std::shared_ptr<ISocketHelper> socket_helper)
     {
         if(!exist(cmd_id))
         {
@@ -47,7 +46,7 @@ public:
 
         auto func = m_dispatcher[cmd_id];
         auto usr_data = m_args[cmd_id];
-        func(data, cmd_id, connection, usr_data);
+        func(data, cmd_id, socket_helper, usr_data);
     }
 
 private:
