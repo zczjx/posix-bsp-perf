@@ -220,6 +220,19 @@ void TcpServer::doAccept()
     }
 }
 
+std::weak_ptr<TcpConnection> TcpServer::getConnectionFromPool(int connection_fd)
+{
+    std::lock_guard<std::mutex> lockGuard(m_mutex);
+    return m_connections_pool[connection_fd];
+}
+
+
+void TcpServer::insertConnectionToPool(std::shared_ptr<TcpConnection> conn, int connection_fd)
+{
+    std::lock_guard<std::mutex> lockGuard(m_mutex);
+    m_connections_pool[connection_fd] = conn;
+}
+
 void TcpServer::incConnection()
 {
     std::lock_guard<std::mutex> lockGuard(m_mutex);

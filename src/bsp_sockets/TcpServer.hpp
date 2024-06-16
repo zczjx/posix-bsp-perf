@@ -58,7 +58,6 @@ public:
     void insertConnectionToPool(std::shared_ptr<TcpConnection> conn, int connection_fd);
 
     std::shared_ptr<EventLoop> getEventLoop() { return m_loop; }
-
     std::shared_ptr<ThreadPool> getThreadPool() { return m_thread_pool; }
 
 public:

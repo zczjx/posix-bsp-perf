@@ -6,5 +6,6 @@ option(BUILD_PERF_CASE_COMMON "Build common cases" ON)
 if(BUILD_PERF_CASE_COMMON)
     add_subdirectory(hello_world)
     add_subdirectory(ddr_bandwidth)
+    add_subdirectory(asyncio_sockets)
 endif()
 
