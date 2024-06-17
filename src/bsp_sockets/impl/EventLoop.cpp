@@ -10,22 +10,25 @@
 #include <errno.h>
 #include <time.h>
 
+#include <memory>
+#include <vector>
+#include <any>
+
 namespace bsp_sockets
 {
 using namespace bsp_perf::shared;
 
 EventLoop::EventLoop():
     m_epoll_fd{::epoll_create1(0)},
-    m_timer_que{std::make_unique<TimerQueue>()},
+    m_timer_queue{std::make_shared<TimerQueue>()},
     m_logger{std::make_unique<BspLogger>()}
 {
-
-    if (m_epoll_fd = -1)
+    if (m_epoll_fd < 0)
     {
         throw BspSocketException("epoll_create1");
     }
 
-    if (m_timer_que == nullptr)
+    if (nullptr == m_timer_queue)
     {
         throw BspSocketException("new TimerQueue");
     }
@@ -42,7 +45,7 @@ EventLoop::EventLoop():
         }
     };
 
-    addIoEvent(m_timer_que->getNotifier(), timerQueueCallback, EPOLLIN, nullptr);
+    addIoEvent(m_timer_queue->getNotifier(), timerQueueCallback, EPOLLIN, m_timer_queue);
 }
 
 void EventLoop::processEvents()
@@ -97,7 +100,7 @@ void EventLoop::processEvents()
  */
 void EventLoop::addIoEvent(int fd, ioCallback proc, int mask, std::any args)
 {
-    int f_mask = 0;//finial mask
+    int f_mask = 0;
     int op;
     ioevIterator it = m_io_events.find(fd);
     if (it == m_io_events.end())
@@ -112,13 +115,13 @@ void EventLoop::addIoEvent(int fd, ioCallback proc, int mask, std::any args)
     }
     if (mask & EPOLLIN)
     {
-        it->second.read_callback = proc;
-        it->second.rcb_args = args;
+        m_io_events[fd].read_callback = proc;
+        m_io_events[fd].rcb_args = args;
     }
     else if (mask & EPOLLOUT)
     {
-        it->second.write_callback = proc;
-        it->second.wcb_args = args;
+        m_io_events[fd].write_callback = proc;
+        m_io_events[fd].wcb_args = args;
     }
 
     m_io_events[fd].mask = f_mask;
@@ -185,7 +188,7 @@ void EventLoop::delIoEvent(int fd)
 int EventLoop::runAt(timerCallback cb, std::any args, time_t ts)
 {
     timerEvent te(cb, args, ts);
-    return m_timer_que->addTimer(te);
+    return m_timer_queue->addTimer(te);
 }
 
 int EventLoop::runAfter(timerCallback cb, std::any args, int sec, int millis)
@@ -204,12 +207,12 @@ int EventLoop::runEvery(timerCallback cb, std::any args, int sec, int millis)
     clock_gettime(CLOCK_REALTIME, &tpc);
     uint64_t ts = tpc.tv_sec * 1000 + tpc.tv_nsec / 1000000UL + interval;
     timerEvent te(cb, args, ts, interval);
-    return m_timer_que->addTimer(te);
+    return m_timer_queue->addTimer(te);
 }
 
 void EventLoop::delTimer(int timer_id)
 {
-    m_timer_que->delTimer(timer_id);
+    m_timer_queue->delTimer(timer_id);
 }
 
 void EventLoop::addTask(pendingFunc func, std::any args)

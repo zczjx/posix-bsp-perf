@@ -46,7 +46,7 @@ public:
     void addTask(pendingFunc func, std::any args);
     void runTask();
 
-    std::unique_ptr<TimerQueue>& getTimerQueue() { return m_timer_que; }
+    std::shared_ptr<TimerQueue>& getTimerQueue() { return m_timer_queue; }
     //operator for timer event
     int runAt(timerCallback cb, std::any args, time_t ts);
     int runAfter(timerCallback cb, std::any args, int sec, int millis = 0);
@@ -59,7 +59,7 @@ private:
     //map: fd->IOEvent
     std::unordered_map<int, IOEvent> m_io_events;
     using ioevIterator = std::unordered_map<int, IOEvent>::iterator;
-    std::unique_ptr<TimerQueue> m_timer_que;
+    std::shared_ptr<TimerQueue> m_timer_queue;
     //此队列用于:暂存将要执行的任务
     std::vector<std::pair<pendingFunc, std::any> > m_pending_factors;
 
