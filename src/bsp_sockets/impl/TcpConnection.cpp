@@ -20,7 +20,7 @@ TcpConnection::TcpConnection(int conn_fd, std::shared_ptr<EventLoop> loop, std::
     m_connection_fd(conn_fd),
     m_loop(loop),
     m_tcp_server(server),
-    m_logger{std::make_unique<BspLogger>()}
+    m_logger{std::make_unique<BspLogger>("TcpConnection")}
 {
     activate(conn_fd, loop);
 }

@@ -6,10 +6,10 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <assert.h>
-#include <string.h>
 #include <errno.h>
 #include <time.h>
 
+#include <string>
 #include <memory>
 #include <vector>
 #include <any>
@@ -21,7 +21,7 @@ using namespace bsp_perf::shared;
 EventLoop::EventLoop():
     m_epoll_fd{::epoll_create1(0)},
     m_timer_queue{std::make_shared<TimerQueue>()},
-    m_logger{std::make_unique<BspLogger>()}
+    m_logger{std::make_unique<BspLogger>("EventLoop")}
 {
     if (m_epoll_fd < 0)
     {

@@ -61,7 +61,7 @@ void domain(ArgParser& args)
     TcpClient client(loop_ptr, std::move(args)); //创建TCP客户端
 
     std::shared_ptr<struct testQPS> qps_ptr = std::make_shared<struct testQPS>();
-    std::shared_ptr<BspLogger> logger = std::make_shared<BspLogger>("TcpClient thread");
+    std::shared_ptr<BspLogger> logger = std::make_shared<BspLogger>("client_thread");
 
     client.addMsgCallback(1, onMessage, std::make_pair(logger, qps_ptr)); //设置：当收到消息id=1的消息时的回调函数
 

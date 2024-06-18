@@ -41,7 +41,7 @@ using namespace std::string_literals;
 
 class BspLogger {
 public:
-    BspLogger(const std::string& log_file_path = "logs/bsp_perf.log"s, const std::string& async_log_file_path = "logs/bsp_perf_async.log"s);
+    BspLogger(const std::string& logger_id, const std::string& log_file_path = "logs/bsp_perf.log"s, const std::string& async_log_file_path = "logs/bsp_perf_async.log"s);
     virtual ~BspLogger();
 
     enum class LogLevel {
@@ -113,9 +113,9 @@ protected:
 
 private:
     // Your code here
-    std::shared_ptr<spdlog::logger> m_stdout_logger;
-    std::shared_ptr<spdlog::logger> m_file_logger;
-    std::shared_ptr<spdlog::logger> m_async_file_logger;
+    std::shared_ptr<spdlog::logger> m_stdout_logger{nullptr};
+    std::shared_ptr<spdlog::logger> m_file_logger{nullptr};
+    std::shared_ptr<spdlog::logger> m_async_file_logger{nullptr};
 };
 
 
