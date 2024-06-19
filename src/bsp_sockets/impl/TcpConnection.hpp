@@ -24,9 +24,13 @@ public:
 
     void handleWrite();
 
-    virtual int sendData(std::vector<uint8_t>& data, int cmd_id) override;
+    int sendData(std::vector<uint8_t>& data, int cmd_id) override;
 
-    virtual int getFd() override { return m_connection_fd; }
+    int getFd() override { return m_connection_fd; }
+
+    int start() override { return 0; }
+
+    void stop() override {}
 
     void cleanConnection();
 

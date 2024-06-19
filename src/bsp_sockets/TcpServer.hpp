@@ -17,6 +17,7 @@
 #include <functional>
 #include <memory>
 #include <any>
+#include <atomic>
 
 namespace bsp_sockets
 {
@@ -29,7 +30,7 @@ using TcpServerParams = struct TcpServerParams
     int thread_num{0};
     int max_connections{0};
 };
-class TcpServer: public std::enable_shared_from_this<TcpServer>
+class TcpServer: public std::enable_shared_from_this<TcpServer>, public ISocketHelper
 {
 public:
     TcpServer(std::shared_ptr<EventLoop> loop, ArgParser&& args);
@@ -41,7 +42,15 @@ public:
     TcpServer(TcpServer&&) = delete;
     TcpServer& operator=(TcpServer&&) = delete;
 
-    void keepAlive() { m_keep_alive = true; }
+    int start() override;
+
+    void stop() override;
+
+    int sendData(std::vector<uint8_t>& data, int cmd_id) override { return -1; }
+
+    int getFd() override { return m_sockfd; }
+
+    void keepAlive() { m_keep_alive.store(true); }
 
     void doAccept();
 
@@ -77,7 +86,8 @@ private:
     std::shared_ptr<ThreadPool> m_thread_pool{nullptr};
     struct sockaddr_in m_conn_addr{};
     socklen_t m_addrlen{sizeof(struct sockaddr_in)};
-    bool m_keep_alive{false};
+    std::atomic_bool m_keep_alive{false};
+    std::atomic_bool m_running{false};
 
     int m_conns_size{0};
     int m_curr_conns{0};

@@ -31,6 +31,10 @@ public:
     UdpClient(UdpClient&&) = delete;
     UdpClient& operator=(UdpClient&&) = delete;
 
+    int start() override { return 0; }
+
+    void stop() override {}
+
     void addMsgCallback(int cmd_id, msgCallback msg_cb, std::any usr_data) { m_msg_dispatcher.addMsgCallback(cmd_id, msg_cb, usr_data); }
 
     std::shared_ptr<EventLoop> getEventLoop() { return m_loop; }

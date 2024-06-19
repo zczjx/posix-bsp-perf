@@ -25,9 +25,10 @@ int main(int argc, char* argv[])
 
     std::shared_ptr<EventLoop> loop_ptr = std::make_shared<EventLoop>();
 
-    TcpServer server(loop_ptr, std::move(parser));
+    std::shared_ptr<TcpServer> server = std::make_shared<TcpServer>(loop_ptr, std::move(parser));
+    server->start();
     std::shared_ptr<BspLogger> logger = std::make_shared<BspLogger>("aio_tcpserver");
-    server.addMsgCallback(1, onMessage, logger);
+    server->addMsgCallback(1, onMessage, logger);
     loop_ptr->processEvents();
 
     return 0;

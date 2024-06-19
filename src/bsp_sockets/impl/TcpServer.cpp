@@ -94,15 +94,6 @@ TcpServer::TcpServer(std::shared_ptr<EventLoop> loop, bsp_perf::shared::ArgParse
 
     m_logger->printStdoutLog(BspLogger::LogLevel::Debug, "server on {}:{} is running...", m_server_params.ipaddr.c_str(), m_server_params.port);
 
-    if (m_server_params.thread_num > 0)
-    {
-        m_thread_pool = std::make_shared<ThreadPool>(m_server_params.thread_num, shared_from_this());
-        if (nullptr == m_thread_pool)
-        {
-            throw BspSocketException("new thread_pool");
-        }
-    }
-
     int next_fd = ::dup(1);
     m_conns_size = m_server_params.max_connections + next_fd;
     ::close(next_fd);
@@ -112,26 +103,56 @@ TcpServer::TcpServer(std::shared_ptr<EventLoop> loop, bsp_perf::shared::ArgParse
         conn.reset(); // 或者 conn = nullptr;
     }
 
-    auto accepterCb = [](std::shared_ptr<EventLoop> loop, int fd, std::any args)
-    {
-        auto server = std::any_cast<std::shared_ptr<TcpServer>>(args);
-        server->doAccept();
-    };
-    m_loop->addIoEvent(m_sockfd, accepterCb, EPOLLIN, std::make_any<std::shared_ptr<TcpServer>>(shared_from_this()));
 }
 
 //TcpServer类使用时往往具有程序的完全生命周期，其实并不需要析构函数
 TcpServer::~TcpServer()
 {
-    m_loop->delIoEvent(m_sockfd);
-    ::close(m_sockfd);
-    ::close(m_reservfd);
-
+    stop();
     // Clean up the connections
     for (auto& conn : m_connections_pool)
     {
         conn.reset();
     }
+}
+
+int TcpServer::start()
+{
+    if (m_running.load())
+    {
+        return 0;
+    }
+
+    if (m_server_params.thread_num > 0)
+    {
+        m_thread_pool = std::make_shared<ThreadPool>(m_server_params.thread_num, shared_from_this());
+        if (nullptr == m_thread_pool)
+        {
+            throw BspSocketException("new thread_pool");
+        }
+    }
+
+    auto accepterCb = [](std::shared_ptr<EventLoop> loop, int fd, std::any args)
+    {
+        auto server = std::any_cast<std::shared_ptr<TcpServer>>(args);
+        server->doAccept();
+    };
+    m_loop->addIoEvent(m_sockfd, accepterCb, EPOLLIN, shared_from_this());
+    m_running.store(true);
+    return 0;
+}
+
+void TcpServer::stop()
+{
+    if (!m_running.load())
+    {
+        return;
+    }
+
+    m_thread_pool.reset();
+    m_loop->delIoEvent(m_sockfd);
+    ::close(m_sockfd);
+    ::close(m_reservfd);
 }
 
 void TcpServer::doAccept()
@@ -183,7 +204,7 @@ void TcpServer::doAccept()
             else
             {
                 assert(connfd < m_conns_size);
-                if (m_keep_alive)
+                if (m_keep_alive.load())
                 {
                     int opend = 1;
                     int ret = ::setsockopt(connfd, SOL_SOCKET, SO_KEEPALIVE, &opend, sizeof(opend));
