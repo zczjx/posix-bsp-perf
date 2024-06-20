@@ -99,7 +99,7 @@ public:
         std::swap(tmp_queue, m_queue);
     }
 
-    std::shared_ptr<EventLoop> get_loop() { return m_loop; }
+    std::shared_ptr<EventLoop> getLoop() { return m_loop; }
 
     //set loop and install message comming event's callback: proc
     void setLoop(std::shared_ptr<EventLoop> loop, ioCallback proc, std::any args)

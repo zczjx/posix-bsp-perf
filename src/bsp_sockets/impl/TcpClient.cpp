@@ -71,8 +71,8 @@ TcpClient::TcpClient(std::shared_ptr<EventLoop> loop, ArgParser&& args):
     m_args{std::move(args)},
     m_logger{std::make_unique<BspLogger>("TcpClient")}
 {
-    m_args.getOptionVal("--ip", m_client_params.ip_addr);
-    m_args.getOptionVal("--port", m_client_params.port);
+    m_args.getOptionVal("--server_ip", m_client_params.ip_addr);
+    m_args.getOptionVal("--server_port", m_client_params.port);
     m_args.getOptionVal("--name", m_client_params.name);
 
     m_logger->setPattern();
@@ -87,8 +87,32 @@ TcpClient::TcpClient(std::shared_ptr<EventLoop> loop, ArgParser&& args):
     }
     m_remote_server_addr.sin_port = htons(m_client_params.port);
 
+}
+
+void TcpClient::startLoop()
+{
+    if (m_running.load())
+    {
+        return;
+    }
     //connect
     doConnect();
+    m_loop->processEvents();
+}
+
+void TcpClient::stop()
+{
+    if (!m_running.load())
+    {
+        return;
+    }
+
+    if (m_sockfd != -1)
+    {
+        m_loop->delIoEvent(m_sockfd);
+        ::close(m_sockfd);
+    }
+    m_running.store(false);
 }
 
 void TcpClient::onConnect()

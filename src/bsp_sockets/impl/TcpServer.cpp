@@ -153,6 +153,7 @@ void TcpServer::stop()
     m_loop->delIoEvent(m_sockfd);
     ::close(m_sockfd);
     ::close(m_reservfd);
+    m_running.store(false);
 }
 
 void TcpServer::doAccept()
@@ -217,14 +218,17 @@ void TcpServer::doAccept()
                 //multi-thread reactor model: round-robin a event loop and give message to it
                 if (m_thread_pool != nullptr)
                 {
+                    m_logger->printStdoutLog(BspLogger::LogLevel::Error, "[S] TcpServer::doAccept: m_thread_pool != nullptr");
                     auto cq = m_thread_pool->getNextThread();
                     queueMsg msg;
                     msg.cmd_type = queueMsg::MSG_TYPE::NEW_CONN;
                     msg.connection_fd = connfd;
                     cq->sendMsg(msg);
+                    m_logger->printStdoutLog(BspLogger::LogLevel::Error, "[E] TcpServer::doAccept: m_thread_pool != nullptr");
                 }
                 else//register in self thread
                 {
+                    m_logger->printStdoutLog(BspLogger::LogLevel::Error, "[S] TcpServer::doAccept: m_thread_pool == nullptr");
                     std::weak_ptr<TcpConnection> conn = m_connections_pool[connfd];
 
                     if (!conn.expired())
@@ -235,6 +239,7 @@ void TcpServer::doAccept()
                     {
                         m_connections_pool[connfd] = std::make_shared<TcpConnection>(connfd, m_loop, shared_from_this());
                     }
+                    m_logger->printStdoutLog(BspLogger::LogLevel::Error, "[E] TcpServer::doAccept: m_thread_pool == nullptr");
                 }
             }
         }

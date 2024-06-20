@@ -30,6 +30,7 @@ static void onMsgComing(std::shared_ptr<EventLoop> loop, int fd, std::any args)
         if (msg.cmd_type == queueMsg::MSG_TYPE::NEW_CONN)
         {
             // toDo: new connection
+            std::cout << "zczjx--> [S] ThreadPool::onMsgComing: "  << std::endl;
             auto conn = tcp_server.lock()->getConnectionFromPool(msg.connection_fd);
 
             if (!conn.expired())
@@ -38,9 +39,13 @@ static void onMsgComing(std::shared_ptr<EventLoop> loop, int fd, std::any args)
             }
             else
             {
-                tcp_server.lock()->insertConnectionToPool(std::make_shared<TcpConnection>(msg.connection_fd, loop, tcp_server),
-                                                            msg.connection_fd);
+                std::cout << "zczjx--> [S] ThreadPool::onMsgComing::insertConnectionToPool"  << std::endl;
+                auto conn = std::make_shared<TcpConnection>(msg.connection_fd, loop, tcp_server);
+                conn->activate(msg.connection_fd, loop);
+                tcp_server.lock()->insertConnectionToPool(conn, msg.connection_fd);
+                std::cout << "zczjx--> [E] ThreadPool::onMsgComing::insertConnectionToPool"  << std::endl;
             }
+            std::cout << "zczjx--> [E] ThreadPool::onMsgComing: "  << std::endl;
         }
         else if (msg.cmd_type == queueMsg::MSG_TYPE::NEW_TASK)
         {

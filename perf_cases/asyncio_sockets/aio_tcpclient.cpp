@@ -24,6 +24,7 @@ struct testQPS
 
 static void onMessage(std::vector<uint8_t>& data, int cmd_id, std::shared_ptr<ISocketHelper> socket_helper, std::any usr_data)
 {
+    std::cout << "[S] zczjx--> aio_tcpclient:onMessage" << std::endl;
     auto pair_args = std::any_cast<std::pair<std::shared_ptr<BspLogger>, std::shared_ptr<struct testQPS>>>(usr_data);
     auto logger = pair_args.first;
     auto qps = pair_args.second;
@@ -45,30 +46,33 @@ static void onMessage(std::vector<uint8_t>& data, int cmd_id, std::shared_ptr<IS
     std::string reqStr = str_convert.str();
     std::vector<uint8_t> data_buffer(reqStr.begin(), reqStr.end());
     socket_helper->sendData(data_buffer, cmd_id);
+    std::cout << "[E] zczjx--> aio_tcpclient:onMessage" << std::endl;
 }
 
 void onConnection(std::shared_ptr<TcpClient> client, std::any args)
 {
+    std::cout << "[S] zczjx--> aio_tcpclient:onConnection" << std::endl;
     std::string reqStr = "I miss you";
     std::vector<uint8_t> data_buffer(reqStr.begin(), reqStr.end());
     client->sendData(data_buffer, 1); //主动发送消息
+    std::cout << "[E] zczjx--> aio_tcpclient:onConnection" << std::endl;
 }
 
 void domain(ArgParser& args)
 {
     std::shared_ptr<EventLoop> loop_ptr = std::make_shared<EventLoop>();
 
-    TcpClient client(loop_ptr, std::move(args)); //创建TCP客户端
+    std::shared_ptr<TcpClient> client = std::make_shared<TcpClient>(loop_ptr, std::move(args));
 
     std::shared_ptr<struct testQPS> qps_ptr = std::make_shared<struct testQPS>();
     std::shared_ptr<BspLogger> logger = std::make_shared<BspLogger>("client_thread");
 
-    client.addMsgCallback(1, onMessage, std::make_pair(logger, qps_ptr)); //设置：当收到消息id=1的消息时的回调函数
+    client->addMsgCallback(1, onMessage, std::make_pair(logger, qps_ptr)); //设置：当收到消息id=1的消息时的回调函数
 
     //安装连接建立后调用的回调函数
-    client.setOnConnection(onConnection, nullptr);
+    client->setOnConnection(onConnection, nullptr);
 
-    loop_ptr->processEvents();
+    client->startLoop();
 }
 
 
@@ -77,7 +81,8 @@ int main(int argc, char* argv[])
     ArgParser parser("Asyncio Sockets Perf Case: Tcp Server");
     parser.addOption("--server_ip", std::string("127.0.0.1"), "tcp server ip address");
     parser.addOption("--server_port", int32_t(12345), "port number for the tcp server");
-    parser.addOption("--thread_num", int32_t(10), "thread number for the tcp server");
+    parser.addOption("--name", std::string("aio_tcpclient"), "name of the tcp client");
+    parser.addOption("--thread_num", int32_t(1), "thread number for the tcp server");
     parser.parseArgs(argc, argv);
 
     int thread_num = 0;

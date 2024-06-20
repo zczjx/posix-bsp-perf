@@ -17,6 +17,7 @@
 #include <any>
 #include <functional>
 #include <memory>
+#include <atomic>
 
 namespace bsp_sockets
 {
@@ -32,7 +33,7 @@ class TcpClient: public ISocketHelper, public std::enable_shared_from_this<TcpCl
 {
 public:
     TcpClient(std::shared_ptr<EventLoop> loop, ArgParser&& args);
-    virtual ~TcpClient() { ::close(m_sockfd); }
+    virtual ~TcpClient() { stop(); }
 
     TcpClient(const TcpClient&) = delete;
     TcpClient& operator=(const TcpClient&) = delete;
@@ -56,9 +57,10 @@ public:
         m_on_close_args = args;
     }
 
-    int start();
+    void startLoop();
 
     void stop();
+
     void onConnect();
 
     void onClose();
@@ -92,6 +94,7 @@ private:
     int m_sockfd;
 
     std::shared_ptr<EventLoop> m_loop{nullptr};
+    std::atomic_bool m_running{false};
     MsgDispatcher m_msg_dispatcher{};
     //when connection success, call _onconnection(_onconn_args)
     onConnectFunc m_on_connection_func{nullptr};
