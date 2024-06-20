@@ -28,10 +28,6 @@ public:
 
     int getFd() override { return m_connection_fd; }
 
-    int start() override { return 0; }
-
-    void stop() override {}
-
     void cleanConnection();
 
 private:

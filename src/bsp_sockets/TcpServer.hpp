@@ -30,7 +30,7 @@ using TcpServerParams = struct TcpServerParams
     int thread_num{0};
     int max_connections{0};
 };
-class TcpServer: public std::enable_shared_from_this<TcpServer>, public ISocketHelper
+class TcpServer: public std::enable_shared_from_this<TcpServer>
 {
 public:
     TcpServer(std::shared_ptr<EventLoop> loop, ArgParser&& args);
@@ -42,13 +42,9 @@ public:
     TcpServer(TcpServer&&) = delete;
     TcpServer& operator=(TcpServer&&) = delete;
 
-    int start() override;
+    void startLoop();
 
-    void stop() override;
-
-    int sendData(std::vector<uint8_t>& data, int cmd_id) override { return -1; }
-
-    int getFd() override { return m_sockfd; }
+    void stop();
 
     void keepAlive() { m_keep_alive.store(true); }
 

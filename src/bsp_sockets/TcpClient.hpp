@@ -56,9 +56,9 @@ public:
         m_on_close_args = args;
     }
 
-    int start() override { return 0; }
+    int start();
 
-    void stop() override {}
+    void stop();
     void onConnect();
 
     void onClose();

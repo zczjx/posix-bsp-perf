@@ -59,6 +59,7 @@ static std::any threadDomain(std::shared_ptr<ThreadQueue<queueMsg>> t_queue, std
     std::shared_ptr<EventLoop> loop = std::make_shared<EventLoop>();
 
     t_queue->setLoop(loop, onMsgComing, std::make_pair(t_queue, server));
+    std::cout << "Thread in pool ID: " << std::this_thread::get_id() << std::endl;
     loop->processEvents();
 }
 

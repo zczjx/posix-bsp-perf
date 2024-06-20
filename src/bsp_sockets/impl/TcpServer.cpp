@@ -116,11 +116,11 @@ TcpServer::~TcpServer()
     }
 }
 
-int TcpServer::start()
+void TcpServer::startLoop()
 {
     if (m_running.load())
     {
-        return 0;
+        return;
     }
 
     if (m_server_params.thread_num > 0)
@@ -139,7 +139,7 @@ int TcpServer::start()
     };
     m_loop->addIoEvent(m_sockfd, accepterCb, EPOLLIN, shared_from_this());
     m_running.store(true);
-    return 0;
+    m_loop->processEvents();
 }
 
 void TcpServer::stop()

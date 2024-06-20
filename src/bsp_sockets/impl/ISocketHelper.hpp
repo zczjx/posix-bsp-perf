@@ -41,8 +41,6 @@ public:
     ISocketHelper(ISocketHelper&&) = delete;
     ISocketHelper& operator=(ISocketHelper&&) = delete;
 
-    virtual int start() = 0;
-    virtual void stop() = 0;
     virtual int sendData(std::vector<uint8_t>& data, int cmd_id) = 0;
     virtual int getFd() = 0;
 

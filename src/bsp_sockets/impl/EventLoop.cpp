@@ -52,6 +52,7 @@ void EventLoop::processEvents()
 {
     while (true)
     {
+        thread_local size_t tid = std::hash<std::thread::id>{}(std::this_thread::get_id());
         int nfds = ::epoll_wait(m_epoll_fd, m_fired_events, MAX_EVENTS, 10);
         for (int i = 0; i < nfds; ++i)
         {
