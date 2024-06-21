@@ -52,7 +52,7 @@ static void onMessage(std::vector<uint8_t>& data, int cmd_id, std::shared_ptr<IS
 void onConnection(std::shared_ptr<TcpClient> client, std::any args)
 {
     std::cout << "[S] zczjx--> aio_tcpclient:onConnection" << std::endl;
-    std::string reqStr = "I miss you";
+    std::string reqStr = "I miss you zczjx";
     std::vector<uint8_t> data_buffer(reqStr.begin(), reqStr.end());
     client->sendData(data_buffer, 1); //主动发送消息
     std::cout << "[E] zczjx--> aio_tcpclient:onConnection" << std::endl;

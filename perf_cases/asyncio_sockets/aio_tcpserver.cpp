@@ -9,10 +9,10 @@ using namespace bsp_sockets;
 static void onMessage(std::vector<uint8_t>& data, int cmd_id, std::shared_ptr<ISocketHelper> socket_helper, std::any usr_data)
 {
     std::cout << "[S] zczjx--> aio_tcpserver:onMessage" << std::endl;
-    // auto logger = std::any_cast<std::shared_ptr<BspLogger>>(usr_data);
+    auto logger = std::any_cast<std::shared_ptr<BspLogger>>(usr_data);
     std::cout << "[E] zczjx--> aio_tcpserver:onMessage" << std::endl;
     std::string data_str(data.begin(), data.end());
-    // logger->printStdoutLog(BspLogger::LogLevel::Critical, "TCP Server onMessage: cmd_id=0x{0:x}, data={1:s}", cmd_id, data_str);
+    logger->printStdoutLog(BspLogger::LogLevel::Critical, "TCP Server onMessage: cmd_id=0x{0:x}, data={1:s}", cmd_id, data_str);
 
     socket_helper->sendData(data, cmd_id);
 }

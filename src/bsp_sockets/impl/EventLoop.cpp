@@ -62,21 +62,16 @@ void EventLoop::processEvents()
 
             if (m_fired_events[i].events & EPOLLIN)
             {
-                std::cout << "[S] zczjx--> processEvents read_callback i: " << i << std::endl;
                 std::any args = ev.rcb_args;
                 ev.read_callback(shared_from_this(), m_fired_events[i].data.fd, args);
-                std::cout << "[E] zczjx--> processEvents read_callback i: " << i << std::endl;
             }
             else if (m_fired_events[i].events & EPOLLOUT)
             {
-                std::cout << "[S] zczjx--> processEvents write_callback" << std::endl;
                 std::any args = ev.wcb_args;
                 ev.write_callback(shared_from_this(), m_fired_events[i].data.fd, args);
-                std::cout << "[E] zczjx--> processEvents write_callback" << std::endl;
             }
             else if (m_fired_events[i].events & (EPOLLHUP | EPOLLERR))
             {
-                std::cout << "[S] zczjx--> processEvents EPOLLHUP | EPOLLERR" << std::endl;
                 if (ev.read_callback)
                 {
                     std::any args = ev.rcb_args;
@@ -92,7 +87,6 @@ void EventLoop::processEvents()
                     m_logger->printStdoutLog(BspLogger::LogLevel::Error, "fd {} get error, delete it from epoll", m_fired_events[i].data.fd);
                     delIoEvent(m_fired_events[i].data.fd);
                 }
-                std::cout << "[E] zczjx--> processEvents EPOLLHUP | EPOLLERR" << std::endl;
             }
         }
         runTask();

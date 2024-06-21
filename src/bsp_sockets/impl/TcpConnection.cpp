@@ -84,7 +84,7 @@ void TcpConnection::handleRead()
 
     msgHead head;
 
-    while (m_inbuf_queue.getBuffersCount() >= 0)
+    while (m_inbuf_queue.getBuffersCount() > 0)
     {
         auto& in_buffer = m_inbuf_queue.getFrontBuffer();
         std::memcpy(&head, in_buffer.data(), sizeof(msgHead));
