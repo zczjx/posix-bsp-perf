@@ -58,11 +58,17 @@ void onConnection(std::shared_ptr<TcpClient> client, std::any args)
     std::cout << "[E] zczjx--> aio_tcpclient:onConnection" << std::endl;
 }
 
-void domain(ArgParser& args)
+void domain(int argc, char* argv[])
 {
+    ArgParser parser("Asyncio Sockets Perf Case: Tcp Client Thread");
+    parser.addOption("--server_ip", std::string("127.0.0.1"), "tcp server ip address");
+    parser.addOption("--server_port", int32_t(12345), "port number for the tcp server");
+    parser.addOption("--name", std::string("aio_tcpclient"), "name of the tcp client");
+    parser.parseArgs(argc, argv);
+
     std::shared_ptr<EventLoop> loop_ptr = std::make_shared<EventLoop>();
 
-    std::shared_ptr<TcpClient> client = std::make_shared<TcpClient>(loop_ptr, std::move(args));
+    std::shared_ptr<TcpClient> client = std::make_shared<TcpClient>(loop_ptr, std::move(parser));
 
     std::shared_ptr<struct testQPS> qps_ptr = std::make_shared<struct testQPS>();
     std::shared_ptr<BspLogger> logger = std::make_shared<BspLogger>("client_thread");
@@ -79,10 +85,7 @@ void domain(ArgParser& args)
 int main(int argc, char* argv[])
 {
     ArgParser parser("Asyncio Sockets Perf Case: Tcp Server");
-    parser.addOption("--server_ip", std::string("127.0.0.1"), "tcp server ip address");
-    parser.addOption("--server_port", int32_t(12345), "port number for the tcp server");
-    parser.addOption("--name", std::string("aio_tcpclient"), "name of the tcp client");
-    parser.addOption("--thread_num", int32_t(1), "thread number for the tcp server");
+    parser.addOption("--thread_num", int32_t(3), "thread number for the tcp server");
     parser.parseArgs(argc, argv);
 
     int thread_num = 0;
@@ -92,7 +95,7 @@ int main(int argc, char* argv[])
 
     for (int i = 0; i < thread_num; i++)
     {
-        threads[i] = std::thread(domain, std::ref(parser));
+        threads[i] = std::thread(domain, argc, argv);
     }
 
     for (int i = 0; i < thread_num; i++)
