@@ -68,10 +68,10 @@ public:
 public:
     MsgDispatcher& getMsgDispatcher() { return m_msg_dispatcher; }
     using connectionCallback = std::function<void(std::shared_ptr<ISocketHelper> conn)>;
-    void onConnectionEstablish(connectionCallback cb) { connectionEstablishCb = cb; }
-    void onConnectionClose(connectionCallback cb) { connectionCloseCb = cb; }
-    connectionCallback connectionEstablishCb{nullptr};//用户设置连接建立后的回调函数
-    connectionCallback connectionCloseCb{nullptr};//用户设置连接释放后的回调函数
+    void setConnectionEstablishCallback(connectionCallback cb) { onConnectionEstablish = cb; }
+    void setConnectionCloseCallback(connectionCallback cb) { onConnectionClose = cb; }
+    connectionCallback onConnectionEstablish{nullptr};//用户设置连接建立后的回调函数
+    connectionCallback onConnectionClose{nullptr};//用户设置连接释放后的回调函数
 
 private:
 

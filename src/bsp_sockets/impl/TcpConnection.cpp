@@ -27,7 +27,6 @@ TcpConnection::TcpConnection(int conn_fd, std::shared_ptr<EventLoop> loop, std::
 
 void TcpConnection::activate(int conn_fd, std::shared_ptr<EventLoop> loop)
 {
-    m_logger->printStdoutLog(BspLogger::LogLevel::Error, "[S] TcpConnection::activate");
     m_connection_fd = conn_fd;
     m_loop = loop;
     //set NONBLOCK
@@ -45,9 +44,9 @@ void TcpConnection::activate(int conn_fd, std::shared_ptr<EventLoop> loop)
     if (!m_tcp_server.expired())
     {
         std::shared_ptr<TcpServer> server = m_tcp_server.lock();
-        if (server->connectionEstablishCb != nullptr)
+        if (server->onConnectionEstablish != nullptr)
         {
-            server->connectionEstablishCb(shared_from_this());
+            server->onConnectionEstablish(shared_from_this());
         }
         server->incConnection();
     }
@@ -59,7 +58,6 @@ void TcpConnection::activate(int conn_fd, std::shared_ptr<EventLoop> loop)
     };
 
     m_loop->addIoEvent(m_connection_fd, tcp_rcb, EPOLLIN, shared_from_this());
-    m_logger->printStdoutLog(BspLogger::LogLevel::Error, "[E] TcpConnection::activate");
 }
 
 
@@ -198,7 +196,10 @@ void TcpConnection::cleanConnection()
     if (!m_tcp_server.expired())
     {
         std::shared_ptr<TcpServer> server = m_tcp_server.lock();
-        server->connectionCloseCb(shared_from_this());
+        if (server->onConnectionClose != nullptr)
+        {
+            server->onConnectionClose(shared_from_this());
+        }
         server->decConnection();
     }
 
