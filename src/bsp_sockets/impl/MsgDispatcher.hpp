@@ -50,8 +50,8 @@ public:
     }
 
 private:
-    std::unordered_map<int, msgCallback> m_dispatcher;
-    std::unordered_map<int, std::any> m_args;
+    std::unordered_map<int, msgCallback> m_dispatcher{};
+    std::unordered_map<int, std::any> m_args{};
 };
 
 }

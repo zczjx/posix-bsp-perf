@@ -75,7 +75,7 @@ void TcpConnection::handleRead()
     else if (ret == 0)
     {
         //The peer is closed, return -2
-        m_logger->printStdoutLog(BspLogger::LogLevel::Debug, "connection closed by peer");
+        m_logger->printStdoutLog(BspLogger::LogLevel::Debug, "connection closed by peer ret: {0:d}", ret);
         cleanConnection();
         return;
     }
@@ -157,7 +157,7 @@ int TcpConnection::sendData(std::vector<uint8_t>& data, int cmd_id)
 {
     bool need_listen = false;
 
-    if (m_outbuf_queue.isEmpty() == 0)
+    if (m_outbuf_queue.isEmpty())
     {
         need_listen = true;
     }
@@ -185,7 +185,7 @@ int TcpConnection::sendData(std::vector<uint8_t>& data, int cmd_id)
 
     if (need_listen)
     {
-        m_loop->addIoEvent(m_connection_fd, tcp_wcb, EPOLLOUT, this);
+        m_loop->addIoEvent(m_connection_fd, tcp_wcb, EPOLLOUT, shared_from_this());
     }
 
     return 0;

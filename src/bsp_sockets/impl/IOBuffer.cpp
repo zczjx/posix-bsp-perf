@@ -41,7 +41,7 @@ int InputBufferQueue::readData(int fd)
     }
     else
     {
-        m_logger->printStdoutLog(BspLogger::LogLevel::Error, "readData error");
+        m_logger->printStdoutLog(BspLogger::LogLevel::Error, "readData error ret: {0:d}", ret);
     }
 
     return ret;

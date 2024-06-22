@@ -50,7 +50,6 @@ static void connectEventCallback(std::shared_ptr<EventLoop> loop, int fd, std::a
         client->setNetConnected(true);
         //call on connection callback(if has)
         client->onConnect();
-
         loop->addIoEvent(fd, readCallback, EPOLLIN, client);
 
         if (!client->isOutputBufferEmpty())
@@ -154,8 +153,6 @@ void TcpClient::doConnect()
         m_net_connected = true;
         //call on connection callback(if has)
         onConnect();
-        m_logger->printStdoutLog(BspLogger::LogLevel::Info, "connect {}:{} successfully",
-                ::inet_ntoa(m_remote_server_addr.sin_addr), ntohs(m_remote_server_addr.sin_port));
     }
     else
     {
@@ -291,9 +288,10 @@ int TcpClient::handleWrite()
     while (!m_outbuf_queue.isEmpty())
     {
         auto& buffer = m_outbuf_queue.getFrontBuffer();
+
         do
         {
-            auto ret = ::write(m_sockfd, buffer.data(), buffer.size());
+            ret = ::write(m_sockfd, buffer.data(), buffer.size());
         }
         while (ret == -1 && errno == EINTR);
 
@@ -318,6 +316,7 @@ int TcpClient::handleWrite()
     {
         m_loop->delIoEvent(m_sockfd, EPOLLOUT);
     }
+
     return 0;
 }
 
