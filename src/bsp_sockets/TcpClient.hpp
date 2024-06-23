@@ -65,6 +65,8 @@ public:
 
     void onClose();
 
+    TcpClientParams& getTcpClientParams() { return m_client_params; }
+
     void addMsgCallback(int cmd_id, msgCallback msg_cb, std::any usr_data)
     { m_msg_dispatcher.addMsgCallback(cmd_id, msg_cb, usr_data); }
 
@@ -91,7 +93,7 @@ private:
     struct sockaddr_in m_remote_server_addr;
     socklen_t m_addrlen{sizeof(struct sockaddr_in)};
     bool m_net_connected{false};
-    int m_sockfd;
+    int m_sockfd{-1};
 
     std::shared_ptr<EventLoop> m_loop{nullptr};
     std::atomic_bool m_running{false};

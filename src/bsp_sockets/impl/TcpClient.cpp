@@ -96,6 +96,7 @@ void TcpClient::startLoop()
     }
     //connect
     doConnect();
+    m_running.store(true);
     m_loop->processEvents();
 }
 
@@ -150,7 +151,7 @@ void TcpClient::doConnect()
 
     if (ret == 0)
     {
-        m_net_connected = true;
+        setNetConnected(true);
         //call on connection callback(if has)
         onConnect();
     }

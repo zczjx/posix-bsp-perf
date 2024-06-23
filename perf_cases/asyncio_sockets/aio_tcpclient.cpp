@@ -10,6 +10,7 @@
 #include <utility>
 #include <any>
 #include <iostream>
+#include <chrono>
 #include <sstream>
 
 using namespace bsp_perf::shared;
@@ -32,11 +33,11 @@ static void onMessage(std::vector<uint8_t>& data, int cmd_id, std::shared_ptr<IS
 
     if (curTs - qps->lstTs >= 1)
     {
-        logger->printStdoutLog(BspLogger::LogLevel::Critical, "** qps:{0:d} **", qps->succ);
+        logger->printStdoutLog(BspLogger::LogLevel::Warn, "** qps:{0:d} **", qps->succ);
         qps->lstTs = curTs;
     }
     std::string data_str(data.begin(), data.end());
-    logger->printStdoutLog(BspLogger::LogLevel::Critical, "client: data={0:s}", data_str);
+    logger->printStdoutLog(BspLogger::LogLevel::Warn, "client: data={0:s}", data_str);
 
     std::ostringstream str_convert;
     str_convert << "I miss you data" <<" index: "<< qps->succ  << ":" << qps->lstTs
@@ -62,6 +63,7 @@ void domain(int argc, char* argv[])
     parser.addOption("--server_ip", std::string("127.0.0.1"), "tcp server ip address");
     parser.addOption("--server_port", int32_t(12345), "port number for the tcp server");
     parser.addOption("--name", std::string("aio_tcpclient"), "name of the tcp client");
+    parser.addOption("--thread_num", int32_t(30), "thread number for the tcp server");
     parser.parseArgs(argc, argv);
 
     std::shared_ptr<EventLoop> loop_ptr = std::make_shared<EventLoop>();
@@ -69,7 +71,8 @@ void domain(int argc, char* argv[])
     std::shared_ptr<TcpClient> client = std::make_shared<TcpClient>(loop_ptr, std::move(parser));
 
     std::shared_ptr<struct testQPS> qps_ptr = std::make_shared<struct testQPS>();
-    std::shared_ptr<BspLogger> logger = std::make_shared<BspLogger>("client_thread");
+
+    std::shared_ptr<BspLogger> logger = std::make_shared<BspLogger>(std::string("client"));
 
     client->addMsgCallback(1, onMessage, std::make_pair(logger, qps_ptr)); //设置：当收到消息id=1的消息时的回调函数
 
@@ -83,7 +86,7 @@ void domain(int argc, char* argv[])
 int main(int argc, char* argv[])
 {
     ArgParser parser("Asyncio Sockets Perf Case: Tcp Server");
-    parser.addOption("--thread_num", int32_t(1), "thread number for the tcp server");
+    parser.addOption("--thread_num", int32_t(10), "thread number for the tcp server");
     parser.parseArgs(argc, argv);
 
     int thread_num = 0;

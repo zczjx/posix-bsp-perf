@@ -10,7 +10,7 @@ static void onMessage(std::vector<uint8_t>& data, int cmd_id, std::shared_ptr<IS
 {
     auto logger = std::any_cast<std::shared_ptr<BspLogger>>(usr_data);
     std::string data_str(data.begin(), data.end());
-    logger->printStdoutLog(BspLogger::LogLevel::Critical, "TCP Server onMessage: cmd_id=0x{0:04x}, data={1:s}", cmd_id, data_str);
+    logger->printStdoutLog(BspLogger::LogLevel::Warn, "TCP Server onMessage: cmd_id=0x{0:04x}, data={1:s}", cmd_id, data_str);
     data_str += " from server";
     data.assign(data_str.begin(), data_str.end());
 

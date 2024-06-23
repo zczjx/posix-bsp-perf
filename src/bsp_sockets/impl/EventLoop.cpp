@@ -12,6 +12,8 @@
 #include <string>
 #include <memory>
 #include <vector>
+#include <cstring>
+#include <cerrno>
 #include <any>
 
 namespace bsp_sockets
@@ -131,9 +133,12 @@ void EventLoop::addIoEvent(int fd, ioCallback proc, int mask, std::any args)
     int ret = ::epoll_ctl(m_epoll_fd, op, fd, &event);
     if (ret == -1)
     {
+        int errnum = errno;
+        m_logger->printStdoutLog(BspLogger::LogLevel::Error, "EventLoop::addIoEvent epoll_ctl ret:{}, m_epoll_fd:{}, fd:{}, Error num: {}",
+                    ret, m_epoll_fd, fd, strerror(errnum));
         throw BspSocketException("epoll_ctl");
     }
-    m_listening.insert(fd);//加入到监听集合中
+    m_listening.insert(fd); //加入到监听集合中
 }
 
 void EventLoop::delIoEvent(int fd, int mask)
@@ -152,6 +157,9 @@ void EventLoop::delIoEvent(int fd, int mask)
         ret = ::epoll_ctl(m_epoll_fd, EPOLL_CTL_DEL, fd, NULL);
         if (ret == -1)
         {
+        int errnum = errno;
+        m_logger->printStdoutLog(BspLogger::LogLevel::Error, "EventLoop::delIoEvent EPOLL_CTL_DEL ret:{}, m_epoll_fd:{}, fd:{}, Error num: {}",
+                    ret, m_epoll_fd, fd, strerror(errnum));
             throw BspSocketException("epoll_ctl EPOLL_CTL_DEL");
         }
         m_listening.erase(fd);//从监听集合中删除
@@ -164,6 +172,9 @@ void EventLoop::delIoEvent(int fd, int mask)
         ret = ::epoll_ctl(m_epoll_fd, EPOLL_CTL_MOD, fd, &event);
         if (ret == -1)
         {
+            int errnum = errno;
+            m_logger->printStdoutLog(BspLogger::LogLevel::Error, "EventLoop::delIoEvent EPOLL_CTL_MOD ret:{}, m_epoll_fd:{}, fd:{}, Error num: {}",
+                        ret, m_epoll_fd, fd, strerror(errnum));
             throw BspSocketException("epoll_ctl EPOLL_CTL_MOD");
         }
     }
@@ -181,6 +192,9 @@ void EventLoop::delIoEvent(int fd)
     int ret = ::epoll_ctl(m_epoll_fd, EPOLL_CTL_DEL, fd, NULL);
     if (ret == -1)
     {
+        int errnum = errno;
+        m_logger->printStdoutLog(BspLogger::LogLevel::Error, "EventLoop::delIoEvent EPOLL_CTL_DEL ret:{}, m_epoll_fd:{}, fd:{}, Error num: {}",
+                    ret, m_epoll_fd, fd, strerror(errnum));
         throw BspSocketException("epoll_ctl EPOLL_CTL_DEL");
     }
 }
