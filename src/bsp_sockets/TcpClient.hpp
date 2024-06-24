@@ -93,7 +93,7 @@ private:
     struct sockaddr_in m_remote_server_addr;
     socklen_t m_addrlen{sizeof(struct sockaddr_in)};
     bool m_net_connected{false};
-    int m_sockfd{-1};
+    int m_sockfd{-1}; // must set to -1 as default value, otherwise a random value socket fd will have side effect on other thread socket fd
 
     std::shared_ptr<EventLoop> m_loop{nullptr};
     std::atomic_bool m_running{false};

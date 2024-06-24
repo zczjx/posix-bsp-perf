@@ -111,6 +111,7 @@ void TcpClient::stop()
     {
         m_loop->delIoEvent(m_sockfd);
         ::close(m_sockfd);
+        m_sockfd = -1;
     }
     m_running.store(false);
 }
@@ -139,6 +140,7 @@ void TcpClient::doConnect()
     if (m_sockfd != -1)
     {
         ::close(m_sockfd);
+        m_sockfd = -1;
     }
     //create socket
     m_sockfd = ::socket(AF_INET, SOCK_STREAM | SOCK_CLOEXEC | SOCK_NONBLOCK, IPPROTO_TCP);
@@ -327,6 +329,7 @@ void TcpClient::cleanConnection()
     {
         m_loop->delIoEvent(m_sockfd);
         ::close(m_sockfd);
+        m_sockfd = -1;
     }
     setNetConnected(false);
 
