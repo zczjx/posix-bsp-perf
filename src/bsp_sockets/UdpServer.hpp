@@ -15,6 +15,7 @@
 #include <memory>
 #include <string>
 #include <vector>
+#include <atomic>
 
 namespace bsp_sockets
 {
@@ -38,7 +39,7 @@ public:
     UdpServer(UdpServer&&) = delete;
     UdpServer& operator=(UdpServer&&) = delete;
 
-    int start();
+    void startLoop();
 
     void stop();
 
@@ -56,10 +57,10 @@ public:
 
 private:
     UdpServerParams m_server_params{};
-    std::unique_ptr<BspLogger> m_logger;
+    std::unique_ptr<BspLogger> m_logger{nullptr};
     ArgParser m_args;
 
-    int m_sockfd;
+    int m_sockfd{-1};
     std::shared_ptr<EventLoop> m_loop{nullptr};
 
     struct sockaddr_in m_src_addr{};
@@ -69,6 +70,8 @@ private:
 
     std::vector<uint8_t> m_rbuf{};
     std::vector<uint8_t> m_wbuf{};
+
+    std::atomic_bool m_running{false};
 };
 
 } // namespace bsp_sockets

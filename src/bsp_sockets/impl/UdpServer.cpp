@@ -65,18 +65,37 @@ UdpServer::UdpServer(std::shared_ptr<EventLoop> loop, ArgParser&& args):
         throw BspSocketException("bind()");
     }
 
-    m_logger->printStdoutLog(BspLogger::LogLevel::Info, "UdpServer on {}:{} is running...", m_server_params.ip_addr.c_str(), m_server_params.port);
-
-    m_loop->addIoEvent(m_sockfd, readCallback, EPOLLIN, shared_from_this());
-
-
+    m_logger->printStdoutLog(BspLogger::LogLevel::Info, "UdpServer on {}:{} is running...", m_server_params.ip_addr, m_server_params.port);
 
 }
 
 UdpServer::~UdpServer()
 {
+    stop();
+}
+
+void UdpServer::startLoop()
+{
+    if (m_running.load())
+    {
+        return;
+    }
+
+    m_loop->addIoEvent(m_sockfd, readCallback, EPOLLIN, shared_from_this());
+    m_running.store(true);
+    m_loop->processEvents();
+}
+
+void UdpServer::stop()
+{
+    if (!m_running.load())
+    {
+        return;
+    }
+
     m_loop->delIoEvent(m_sockfd);
     ::close(m_sockfd);
+    m_running.store(false);
 }
 
 void UdpServer::handleRead()

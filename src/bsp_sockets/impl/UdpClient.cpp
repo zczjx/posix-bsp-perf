@@ -28,8 +28,8 @@ UdpClient::UdpClient(std::shared_ptr<EventLoop> loop, ArgParser&& args):
     m_logger{std::make_unique<BspLogger>("UdpClient")}
 
 {
-    m_args.getOptionVal("--ip", m_client_params.ip_addr);
-    m_args.getOptionVal("--port", m_client_params.port);
+    m_args.getOptionVal("--server_ip", m_client_params.ip_addr);
+    m_args.getOptionVal("--server_port", m_client_params.port);
     m_logger->setPattern();
 
     //create socket
@@ -58,15 +58,37 @@ UdpClient::UdpClient(std::shared_ptr<EventLoop> loop, ArgParser&& args):
         throw BspSocketException("connect()");
     }
 
-    //add accepter event
-    m_loop->addIoEvent(m_sockfd, readCallback, EPOLLIN, shared_from_this());
-
+    m_logger->printStdoutLog(BspLogger::LogLevel::Info, "successfully connected on {}:{} ...", m_client_params.ip_addr, m_client_params.port);
 }
 
 UdpClient::~UdpClient()
 {
+    stop();
+}
+
+void UdpClient::startLoop()
+{
+    if (m_running.load())
+    {
+        return;
+    }
+
+    //add accepter event
+    m_loop->addIoEvent(m_sockfd, readCallback, EPOLLIN, shared_from_this());
+    m_running.store(true);
+    m_loop->processEvents();
+}
+
+void UdpClient::stop()
+{
+    if (!m_running.load())
+    {
+        return;
+    }
+
     m_loop->delIoEvent(m_sockfd);
     ::close(m_sockfd);
+    m_running.store(false);
 }
 
 void UdpClient::handleRead()
