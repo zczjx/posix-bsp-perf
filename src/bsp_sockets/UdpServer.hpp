@@ -63,8 +63,7 @@ private:
     int m_sockfd{-1};
     std::shared_ptr<EventLoop> m_loop{nullptr};
 
-    struct sockaddr_in m_src_addr{};
-    socklen_t m_addrlen{sizeof(struct sockaddr_in)};
+    struct sockaddr m_latest_client_addr{};
 
     MsgDispatcher m_msg_dispatcher{};
 

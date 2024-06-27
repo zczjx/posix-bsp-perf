@@ -51,7 +51,7 @@ UdpClient::UdpClient(std::shared_ptr<EventLoop> loop, ArgParser&& args):
     }
     serv_addr.sin_port = htons(m_client_params.port);
 
-    ret = ::connect(m_sockfd, (const struct sockaddr*)&serv_addr, sizeof serv_addr);
+    ret = ::connect(m_sockfd, (const struct sockaddr*)&serv_addr, sizeof(serv_addr));
 
     if (ret == -1)
     {
@@ -75,6 +75,11 @@ void UdpClient::startLoop()
 
     //add accepter event
     m_loop->addIoEvent(m_sockfd, readCallback, EPOLLIN, shared_from_this());
+
+    if (onConnectFunc)
+    {
+        onConnectFunc(shared_from_this());
+    }
     m_running.store(true);
     m_loop->processEvents();
 }
@@ -142,13 +147,13 @@ int UdpClient::sendData(std::vector<uint8_t>& data, int cmd_id)
     head.cmd_id = cmd_id;
 
     std::memcpy(m_wbuf.data(), &head, sizeof(msgHead));
-    m_wbuf.insert(m_wbuf.end(), data.begin(), data.end());
+    m_wbuf.insert(m_wbuf.begin() + sizeof(msgHead), data.begin(), data.end());
+    auto data_len = sizeof(msgHead) + head.length;
+    auto ret = ::send(m_sockfd, m_wbuf.data(), data_len, 0);
 
-    int ret = ::sendto(m_sockfd, m_wbuf.data(), m_wbuf.size(), 0, NULL, 0);
-
-    if (ret == -1)
+    if (ret < 0)
     {
-        m_logger->printStdoutLog(BspLogger::LogLevel::Error, "sendto()");
+        m_logger->printStdoutLog(BspLogger::LogLevel::Error, "send() ret: {}", ret);
     }
 
     return ret;

@@ -102,8 +102,10 @@ void UdpServer::handleRead()
 {
     while (true)
     {
-        int pkg_len = ::recvfrom(m_sockfd, m_rbuf.data(), m_rbuf.size(), 0, reinterpret_cast<struct sockaddr*>(&m_src_addr), &m_addrlen);
-        if (pkg_len == -1)
+        socklen_t addrLen = sizeof(m_latest_client_addr);
+        int pkg_len = ::recvfrom(m_sockfd, m_rbuf.data(), m_rbuf.size(), 0, &m_latest_client_addr, &addrLen);
+
+        if (pkg_len < 0)
         {
             if (errno == EINTR)
             {
@@ -129,7 +131,7 @@ void UdpServer::handleRead()
             continue;
         }
 
-        std::vector<uint8_t> data_buffer(m_rbuf.begin() + sizeof(msgHead), m_rbuf.end());
+        std::vector<uint8_t> data_buffer(m_rbuf.begin() + sizeof(msgHead), m_rbuf.begin() + sizeof(msgHead) + head.length);
         m_msg_dispatcher.callbackFunc(data_buffer, head.cmd_id, shared_from_this());
     }
 
@@ -148,11 +150,12 @@ int UdpServer::sendData(std::vector<uint8_t>& data, int cmd_id)
     head.cmd_id = cmd_id;
 
     std::memcpy(m_wbuf.data(), &head, sizeof(msgHead));
-    m_wbuf.insert(m_wbuf.end(), data.begin(), data.end());
+    m_wbuf.insert(m_wbuf.begin() + sizeof(msgHead), data.begin(), data.end());
+    auto data_len = sizeof(msgHead) + head.length;
 
-    int ret = ::sendto(m_sockfd, m_wbuf.data(), m_wbuf.size(), 0, reinterpret_cast<struct sockaddr*>(&m_src_addr), m_addrlen);
+    int ret = ::sendto(m_sockfd, m_wbuf.data(), data_len, 0, &m_latest_client_addr, sizeof(m_latest_client_addr));
 
-    if (ret == -1)
+    if (ret < 0)
     {
         m_logger->printStdoutLog(BspLogger::LogLevel::Error, "sendto()");
     }

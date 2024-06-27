@@ -1,50 +1,21 @@
-#include <bsp_sockets/EventLoop.hpp>
+#include<bsp_sockets/UdpServer.hpp>
+#include<bsp_sockets/EventLoop.hpp>
 #include <shared/BspLogger.hpp>
-#include <shared/ArgParser.hpp>
 #include <iostream>
-#include <vector>
-#include <cstring>
-#include <sys/socket.h>
-#include <netinet/in.h>
-#include <unistd.h>
 
 using namespace bsp_perf::shared;
 using namespace bsp_sockets;
 
-static int createNonblockingUDP()
+static void onMessage(std::vector<uint8_t>& data, int cmd_id, std::shared_ptr<ISocketHelper> socket_helper, std::any usr_data)
 {
-  int sockfd = ::socket(AF_INET, SOCK_DGRAM | SOCK_NONBLOCK | SOCK_CLOEXEC, IPPROTO_UDP);
-  if (sockfd < 0)
-  {
-    std::cout << "::socket failed" << std::endl;
-  }
-  return sockfd;
+    auto logger = std::any_cast<std::shared_ptr<BspLogger>>(usr_data);
+    std::string data_str(data.begin(), data.end());
+    logger->printStdoutLog(BspLogger::LogLevel::Warn, "TCP Server onMessage: cmd_id=0x{0:04x}, data={1:s}", cmd_id, data_str);
+    data_str += " from server";
+    data.assign(data_str.begin(), data_str.end());
+
+    socket_helper->sendData(data, cmd_id);
 }
-
-static void readCallback(std::shared_ptr<EventLoop> loop, int sockfd, std::any args)
-{
-    std::vector<uint8_t> rbuf(1024);
-    struct sockaddr peerAddr;
-    memset(&peerAddr, 0, sizeof(peerAddr));
-    socklen_t addrLen = sizeof(peerAddr);
-
-    ssize_t nr = ::recvfrom(sockfd, rbuf.data(), rbuf.size(), 0, &peerAddr, &addrLen);
-    if (nr < 0)
-    {
-        std::cout << "::recvfrom failed" << std::endl;
-    }
-
-    std::cout << "received: " << nr << "bytes from client" << std::endl;
-    std::string data_str(rbuf.begin(), rbuf.end());
-    std::cout << "data: " << data_str << std::endl;
-
-    size_t nw = ::sendto(sockfd, rbuf.data(), nr, 0, &peerAddr, addrLen);
-    if (nw < 0)
-    {
-        std::cout << "::sendto failed" << std::endl;
-    }
-}
-
 
 int main(int argc, char* argv[])
 {
@@ -55,29 +26,10 @@ int main(int argc, char* argv[])
 
     std::shared_ptr<EventLoop> loop_ptr = std::make_shared<EventLoop>();
 
-    std::string ip_addr{""};
-    int port{-1};
-
-    parser.getOptionVal("--ip", ip_addr);
-    parser.getOptionVal("--port", port);
-
-    int sockfd = createNonblockingUDP();
-
-    struct sockaddr_in servaddr;
-    memset(&servaddr, 0, sizeof(servaddr));
-    servaddr.sin_family = AF_INET;
-    servaddr.sin_addr.s_addr = INADDR_ANY;
-    servaddr.sin_port = htons(port);
-
-    if (::bind(sockfd, (const struct sockaddr *)&servaddr, sizeof(servaddr)) < 0)
-    {
-        std::cerr << "::bind failed" << std::endl;
-        close(sockfd);
-        exit(EXIT_FAILURE);
-    }
-
-    loop_ptr->addIoEvent(sockfd, readCallback, EPOLLIN, std::any());
-    loop_ptr->processEvents();
+    std::shared_ptr<UdpServer> server = std::make_shared<UdpServer>(loop_ptr, std::move(parser));
+    std::shared_ptr<BspLogger> logger = std::make_shared<BspLogger>("aio_udpserver");
+    server->addMsgCallback(1, onMessage, logger);
+    server->startLoop();
 
     return 0;
 }

@@ -31,6 +31,7 @@ public:
     UdpClient& operator=(const UdpClient&) = delete;
     UdpClient(UdpClient&&) = delete;
     UdpClient& operator=(UdpClient&&) = delete;
+    using onConnectCallback = std::function<void(std::shared_ptr<UdpClient> client)>;
 
     void startLoop();
 
@@ -44,9 +45,14 @@ public:
 
     void handleRead();
 
+    void setOnConnectCallback(onConnectCallback cb) { onConnectFunc = cb; }
+
     virtual int sendData(std::vector<uint8_t>& data, int cmd_id) override;
 
     virtual int getFd() override { return m_sockfd; }
+
+private:
+    onConnectCallback onConnectFunc{nullptr};//用户设置连接建立后的回调函数
 
 private:
     UdpClientParams m_client_params{};

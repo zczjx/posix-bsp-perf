@@ -1,93 +1,103 @@
 #include <bsp_sockets/EventLoop.hpp>
+#include <bsp_sockets/UdpClient.hpp>
 #include <shared/BspLogger.hpp>
 #include <shared/ArgParser.hpp>
-#include <iostream>
+
+#include <thread>
 #include <vector>
-#include <cstring>
-#include <sys/socket.h>
-#include <netinet/in.h>
-#include <arpa/inet.h>
-#include <unistd.h>
+#include <string>
+#include <memory>
+#include <utility>
+#include <any>
+#include <iostream>
+#include <chrono>
+#include <sstream>
 
 using namespace bsp_perf::shared;
 using namespace bsp_sockets;
 
-static int createNonblockingUDP()
+struct testQPS
 {
-  int sockfd = ::socket(AF_INET, SOCK_DGRAM | SOCK_NONBLOCK | SOCK_CLOEXEC, IPPROTO_UDP);
-  if (sockfd < 0)
-  {
-    std::cout << "::socket failed" << std::endl;
-  }
-  return sockfd;
+    testQPS(): lstTs(0), succ(0) {}
+    long lstTs;
+    int succ;
+};
+
+static void onMessage(std::vector<uint8_t>& data, int cmd_id, std::shared_ptr<ISocketHelper> socket_helper, std::any usr_data)
+{
+    auto pair_args = std::any_cast<std::pair<std::shared_ptr<BspLogger>, std::shared_ptr<struct testQPS>>>(usr_data);
+    auto logger = pair_args.first;
+    auto qps = pair_args.second;
+    qps->succ++;
+    long curTs = time(NULL);
+
+    if (curTs - qps->lstTs >= 1)
+    {
+        logger->printStdoutLog(BspLogger::LogLevel::Warn, "** qps:{0:d} **", qps->succ);
+        qps->lstTs = curTs;
+    }
+    std::string data_str(data.begin(), data.end());
+    logger->printStdoutLog(BspLogger::LogLevel::Warn, "client: data={0:s}", data_str);
+
+    std::ostringstream str_convert;
+    str_convert << "I miss you data" <<" index: "<< qps->succ  << ":" << qps->lstTs
+        << "Thread ID: " << std::this_thread::get_id();
+
+    std::string reqStr = str_convert.str();
+    std::vector<uint8_t> data_buffer(reqStr.begin(), reqStr.end());
+    socket_helper->sendData(data_buffer, cmd_id);
 }
 
-static void readCallback(std::shared_ptr<EventLoop> loop, int sockfd, std::any args)
+static void onConnect(std::shared_ptr<UdpClient> client)
 {
-    std::vector<uint8_t> rbuf(1024);
+    std::string reqStr = "aio udp client start";
+    std::vector<uint8_t> data_buffer(reqStr.begin(), reqStr.end());
+    client->sendData(data_buffer, 0x01); //主动发送消息
+}
 
-    ssize_t nr = ::recv(sockfd, rbuf.data(), rbuf.size(), 0);
-    if (nr < 0)
-    {
-        std::cout << "::recv failed" << std::endl;
-    }
+void domain(int argc, char* argv[])
+{
+    ArgParser parser("Asyncio Sockets Perf Case: UDP Client Thread");
+    parser.addOption("--server_ip", std::string("127.0.0.1"), "UDP server ip address");
+    parser.addOption("--server_port", int32_t(12347), "port number for the udp server");
+    parser.addOption("--thread_num", int32_t(1), "thread number for the udp server");
+    parser.parseArgs(argc, argv);
 
-    std::cout << "received: " << nr << "bytes from server" << std::endl;
-    std::string data_str(rbuf.begin(), rbuf.end());
-    std::cout << "data: " << data_str << std::endl;
+    std::shared_ptr<EventLoop> loop_ptr = std::make_shared<EventLoop>();
 
-    size_t nw = ::send(sockfd, rbuf.data(), nr, 0);
-    if (nw < 0)
-    {
-        std::cout << "::send failed" << std::endl;
-    }
+    std::shared_ptr<UdpClient> client = std::make_shared<UdpClient>(loop_ptr, std::move(parser));
+
+    std::shared_ptr<struct testQPS> qps_ptr = std::make_shared<struct testQPS>();
+
+    std::shared_ptr<BspLogger> logger = std::make_shared<BspLogger>(std::string("client"));
+
+    client->addMsgCallback(1, onMessage, std::make_pair(logger, qps_ptr)); //设置：当收到消息id=1的消息时的回调函数
+    client->setOnConnectCallback(onConnect);
+    client->startLoop();
 }
 
 
 int main(int argc, char* argv[])
 {
-    ArgParser parser("Asyncio Sockets Perf Case: UDP Server");
-    parser.addOption("--ip", std::string("127.0.0.1"), "tcp server ip address");
-    parser.addOption("--port", int32_t(12347), "port number for the udp server");
+    ArgParser parser("Asyncio Sockets Perf Case: UDP Client");
+    parser.addOption("--thread_num", int32_t(1), "thread number for the tcp server");
     parser.parseArgs(argc, argv);
 
-    std::shared_ptr<EventLoop> loop_ptr = std::make_shared<EventLoop>();
+    int thread_num = 0;
+    parser.getOptionVal("--thread_num", thread_num);
 
-    std::string ip_addr{""};
-    int port{-1};
+    std::vector<std::thread> threads(thread_num);
 
-    parser.getOptionVal("--ip", ip_addr);
-    parser.getOptionVal("--port", port);
-
-    int sockfd = createNonblockingUDP();
-
-    struct sockaddr_in servaddr;
-    memset(&servaddr, 0, sizeof(servaddr));
-    servaddr.sin_family = AF_INET;
-    ::inet_aton(ip_addr.c_str(), &servaddr.sin_addr);
-    // servaddr.sin_addr.s_addr = ::inet_addr(ip_addr.c_str());
-    servaddr.sin_port = htons(port);
-
-    if (::connect(sockfd, (const struct sockaddr *)&servaddr, sizeof(servaddr)) < 0)
+    for (int i = 0; i < thread_num; i++)
     {
-        std::cerr << "::connect failed" << std::endl;
-        perror("connect failed");
-        close(sockfd);
-        exit(EXIT_FAILURE);
-    }
-    loop_ptr->addIoEvent(sockfd, readCallback, EPOLLIN, std::any());
-
-    std::string data_str("zczjx--> aio udp client start");
-
-    std::vector<uint8_t> data_buffer(data_str.begin(), data_str.end());
-
-    size_t nw = ::send(sockfd, data_buffer.data(), data_buffer.size(), 0);
-    if (nw < 0)
-    {
-        std::cout << "::send failed" << std::endl;
+        threads[i] = std::thread(domain, argc, argv);
     }
 
-    loop_ptr->processEvents();
+    for (int i = 0; i < thread_num; i++)
+    {
+        threads[i].join();
+    }
+
 
     return 0;
 }
