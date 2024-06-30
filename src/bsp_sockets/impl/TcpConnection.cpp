@@ -106,7 +106,6 @@ void TcpConnection::handleRead()
             std::shared_ptr<TcpServer> server = m_tcp_server.lock();
             auto& dispatcher = server->getMsgDispatcher();
 
-            m_logger->printStdoutLog(BspLogger::LogLevel::Error, "head.cmd_id: 0x{0:x}", head.cmd_id);
             if (!dispatcher.exist(head.cmd_id))
             {
                 //data format is messed up
