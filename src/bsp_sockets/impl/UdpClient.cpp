@@ -78,7 +78,7 @@ void UdpClient::startLoop()
 
     if (onConnectFunc)
     {
-        onConnectFunc(shared_from_this());
+        onConnectFunc(shared_from_this(), m_on_connect_args);
     }
     m_running.store(true);
     m_loop->processEvents();
@@ -128,13 +128,13 @@ void UdpClient::handleRead()
             continue;
         }
         std::vector<uint8_t> data_buffer(m_rbuf.begin() + sizeof(msgHead), m_rbuf.end());
-        m_msg_dispatcher.callbackFunc(data_buffer, head.cmd_id, shared_from_this());
+        m_msg_dispatcher.callbackFunc(head.cmd_id, data_buffer, shared_from_this());
     }
 
 }
 
 
-int UdpClient::sendData(std::vector<uint8_t>& data, int cmd_id)
+int UdpClient::sendData(size_t cmd_id, std::vector<uint8_t>& data)
 {
     if (data.size() > MSG_LENGTH_LIMIT)
     {

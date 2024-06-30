@@ -171,7 +171,7 @@ void TcpClient::doConnect()
     }
 }
 
-int TcpClient::sendData(std::vector<uint8_t>& data, int cmd_id) //call by user
+int TcpClient::sendData(size_t cmd_id, std::vector<uint8_t>& data) //call by user
 {
     if (!m_net_connected)
     {
@@ -248,7 +248,7 @@ int TcpClient::handleRead()
         }
 
         std::vector<uint8_t> data_buffer(buffer.begin() + sizeof(msgHead), buffer.end());
-        m_msg_dispatcher.callbackFunc(data_buffer, head.cmd_id, shared_from_this());
+        m_msg_dispatcher.callbackFunc(head.cmd_id, data_buffer, shared_from_this());
 
     }
     else if (ret == 0)

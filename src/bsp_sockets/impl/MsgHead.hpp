@@ -3,17 +3,23 @@
 
 #include <any>
 #include <functional>
+#include <string>
 #include <memory>
 
 namespace bsp_sockets
 {
 class EventLoop;
-static constexpr int MSG_HEAD_LENGTH = 8;
+static constexpr int MSG_HEAD_LENGTH = sizeof(size_t) + sizeof(int);
 static constexpr int MSG_LENGTH_LIMIT = 65536 - MSG_HEAD_LENGTH;
+
+static inline size_t genCmdId(const std::string& cmd_name)
+{
+    return std::hash<std::string>{}(cmd_name);
+}
 
 using msgHead = struct msgHead
 {
-    int cmd_id;
+    size_t cmd_id;
     int length;
 };
 

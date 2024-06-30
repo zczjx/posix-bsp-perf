@@ -24,7 +24,7 @@ public:
 
     void handleWrite();
 
-    int sendData(std::vector<uint8_t>& data, int cmd_id) override;
+    int sendData(size_t cmd_id, std::vector<uint8_t>& data) override;
 
     int getFd() override { return m_connection_fd; }
 

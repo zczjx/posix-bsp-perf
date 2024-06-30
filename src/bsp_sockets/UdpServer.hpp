@@ -45,13 +45,16 @@ public:
 
     UdpServerParams& getUdpServerParams() { return m_server_params; }
 
-    void addMsgCallback(int cmd_id, msgCallback msg_cb, std::any usr_data) { m_msg_dispatcher.addMsgCallback(cmd_id, msg_cb, usr_data); }
+    void addMsgCallback(std::string& cmd_name, msgCallback msg_cb, std::any usr_data)
+    { m_msg_dispatcher.addMsgCallback(cmd_name, msg_cb, usr_data); }
 
     std::shared_ptr<EventLoop> getEventLoop() { return m_loop; }
 
     void handleRead();
 
-    virtual int sendData(std::vector<uint8_t>& data, int cmd_id) override;
+    virtual int sendData(size_t cmd_id, std::vector<uint8_t>& data) override;
+
+    using ISocketHelper::sendData;
 
     virtual int getFd() override { return m_sockfd; }
 

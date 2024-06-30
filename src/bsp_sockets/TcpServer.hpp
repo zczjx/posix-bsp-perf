@@ -52,7 +52,8 @@ public:
 
     void doAccept();
 
-    void addMsgCallback(int cmd_id, msgCallback msg_cb, std::any usr_data) { m_msg_dispatcher.addMsgCallback(cmd_id, msg_cb, usr_data); }
+    void addMsgCallback(std::string& cmd_name, msgCallback msg_cb, std::any usr_data)
+    { m_msg_dispatcher.addMsgCallback(cmd_name, msg_cb, usr_data); }
 
     void incConnection();
 

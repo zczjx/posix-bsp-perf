@@ -67,10 +67,12 @@ public:
 
     TcpClientParams& getTcpClientParams() { return m_client_params; }
 
-    void addMsgCallback(int cmd_id, msgCallback msg_cb, std::any usr_data)
-    { m_msg_dispatcher.addMsgCallback(cmd_id, msg_cb, usr_data); }
+    void addMsgCallback(std::string& cmd_name, msgCallback msg_cb, std::any usr_data)
+    { m_msg_dispatcher.addMsgCallback(cmd_name, msg_cb, usr_data); }
 
-    int sendData(std::vector<uint8_t>& data, int cmd_id) override;
+    int sendData(size_t cmd_id, std::vector<uint8_t>& data) override;
+
+    using ISocketHelper::sendData;
 
     int getFd() override { return m_sockfd; }
 

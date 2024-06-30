@@ -106,6 +106,7 @@ void TcpConnection::handleRead()
             std::shared_ptr<TcpServer> server = m_tcp_server.lock();
             auto& dispatcher = server->getMsgDispatcher();
 
+            m_logger->printStdoutLog(BspLogger::LogLevel::Error, "head.cmd_id: 0x{0:x}", head.cmd_id);
             if (!dispatcher.exist(head.cmd_id))
             {
                 //data format is messed up
@@ -116,7 +117,7 @@ void TcpConnection::handleRead()
 
             std::vector<uint8_t> data_buffer(in_buffer.begin() + sizeof(msgHead), in_buffer.end());
             //domain: call user callback
-            dispatcher.callbackFunc(data_buffer, head.cmd_id, shared_from_this());
+            dispatcher.callbackFunc(head.cmd_id, data_buffer, shared_from_this());
             m_inbuf_queue.popBuffer();
         }
         else
@@ -153,7 +154,7 @@ void TcpConnection::handleWrite()
 
 }
 
-int TcpConnection::sendData(std::vector<uint8_t>& data, int cmd_id)
+int TcpConnection::sendData(size_t cmd_id, std::vector<uint8_t>& data)
 {
     bool need_listen = false;
 

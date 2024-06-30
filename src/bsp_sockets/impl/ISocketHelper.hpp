@@ -28,6 +28,7 @@ SOFTWARE.
 #include <stdint.h>
 #include <any>
 #include <vector>
+#include "MsgHead.hpp"
 
 namespace bsp_sockets
 {
@@ -41,7 +42,12 @@ public:
     ISocketHelper(ISocketHelper&&) = delete;
     ISocketHelper& operator=(ISocketHelper&&) = delete;
 
-    virtual int sendData(std::vector<uint8_t>& data, int cmd_id) = 0;
+    virtual int sendData(size_t cmd_id, std::vector<uint8_t>& data) = 0;
+    virtual int sendData(std::string& cmd_name, std::vector<uint8_t>& data)
+    {
+        return sendData(genCmdId(cmd_name), data);
+    }
+
     virtual int getFd() = 0;
 
 };

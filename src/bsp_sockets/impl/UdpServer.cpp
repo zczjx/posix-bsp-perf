@@ -132,12 +132,12 @@ void UdpServer::handleRead()
         }
 
         std::vector<uint8_t> data_buffer(m_rbuf.begin() + sizeof(msgHead), m_rbuf.begin() + sizeof(msgHead) + head.length);
-        m_msg_dispatcher.callbackFunc(data_buffer, head.cmd_id, shared_from_this());
+        m_msg_dispatcher.callbackFunc(head.cmd_id, data_buffer, shared_from_this());
     }
 
 }
 
-int UdpServer::sendData(std::vector<uint8_t>& data, int cmd_id)
+int UdpServer::sendData(size_t cmd_id, std::vector<uint8_t>& data)
 {
     if (data.size() > MSG_LENGTH_LIMIT)
     {

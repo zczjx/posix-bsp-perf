@@ -31,7 +31,7 @@ public:
     UdpClient& operator=(const UdpClient&) = delete;
     UdpClient(UdpClient&&) = delete;
     UdpClient& operator=(UdpClient&&) = delete;
-    using onConnectCallback = std::function<void(std::shared_ptr<UdpClient> client)>;
+    using onConnectCallback = std::function<void(std::shared_ptr<UdpClient> client, std::any args)>;
 
     void startLoop();
 
@@ -39,20 +39,28 @@ public:
 
     UdpClientParams& getUdpClientParams() { return m_client_params; }
 
-    void addMsgCallback(int cmd_id, msgCallback msg_cb, std::any usr_data) { m_msg_dispatcher.addMsgCallback(cmd_id, msg_cb, usr_data); }
+    void addMsgCallback(std::string& cmd_name, msgCallback msg_cb, std::any usr_data)
+    { m_msg_dispatcher.addMsgCallback(cmd_name, msg_cb, usr_data); }
 
     std::shared_ptr<EventLoop> getEventLoop() { return m_loop; }
 
     void handleRead();
 
-    void setOnConnectCallback(onConnectCallback cb) { onConnectFunc = cb; }
+    void setOnConnectCallback(onConnectCallback func, std::any args = nullptr)
+    {
+        onConnectFunc = func;
+        m_on_connect_args = args;
+    }
 
-    virtual int sendData(std::vector<uint8_t>& data, int cmd_id) override;
+    virtual int sendData(size_t cmd_id, std::vector<uint8_t>& data) override;
+
+    using ISocketHelper::sendData;
 
     virtual int getFd() override { return m_sockfd; }
 
 private:
     onConnectCallback onConnectFunc{nullptr};//用户设置连接建立后的回调函数
+    std::any m_on_connect_args{nullptr};
 
 private:
     UdpClientParams m_client_params{};
