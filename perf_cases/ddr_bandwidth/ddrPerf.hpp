@@ -23,12 +23,13 @@ SOFTWARE.
 */
 
 
-#ifndef DDR_PERF_HPP
-#define DDR_PERF_HPP
+#ifndef __DDR_PERF_HPP__
+#define __DDR_PERF_HPP__
 
 #include <framework/BasePerfCase.hpp>
 #include <shared/ArgParser.hpp>
 #include <profiler/PerfProfiler.hpp>
+#include <profiler/BspTrace.hpp>
 #include <memory>
 #include <string>
 #include <cstring>
@@ -40,23 +41,26 @@ SOFTWARE.
 namespace bsp_perf {
 namespace perf_cases {
 
-constexpr int32_t num_1M = 1000000;
+using namespace bsp_perf::common;
 
-class ddrPerf : public bsp_perf::common::BasePerfCase
+constexpr int32_t num_1M = 1000000;
+class ddrPerf : public BasePerfCase
 {
 
 public:
-    static constexpr char LOG_TAG[] {"[ddrPerf]: "};
 
     ddrPerf(bsp_perf::shared::ArgParser&& args):
         BasePerfCase(std::move(args))
     {
+        BSP_TRACE_EVENT_BEGIN("DDR Perf");
+        BSP_TRACE_EVENT_BEGIN("DDR Perf Constructor");
         auto& params = getArgs();
         std::string ret;
         params.getOptionVal("--case_name", ret);
         std::string file_path;
         params.getOptionVal("--profile_path", file_path);
         m_profiler = std::make_unique<bsp_perf::common::PerfProfiler>(ret, file_path);
+        BSP_TRACE_EVENT_END();
 
     }
     ddrPerf(const ddrPerf&) = delete;
@@ -67,11 +71,13 @@ public:
     {
         // Release any resources held by m_profiler
         m_profiler.reset();
+        BSP_TRACE_EVENT_END();
     }
 private:
 
     void onInit() override
     {
+        BSP_TRACE_EVENT_BEGIN("DDR Perf Init");
         auto& params = getArgs();
         size_t mem_size;
         params.getOptionVal("--size_mb", mem_size);
@@ -83,48 +89,58 @@ private:
         {
             m_test_arr[i] = rand();
         }
+        BSP_TRACE_EVENT_END();
 
     }
 
     void onProcess() override
     {
         {
+            BSP_TRACE_EVENT_BEGIN("Raw PTR Writing");
             auto begin = m_profiler->getCurrentTimePoint();
             rawPtrWritingPerf(m_test_arr.get(), m_rw_cnt);
             auto end = m_profiler->getCurrentTimePoint();
             auto raw_ptr_write_latency = m_profiler->getLatencyUs(begin, end);
             m_raw_write_bw_mb = getDDRBandwidthMB(raw_ptr_write_latency);
             m_profiler->asyncRecordPerfData("Raw PTR Writing BandWidth", m_raw_write_bw_mb, "MB/s");
+            BSP_TRACE_EVENT_END();
         }
 
         {
+            BSP_TRACE_EVENT_BEGIN("Smart PTR Writing");
             auto begin = m_profiler->getCurrentTimePoint();
             smartPtrWritingPerf(m_test_arr, m_rw_cnt);
             auto end = m_profiler->getCurrentTimePoint();
             auto smart_ptr_write_latency = m_profiler->getLatencyUs(begin, end);
             m_smart_write_bw_mb = getDDRBandwidthMB(smart_ptr_write_latency);
             m_profiler->asyncRecordPerfData("Smart PTR Writing BandWidth", m_smart_write_bw_mb, "MB/s");
+            BSP_TRACE_EVENT_END();
         }
 
         {
+            BSP_TRACE_EVENT_BEGIN("Raw PTR Reading");
             auto begin = m_profiler->getCurrentTimePoint();
             rawPtrReadingPerf(m_test_arr.get(), m_rw_cnt);
             auto end = m_profiler->getCurrentTimePoint();
             auto raw_ptr_read_latency = m_profiler->getLatencyUs(begin, end);
             m_raw_read_bw_mb = getDDRBandwidthMB(raw_ptr_read_latency);
             m_profiler->asyncRecordPerfData("Raw PTR Reading BandWidth", m_raw_read_bw_mb, "MB/s");
+            BSP_TRACE_EVENT_END();
         }
 
         {
+            BSP_TRACE_EVENT_BEGIN("Smart PTR Reading");
             auto begin = m_profiler->getCurrentTimePoint();
             smartPtrReadingPerf(m_test_arr, m_rw_cnt);
             auto end = m_profiler->getCurrentTimePoint();
             auto smart_ptr_read_latency = m_profiler->getLatencyUs(begin, end);
             m_smart_read_bw_mb = getDDRBandwidthMB(smart_ptr_read_latency);
             m_profiler->asyncRecordPerfData("Smart PTR Reading BandWidth", m_smart_read_bw_mb, "MB/s");
+            BSP_TRACE_EVENT_END();
         }
 
         {
+            BSP_TRACE_EVENT_BEGIN("Raw PTR Memcpy");
             std::unique_ptr<uint32_t[]> dst_ptr = std::make_unique<uint32_t[]>(m_bytes_cnt / sizeof(uint32_t));
             auto begin = m_profiler->getCurrentTimePoint();
             stdMemcpyPerf(m_test_arr.get(), dst_ptr.get(), m_bytes_cnt);
@@ -132,22 +148,27 @@ private:
             auto raw_ptr_memcpy_latency = m_profiler->getLatencyUs(begin, end);
             m_memcpy_bw_mb = getDDRBandwidthMB(raw_ptr_memcpy_latency);
             m_profiler->asyncRecordPerfData("Raw PTR Memcpy BandWidth", m_memcpy_bw_mb, "MB/s");
+            BSP_TRACE_EVENT_END();
         }
 
     }
 
     void onRender() override
     {
+        BSP_TRACE_EVENT_BEGIN("DDR Perf Render");
         m_profiler->printPerfData("Raw PTR Writing BandWidth", m_raw_write_bw_mb, "MB/s");
         m_profiler->printPerfData("Smart PTR Writing BandWidth", m_smart_write_bw_mb, "MB/s");
         m_profiler->printPerfData("Raw PTR Reading BandWidth", m_raw_read_bw_mb, "MB/s");
         m_profiler->printPerfData("Smart PTR Reading BandWidth", m_smart_read_bw_mb, "MB/s");
         m_profiler->printPerfData("Raw PTR Memcpy BandWidth", m_memcpy_bw_mb, "MB/s");
+        BSP_TRACE_EVENT_END();
     }
 
     void onRelease() override
     {
+        BSP_TRACE_EVENT_BEGIN("DDR Perf Release");
         m_test_arr.reset();
+        BSP_TRACE_EVENT_END();
     }
 
     inline void stdMemcpyPerf(uint32_t* src, uint32_t* dst, size_t bytes_cnt = 0)
@@ -221,5 +242,5 @@ private:
 } // namespace perf_cases
 } // namespace bsp_perf
 
-#endif // DDR_PERF_HPP
+#endif // __DDR_PERF_HPP__
 

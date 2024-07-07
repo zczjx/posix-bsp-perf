@@ -10,8 +10,9 @@ set(CMAKE_CXX_STANDARD 17)
 
 # Add the source files
 set(SOURCES
-  PerfProfiler.hpp
   PerfProfiler.cpp
+  BspTrace.cpp
+  perfetto.cc
     # Add more source files here if needed
 )
 
@@ -44,6 +45,7 @@ set_target_properties(${PROJECT_NAME} PROPERTIES INSTALL_RPATH "$ORIGIN/../lib")
 install(TARGETS ${PROJECT_NAME}
   RUNTIME DESTINATION bin
   LIBRARY DESTINATION lib
+  ARCHIVE DESTINATION lib
 )
 
 

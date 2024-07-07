@@ -18,6 +18,8 @@ int main(int argc, char* argv[])
     int32_t cycles;
     parser.getOptionVal("--cycles", cycles);
 
+    static BspTrace ddrPerfTrace("./ddr_perf.perfetto");
+
     ddrPerf perf_case(std::move(parser));
     perf_case.run(cycles);
 
