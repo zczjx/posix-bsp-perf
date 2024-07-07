@@ -17,3 +17,7 @@ the local native build env if required(or you don't like to use docker)
 ## Reference Build cmd
 
 please reference the cmd in [reference_build_cmd.sh ](./reference_build_cmd.sh ) to get the reference build cmd
+
+## BSP Trace Event Visualization
+
+upload the *.perfetto profiler file to [perfetto](https://ui.perfetto.dev/) to analysis the perf data at local web browser
