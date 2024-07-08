@@ -21,3 +21,8 @@ please reference the cmd in [reference_build_cmd.sh ](./reference_build_cmd.sh )
 ## BSP Trace Event Visualization
 
 upload the *.perfetto profiler file to [perfetto](https://ui.perfetto.dev/) to analysis the perf data at local web browser
+
+## Tracing Branch
+
+Tracing branch(``git checkout -b tracing origin/tracing``) is for deep tracing in the src code, will leave so many trace event tags in the code for analysis
+User could do ``git pull origin master --rebase`` to sync and merge the latest master ToT to tracing branch
