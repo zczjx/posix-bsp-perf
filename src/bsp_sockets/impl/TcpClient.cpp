@@ -117,6 +117,7 @@ void TcpClient::stop()
 
 void TcpClient::onConnect()
 {
+    BSP_TRACE_EVENT_BEGIN("TcpClient::onConnect");
     m_logger->printStdoutLog(BspLogger::LogLevel::Info, "connect {}:{} successfully",
             ::inet_ntoa(m_remote_server_addr.sin_addr), ntohs(m_remote_server_addr.sin_port));
 
@@ -124,6 +125,7 @@ void TcpClient::onConnect()
     {
         m_on_connection_func(shared_from_this(), m_on_connection_args);
     }
+    BSP_TRACE_EVENT_END();
 }
 
 void TcpClient::onClose()
@@ -136,6 +138,7 @@ void TcpClient::onClose()
 
 void TcpClient::doConnect()
 {
+    BSP_TRACE_EVENT_BEGIN("TcpClient::doConnect");
     if (m_sockfd != -1)
     {
         ::close(m_sockfd);
@@ -176,10 +179,12 @@ void TcpClient::doConnect()
             throw BspSocketException("connect()");
         }
     }
+    BSP_TRACE_EVENT_END();
 }
 
 int TcpClient::sendData(size_t cmd_id, std::vector<uint8_t>& data) //call by user
 {
+    BSP_TRACE_EVENT_BEGIN("TcpClient::sendData");
     if (!m_net_connected)
     {
         return -1;
@@ -212,6 +217,7 @@ int TcpClient::sendData(size_t cmd_id, std::vector<uint8_t>& data) //call by use
         m_loop->addIoEvent(m_sockfd, writeCallback, EPOLLOUT, shared_from_this());
     }
 
+    BSP_TRACE_EVENT_END();
     return 0;
 
 }
@@ -334,6 +340,7 @@ int TcpClient::handleWrite()
 
 void TcpClient::cleanConnection()
 {
+    BSP_TRACE_EVENT_BEGIN("TcpClient::cleanConnection");
     if (m_sockfd != -1)
     {
         m_loop->delIoEvent(m_sockfd);
@@ -347,6 +354,7 @@ void TcpClient::cleanConnection()
 
     //connect
     doConnect();
+    BSP_TRACE_EVENT_END();
 }
 
 } // namespace bsp_sockets

@@ -13,6 +13,7 @@
 
 #include <shared/BspLogger.hpp>
 #include <shared/ArgParser.hpp>
+#include <profiler/BspTrace.hpp>
 
 #include <any>
 #include <functional>
