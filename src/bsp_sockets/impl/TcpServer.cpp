@@ -4,6 +4,8 @@
 #include "TcpConnection.hpp"
 #include "BspSocketException.hpp"
 
+#include <profiler/BspTrace.hpp>
+
 #include <stdio.h>
 #include <fcntl.h>
 #include <errno.h>
@@ -55,12 +57,14 @@ TcpServer::TcpServer(std::shared_ptr<EventLoop> loop, bsp_perf::shared::ArgParse
     }
 
     //create socket
+    BSP_TRACE_EVENT_BEGIN("tcpserver open socket");
     m_sockfd = ::socket(AF_INET, SOCK_STREAM | SOCK_NONBLOCK | SOCK_CLOEXEC, IPPROTO_TCP);
 
     if (m_sockfd < 0)
     {
         throw BspSocketException("socket()");
     }
+    BSP_TRACE_EVENT_END();
 
     m_reservfd = ::open("/tmp/reactor_accepter", O_CREAT | O_RDONLY | O_CLOEXEC, 0666);
 
@@ -137,11 +141,13 @@ void TcpServer::startLoop()
 
     if (m_server_params.thread_num > 0)
     {
+        BSP_TRACE_EVENT_BEGIN("tcpserver create thread_pool");
         m_thread_pool = std::make_shared<ThreadPool>(m_server_params.thread_num, shared_from_this());
         if (nullptr == m_thread_pool)
         {
             throw BspSocketException("new thread_pool");
         }
+        BSP_TRACE_EVENT_END();
     }
 
     auto accepterCb = [](std::shared_ptr<EventLoop> loop, int fd, std::any args)
@@ -174,6 +180,7 @@ void TcpServer::doAccept()
     bool conn_full = false;
     while (true)
     {
+        BSP_TRACE_EVENT_BEGIN("tcpserver accept");
         connfd = ::accept(m_sockfd, (struct sockaddr*)&m_conn_addr, &m_addrlen);
         if (connfd == -1)
         {
@@ -246,11 +253,14 @@ void TcpServer::doAccept()
                     }
                     else
                     {
+                        BSP_TRACE_EVENT_BEGIN("tcpserver create connection");
                         m_connections_pool[connfd] = std::make_shared<TcpConnection>(connfd, m_loop, shared_from_this());
+                        BSP_TRACE_EVENT_END();
                     }
                 }
             }
         }
+        BSP_TRACE_EVENT_END();
     }
 }
 

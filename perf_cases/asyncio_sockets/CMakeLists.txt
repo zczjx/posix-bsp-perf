@@ -16,7 +16,7 @@ install(TARGETS ${APP_NAME}
 
 set(APP_NAME aio_tcpserver)
 add_executable(${APP_NAME} aio_tcpserver.cpp)
-target_link_libraries(${APP_NAME} PRIVATE bsp_shared bsp_sockets)
+target_link_libraries(${APP_NAME} PRIVATE bsp_shared bsp_sockets bsp_profiler)
 target_include_directories(${APP_NAME} PRIVATE ${CMAKE_SOURCE_DIR}/src)
 set_target_properties(${APP_NAME} PROPERTIES INSTALL_RPATH "$ORIGIN/../lib")
 

@@ -3,6 +3,7 @@
 #include "MsgHead.hpp"
 #include <bsp_sockets/TcpServer.hpp>
 #include "BspSocketException.hpp"
+#include <profiler/BspTrace.hpp>
 
 #include <cstring>
 #include <memory>
@@ -27,6 +28,7 @@ TcpConnection::TcpConnection(int conn_fd, std::shared_ptr<EventLoop> loop, std::
 
 void TcpConnection::activate(int conn_fd, std::shared_ptr<EventLoop> loop)
 {
+    BSP_TRACE_EVENT_BEGIN("TcpConnection::activate");
     m_connection_fd = conn_fd;
     m_loop = loop;
     //set NONBLOCK
@@ -58,6 +60,7 @@ void TcpConnection::activate(int conn_fd, std::shared_ptr<EventLoop> loop)
     };
 
     m_loop->addIoEvent(m_connection_fd, tcp_rcb, EPOLLIN, shared_from_this());
+    BSP_TRACE_EVENT_END();
 }
 
 
@@ -193,6 +196,7 @@ int TcpConnection::sendData(size_t cmd_id, std::vector<uint8_t>& data)
 
 void TcpConnection::cleanConnection()
 {
+    BSP_TRACE_EVENT_BEGIN("TcpConnection::cleanConnection");
     if (!m_tcp_server.expired())
     {
         std::shared_ptr<TcpServer> server = m_tcp_server.lock();
@@ -208,6 +212,7 @@ void TcpConnection::cleanConnection()
     m_outbuf_queue.clearBuffers();
     ::close(m_connection_fd);
     m_connection_fd = -1;
+    BSP_TRACE_EVENT_END();
 }
 
 } // namespace bsp_sockets
