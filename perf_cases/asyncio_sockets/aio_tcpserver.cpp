@@ -30,7 +30,7 @@ int main(int argc, char* argv[])
     parser.addOption("--max_connections", int32_t(1024), "thread number for the tcp server");
     parser.parseArgs(argc, argv);
 
-    BspTrace ddrPerfTrace("./aio_tcpserver.perfetto");
+    BspTrace perfTracer("./aio_tcpserver.perfetto");
 
     BSP_TRACE_EVENT_BEGIN("aio tcpserver");
     std::shared_ptr<EventLoop> loop_ptr = std::make_shared<EventLoop>();

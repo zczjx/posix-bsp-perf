@@ -2,6 +2,7 @@
 #include <bsp_sockets/TcpClient.hpp>
 #include <shared/BspLogger.hpp>
 #include <shared/ArgParser.hpp>
+#include <profiler/BspTrace.hpp>
 
 #include <thread>
 #include <vector>
@@ -15,6 +16,7 @@
 
 using namespace bsp_perf::shared;
 using namespace bsp_sockets;
+using namespace bsp_perf::common;
 
 struct testQPS
 {
@@ -25,6 +27,7 @@ struct testQPS
 
 static void onMessage(size_t cmd_id, std::vector<uint8_t>& data, std::shared_ptr<ISocketHelper> socket_helper, std::any usr_data)
 {
+    BSP_TRACE_EVENT_BEGIN("aio tcpclient onMessage");
     auto pair_args = std::any_cast<std::pair<std::shared_ptr<BspLogger>, std::shared_ptr<struct testQPS>>>(usr_data);
     auto logger = pair_args.first;
     auto qps = pair_args.second;
@@ -46,16 +49,19 @@ static void onMessage(size_t cmd_id, std::vector<uint8_t>& data, std::shared_ptr
     std::string reqStr = str_convert.str();
     std::vector<uint8_t> data_buffer(reqStr.begin(), reqStr.end());
     socket_helper->sendData(cmd_id, data_buffer);
+    BSP_TRACE_EVENT_END();
 }
 
 void onConnection(std::shared_ptr<TcpClient> client, std::any args)
 {
+    BSP_TRACE_EVENT_BEGIN("aio_tcpclient:onConnection");
     std::string cmd_name = std::any_cast<std::string>(args);
     std::cout << "[S] zczjx--> aio_tcpclient:onConnection" << std::endl;
     std::string reqStr = "zczjx--> aio client onConnection";
     std::vector<uint8_t> data_buffer(reqStr.begin(), reqStr.end());
     client->sendData(cmd_name, data_buffer); //主动发送消息
     std::cout << "[E] zczjx--> aio_tcpclient:onConnection" << std::endl;
+    BSP_TRACE_EVENT_END();
 }
 
 void domain(int argc, char* argv[])
@@ -67,9 +73,12 @@ void domain(int argc, char* argv[])
     parser.addOption("--thread_num", int32_t(30), "thread number for the tcp server");
     parser.parseArgs(argc, argv);
 
+    BSP_TRACE_EVENT_BEGIN("aio tcpclient");
     std::shared_ptr<EventLoop> loop_ptr = std::make_shared<EventLoop>();
 
+    BSP_TRACE_EVENT_BEGIN("aio tcpclient create");
     std::shared_ptr<TcpClient> client = std::make_shared<TcpClient>(loop_ptr, std::move(parser));
+    BSP_TRACE_EVENT_END();
 
     std::shared_ptr<struct testQPS> qps_ptr = std::make_shared<struct testQPS>();
 
@@ -83,6 +92,7 @@ void domain(int argc, char* argv[])
     client->setOnConnection(onConnection, cmd_name);
 
     client->startLoop();
+    BSP_TRACE_EVENT_END();
 }
 
 
@@ -91,6 +101,8 @@ int main(int argc, char* argv[])
     ArgParser parser("Asyncio Sockets Perf Case: Tcp Server");
     parser.addOption("--thread_num", int32_t(10), "thread number for the tcp server");
     parser.parseArgs(argc, argv);
+
+    BspTrace perfTracer("./aio_tcpclient.perfetto");
 
     int thread_num = 0;
     parser.getOptionVal("--thread_num", thread_num);

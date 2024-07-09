@@ -134,6 +134,7 @@ TcpServer::~TcpServer()
 
 void TcpServer::startLoop()
 {
+    BSP_TRACE_EVENT_BEGIN("tcpserver start loop");
     if (m_running.load())
     {
         return;
@@ -158,6 +159,7 @@ void TcpServer::startLoop()
     m_loop->addIoEvent(m_sockfd, accepterCb, EPOLLIN, shared_from_this());
     m_running.store(true);
     m_loop->processEvents();
+    BSP_TRACE_EVENT_END();
 }
 
 void TcpServer::stop()
