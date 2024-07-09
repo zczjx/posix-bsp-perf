@@ -4,6 +4,7 @@
 #include <fcntl.h>
 #include <unistd.h>
 
+PERFETTO_TRACK_EVENT_STATIC_STORAGE();
 namespace bsp_perf {
 namespace common {
 
