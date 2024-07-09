@@ -58,12 +58,12 @@ if(is_top_level)
 endif()
 
 set_target_properties(${PROJECT_NAME} PROPERTIES INSTALL_RPATH "$ORIGIN/../lib")
-target_link_libraries(${PROJECT_NAME} PUBLIC bsp_shared)
 
 if(PC_LIBEVENT_LIBRARIES)
   target_link_libraries(${PROJECT_NAME} PUBLIC ${PC_LIBEVENT_LIBRARIES})
   target_include_directories(${PROJECT_NAME} PUBLIC ${PC_LIBEVENT_INCLUDE_DIRS})
 endif()
+target_link_libraries(${PROJECT_NAME} PRIVATE bsp_shared bsp_profiler)
 
 install(TARGETS ${PROJECT_NAME}
   RUNTIME DESTINATION bin

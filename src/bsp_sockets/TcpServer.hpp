@@ -18,7 +18,6 @@
 #include <memory>
 #include <any>
 #include <atomic>
-
 namespace bsp_sockets
 {
 
