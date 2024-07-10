@@ -21,3 +21,7 @@ please reference the cmd in [reference_build_cmd.sh ](./reference_build_cmd.sh )
 ## BSP Trace Event Visualization
 
 upload the *.perfetto profiler file to [perfetto](https://ui.perfetto.dev/) to analysis the perf data at local web browser
+
+- BspTrace visualization demo
+
+  ![Perfetto demo](image/perfetto.PNG)
