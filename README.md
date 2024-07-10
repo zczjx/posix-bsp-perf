@@ -22,6 +22,10 @@ please reference the cmd in [reference_build_cmd.sh ](./reference_build_cmd.sh )
 
 upload the *.perfetto profiler file to [perfetto](https://ui.perfetto.dev/) to analysis the perf data at local web browser
 
+- BspTrace visualization demo
+
+  ![Perfetto demo](image/perfetto.PNG)
+
 ## Tracing Branch
 
 Tracing branch(``git checkout -b tracing origin/tracing``) is for deep tracing in the src code, will leave so many trace event tags in the code for analysis
