@@ -51,9 +51,11 @@ static void onMessage(size_t cmd_id, std::vector<uint8_t>& data, std::shared_ptr
 static void onConnect(std::shared_ptr<UdpClient> client, std::any args)
 {
     std::string cmd_name = std::any_cast<std::string>(args);
-    std::string reqStr = "aio udp client start";
+    std::cout << "[S] zczjx--> aio_tcpclient:onConnection" << std::endl;
+    std::string reqStr = "zczjx--> aio client onConnection";
     std::vector<uint8_t> data_buffer(reqStr.begin(), reqStr.end());
     client->sendData(cmd_name, data_buffer); //主动发送消息
+    std::cout << "[E] zczjx--> aio_tcpclient:onConnection" << std::endl;
 }
 
 void domain(int argc, char* argv[])

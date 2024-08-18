@@ -203,6 +203,7 @@ void TcpServer::doAccept()
             {
                 throw BspSocketException("open()");
             }
+            conn_full = false;
         }
         else
         {
@@ -247,6 +248,7 @@ void TcpServer::doAccept()
                     else
                     {
                         m_connections_pool[connfd] = std::make_shared<TcpConnection>(connfd, m_loop, shared_from_this());
+                        m_connections_pool[connfd]->activate(connfd,m_loop);
                     }
                 }
             }

@@ -144,7 +144,14 @@ void TimerQueue::heapDel(int pos)
 
     m_count--;
     m_event_list.pop_back();
-    heapHold(pos);
+
+
+    heapHold(pos);//sink
+    if (m_event_list[pos].timer_id == tmp.timer_id)
+    {
+        heapFloat(pos);//float if pos's timer id is smaller than parent
+    }
+         
 }
 
 void TimerQueue::heapPop()
@@ -196,6 +203,21 @@ void TimerQueue::heapHold(int pos)
         m_position[m_event_list[pos].timer_id] = pos;
 
         heapHold(min_pos);
+    }
+}
+
+void TimerQueue::heapFloat(int pos)
+{
+    while (pos > 0) {
+        int parent = (pos - 1) / 2;
+        if (m_event_list[pos].ts < m_event_list[parent].ts) {
+            std::swap(m_event_list[pos], m_event_list[parent]);
+            m_position[m_event_list[pos].timer_id] = pos;
+            m_position[m_event_list[parent].timer_id] = parent;
+            pos = parent;
+        } else {
+            break;
+        }
     }
 }
 

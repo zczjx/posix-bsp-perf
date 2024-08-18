@@ -16,19 +16,32 @@
 #include <cerrno>
 #include <any>
 
+#include <poll.h>
+
+
+
 namespace bsp_sockets
 {
 using namespace bsp_perf::shared;
 
 EventLoop::EventLoop():
+#ifdef USE_EPOLL
     m_epoll_fd{::epoll_create1(0)},
+#endif
     m_timer_queue{std::make_shared<TimerQueue>()},
     m_logger{std::make_unique<BspLogger>("EventLoop")}
 {
+#ifdef  USE_EPOLL
     if (m_epoll_fd < 0)
     {
         throw BspSocketException("epoll_create1");
     }
+#else
+    for(int i=0; i<1024; ++i)
+    {
+        m_fds[i].fd = -1;
+    }
+#endif
 
     if (nullptr == m_timer_queue)
     {
@@ -52,6 +65,7 @@ EventLoop::EventLoop():
 
 void EventLoop::processEvents()
 {
+#ifdef USE_EPOLL
     while (true)
     {
         thread_local size_t tid = std::hash<std::thread::id>{}(std::this_thread::get_id());
@@ -93,6 +107,51 @@ void EventLoop::processEvents()
         }
         runTask();
     }
+#else
+    while (true)
+    {
+        thread_local size_t tid = std::hash<std::thread::id>{}(std::this_thread::get_id());
+        int nfds = ::poll(m_fds, m_nfds, 10000);
+        for (int i = 0; i < m_nfds; ++i)
+        {
+            int fd= m_fds[i].fd;
+            int events = m_fds[i].revents;
+            ioevIterator it = m_io_events.find(fd);
+            assert(it != m_io_events.end());
+            auto& ev = it->second;
+
+            if (events & POLLIN)
+            {
+                std::any args = ev.rcb_args;
+                ev.read_callback(shared_from_this(), fd, args);
+            }
+            else if (events & POLLOUT)
+            {
+                std::any args = ev.wcb_args;
+                ev.write_callback(shared_from_this(), fd, args);
+            }
+            else if (events & (POLLHUP | POLLERR))
+            {
+                if (ev.read_callback)
+                {
+                    std::any args = ev.rcb_args;
+                    ev.read_callback(shared_from_this(), fd, args);
+                }
+                else if (ev.write_callback)
+                {
+                    std::any args = ev.wcb_args;
+                    ev.write_callback(shared_from_this(), fd, args);
+                }
+                else
+                {
+                    m_logger->printStdoutLog(BspLogger::LogLevel::Error, "fd {} get error, delete it from poll", fd);
+                    delIoEvent(fd);
+                }
+            }
+        }
+        runTask();
+    }
+#endif
 }
 
 /*
@@ -102,6 +161,7 @@ void EventLoop::processEvents()
  */
 void EventLoop::addIoEvent(int fd, ioCallback proc, int mask, std::any args)
 {
+#ifdef USE_EPOLL
     int f_mask = 0;
     int op;
     ioevIterator it = m_io_events.find(fd);
@@ -138,11 +198,65 @@ void EventLoop::addIoEvent(int fd, ioCallback proc, int mask, std::any args)
                     ret, m_epoll_fd, fd, strerror(errnum));
         throw BspSocketException("epoll_ctl");
     }
+#else
+    if (mask == EPOLLIN)
+    {
+        mask = POLLIN;
+    }
+    else if (mask == EPOLLOUT)
+    {
+        mask = POLLOUT;
+    }
+    
+    int f_mask = 0;
+    ioevIterator it = m_io_events.find(fd);
+    if (it == m_io_events.end())
+    {
+        f_mask = mask;
+    }
+    else
+    {
+        f_mask = it->second.mask | mask;
+    }
+
+    if (mask & POLLIN)
+    {
+        m_io_events[fd].read_callback = proc;
+        m_io_events[fd].rcb_args = args;
+    }
+    else if (mask & POLLOUT)
+    {
+        m_io_events[fd].write_callback = proc;
+        m_io_events[fd].wcb_args = args;
+    }
+
+    if (it == m_io_events.end())
+    {
+        struct pollfd pfd;
+        pfd.fd = fd;
+        pfd.events = f_mask;
+        m_fds[m_nfds++] = pfd;
+    }
+    else
+    {
+        for (int i = 0; i < m_nfds; i++)
+        {
+            if (m_fds[i].fd == fd)
+            {
+                m_fds[i].events = f_mask;
+                break;
+            }
+            
+        }
+        
+    }
+#endif
     m_listening.insert(fd); //加入到监听集合中
 }
 
 void EventLoop::delIoEvent(int fd, int mask)
 {
+#ifdef USE_EPOLL
     ioevIterator it = m_io_events.find(fd);
     if (it == m_io_events.end())
     {
@@ -178,10 +292,58 @@ void EventLoop::delIoEvent(int fd, int mask)
             throw BspSocketException("epoll_ctl EPOLL_CTL_MOD");
         }
     }
+#else
+    ioevIterator it = m_io_events.find(fd);
+    if (it == m_io_events.end())
+    {
+        return ;
+    }
+    int& o_mask = it->second.mask;
+    if (mask == EPOLLIN)
+    {
+        mask = POLLIN;
+    }
+    else if (mask == EPOLLOUT)
+    {
+        mask = POLLOUT;
+    }
+    int ret;
+    o_mask = o_mask & (~mask);
+    if (o_mask == 0)
+    {
+        m_io_events.erase(it);
+        for (int i = 0; i < m_nfds; ++i)
+        {
+            if (m_fds[i].fd == fd)
+            {
+                // Shift the remaining elements to the left
+                for (int j = i; j < m_nfds - 1; ++j)
+                {
+                    m_fds[j] = m_fds[j + 1];
+                }
+                --m_nfds;
+                break;
+            }
+        }
+        m_listening.erase(fd);
+    }
+    else
+    {
+        for (int i = 0; i < m_nfds; ++i)
+        {
+            if (m_fds[i].fd == fd)
+            {
+                m_fds[i].events = o_mask;
+                break;
+            }
+        }
+    }
+#endif
 }
 
 void EventLoop::delIoEvent(int fd)
 {
+#ifdef USE_EPOLL
     ioevIterator it = m_io_events.find(fd);
     if (it == m_io_events.end())
     {
@@ -197,6 +359,28 @@ void EventLoop::delIoEvent(int fd)
                     ret, m_epoll_fd, fd, strerror(errnum));
         throw BspSocketException("epoll_ctl EPOLL_CTL_DEL");
     }
+#else
+    ioevIterator it = m_io_events.find(fd);
+    if (it == m_io_events.end())
+    {
+        return;
+    }
+    m_io_events.erase(it);
+    m_listening.erase(fd);
+
+    for (int i = 0; i < m_nfds; i++)
+    {
+        if (m_fds[i].fd == fd)
+        {
+            for (int j = i; j < m_nfds - 1; j++)
+            {
+                m_fds[j] = m_fds[j + 1];
+            }
+            --m_nfds;
+            break;
+        }
+    }
+#endif
 }
 
 int EventLoop::runAt(timerCallback cb, std::any args, time_t ts)
