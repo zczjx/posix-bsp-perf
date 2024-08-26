@@ -10,9 +10,6 @@
 #include <functional>
 #include <iostream>
 #include <memory>
-#include <poll.h>
-
-//#define USE_EPOLL
 
 namespace bsp_sockets
 {
@@ -57,13 +54,8 @@ public:
     void delTimer(int timer_id);
 
 private:
-#ifdef USE_EPOLL
     int m_epoll_fd{-1};
     struct epoll_event m_fired_events[MAX_EVENTS];
-#else
-    struct pollfd m_fds[1024];
-    int m_nfds{0};
-#endif
     //map: fd->IOEvent
     std::unordered_map<int, IOEvent> m_io_events;
     using ioevIterator = std::unordered_map<int, IOEvent>::iterator;
