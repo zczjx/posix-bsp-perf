@@ -1,0 +1,1 @@
+/usr/bin/c++  -O0 -rdynamic -g -Wall -Wextra -g CMakeFiles/aio_tcpclient.dir/aio_tcpclient.cpp.o -o aio_tcpclient  -Wl,-rpath,/home/builder/build/src/bsp_sockets:/home/builder/build/src/shared: ../../src/bsp_sockets/libbsp_sockets.so ../../src/shared/libbsp_shared.so 

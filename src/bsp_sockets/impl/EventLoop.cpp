@@ -68,17 +68,7 @@ void EventLoop::addTask(pendingFunc func, std::any args)
     m_pending_factors.push_back(item);
 }
 
-void EventLoop::runTask()
-{
-    std::vector<std::pair<pendingFunc, std::any> >::iterator it;
-    for (it = m_pending_factors.begin(); it != m_pending_factors.end(); ++it)
-    {
-        pendingFunc func = it->first;
-        std::any args = it->second;
-        func(shared_from_this(), args);
-    }
-    m_pending_factors.clear();
-}
+
 
 } //namespace bsp_sockets
 

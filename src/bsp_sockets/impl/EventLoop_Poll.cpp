@@ -54,8 +54,8 @@ void EventLoop_Poll::processEvents()
     {
         thread_local size_t tid = std::hash<std::thread::id>{}(std::this_thread::get_id());
         int nfds = ::poll(m_fds, m_nfds, -1);
-        //std::cout << this <<" " << nfds << "@120行in EventLoop.cpp"<<std::endl;
-        //std::cout << this << " " << m_nfds << "@121行 in EventLoop.cpp"<< std::endl;
+        //std::cout << this <<" " << nfds << "@57行in EventLoop.cpp"<<std::endl;
+        //std::cout << this << " " << m_nfds << "@58行 in EventLoop.cpp"<< std::endl;
         for (int i = 0; i < m_nfds; ++i)
         {
             int fd= m_fds[i].fd;
@@ -242,6 +242,18 @@ void EventLoop_Poll::delIoEvent(int fd)
         }
     }
 
+}
+
+void EventLoop_Poll::runTask()
+{
+    std::vector<std::pair<pendingFunc, std::any> >::iterator it;
+    for (it = m_pending_factors.begin(); it != m_pending_factors.end(); ++it)
+    {
+        pendingFunc func = it->first;
+        std::any args = it->second;
+        func(shared_from_this(), args);
+    }
+    m_pending_factors.clear();
 }
 
 } //namespace bsp_sockets
