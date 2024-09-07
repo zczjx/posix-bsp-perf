@@ -1,4 +1,6 @@
 #include <bsp_sockets/EventLoop.hpp>
+#include <bsp_sockets/EventLoop_Epoll.hpp>
+#include <bsp_sockets/EventLoop_Poll.hpp>
 #include <bsp_sockets/TcpClient.hpp>
 #include <shared/BspLogger.hpp>
 #include <shared/ArgParser.hpp>
@@ -65,9 +67,21 @@ void domain(int argc, char* argv[])
     parser.addOption("--server_port", int32_t(12345), "port number for the tcp server");
     parser.addOption("--name", std::string("aio_tcpclient"), "name of the tcp client");
     parser.addOption("--thread_num", int32_t(30), "thread number for the tcp server");
+    parser.addOption("--Poll", int32_t(0), "choose Poll or Epoll for Eventloop");
     parser.parseArgs(argc, argv);
 
-    std::shared_ptr<EventLoop> loop_ptr = std::make_shared<EventLoop>();
+    int32_t Poll_flag = 0;
+    parser.getOptionVal("--Poll", Poll_flag);
+
+    std::shared_ptr<EventLoop> loop_ptr;
+    if (Poll_flag == 1)
+    {
+        loop_ptr = std::make_shared<EventLoop_Poll>();
+    }
+    else
+    {
+        loop_ptr = std::make_shared<EventLoop_Epoll>();
+    }
 
     std::shared_ptr<TcpClient> client = std::make_shared<TcpClient>(loop_ptr, std::move(parser));
 
@@ -90,6 +104,7 @@ int main(int argc, char* argv[])
 {
     ArgParser parser("Asyncio Sockets Perf Case: Tcp Server");
     parser.addOption("--thread_num", int32_t(10), "thread number for the tcp server");
+
     parser.parseArgs(argc, argv);
 
     int thread_num = 0;

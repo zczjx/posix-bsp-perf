@@ -2,6 +2,8 @@
 #include "TcpConnection.hpp"
 
 #include <bsp_sockets/EventLoop.hpp>
+#include <bsp_sockets/EventLoop_Epoll.hpp>
+#include <bsp_sockets/EventLoop_Poll.hpp>
 #include <bsp_sockets/TcpServer.hpp>
 
 #include <memory>
@@ -57,7 +59,16 @@ static void onMsgComing(std::shared_ptr<EventLoop> loop, int fd, std::any args)
 
 static std::any threadDomain(std::shared_ptr<ThreadQueue<queueMsg>> t_queue, std::weak_ptr<TcpServer> server)
 {
-    std::shared_ptr<EventLoop> loop = std::make_shared<EventLoop>();
+    std::shared_ptr<EventLoop> loop;
+    if (TcpServerParams.poll_flag == 1)
+    {
+        loop = std::make_shared<EventLoop_Poll>();
+    }
+    else
+    {
+        loop = std::make_shared<EventLoop_Epoll>();
+    }
+    
 
     t_queue->setLoop(loop, onMsgComing, std::make_pair(t_queue, server));
     std::cout << "Thread in pool ID: " << std::this_thread::get_id() << std::endl;

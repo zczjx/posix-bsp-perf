@@ -32,14 +32,14 @@ class EventLoop : public std::enable_shared_from_this<EventLoop>
 public:
     EventLoop();
 
-    void processEvents();
+    virtual void processEvents() {};
 
     //operator for IO event
-    void addIoEvent(int fd, ioCallback proc, int mask, std::any args);
+    virtual void addIoEvent(int fd, ioCallback proc, int mask, std::any args) {};
     //delete only mask event for fd in epoll
-    void delIoEvent(int fd, int mask);
+    virtual void delIoEvent(int fd, int mask) {};
     //delete event for fd in epoll
-    void delIoEvent(int fd);
+    virtual void delIoEvent(int fd) {};
     //get all fds this loop is listening
     std::unordered_set<int>& getAllListenings() { return m_listening; }
 
@@ -53,9 +53,10 @@ public:
     int runEvery(timerCallback cb, std::any args, int sec, int millis = 0);
     void delTimer(int timer_id);
 
-private:
-    int m_epoll_fd{-1};
-    struct epoll_event m_fired_events[MAX_EVENTS];
+    virtual ~EventLoop() = default;
+
+protected:
+    
     //map: fd->IOEvent
     std::unordered_map<int, IOEvent> m_io_events;
     using ioevIterator = std::unordered_map<int, IOEvent>::iterator;

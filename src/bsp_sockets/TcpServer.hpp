@@ -29,6 +29,7 @@ using TcpServerParams = struct TcpServerParams
     int port{-1};
     int thread_num{0};
     int max_connections{0};
+    int poll_flag{0};
 };
 class TcpServer: public std::enable_shared_from_this<TcpServer>
 {
@@ -96,6 +97,7 @@ private:
 
     std::vector<std::shared_ptr<TcpConnection>> m_connections_pool{};//连接池
     MsgDispatcher m_msg_dispatcher{};
+
 };
 
 }
