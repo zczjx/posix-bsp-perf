@@ -39,7 +39,7 @@ static void onMessage(size_t cmd_id, std::vector<uint8_t>& data, std::shared_ptr
         qps->lstTs = curTs;
     }
     std::string data_str(data.begin(), data.end());
-    //logger->printStdoutLog(BspLogger::LogLevel::Warn, "client: data={0:s}", data_str);
+    logger->printStdoutLog(BspLogger::LogLevel::Warn, "client: data={0:s}", data_str);
 
     std::ostringstream str_convert;
     str_convert << "I miss you data" <<" index: "<< qps->succ  << ":" << qps->lstTs
