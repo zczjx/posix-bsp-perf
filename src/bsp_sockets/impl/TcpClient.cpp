@@ -156,6 +156,13 @@ void TcpClient::doConnect()
         setNetConnected(true);
         //call on connection callback(if has)
         onConnect();
+
+        m_loop->addIoEvent(m_sockfd, readCallback, EPOLLIN, shared_from_this());
+
+        if (!isOutputBufferEmpty())
+        {
+            m_loop->addIoEvent(m_sockfd, writeCallback, EPOLLOUT, shared_from_this());
+        }
     }
     else
     {

@@ -54,6 +54,7 @@ private:
     void heapDel(int pos);
     void heapPop();
     void heapHold(int pos);
+    void heapFloat(int pos);
 
 private:
     std::vector<timerEvent> m_event_list{};
