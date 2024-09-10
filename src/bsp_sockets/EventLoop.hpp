@@ -11,6 +11,9 @@
 #include <iostream>
 #include <memory>
 
+
+
+
 namespace bsp_sockets
 {
 static constexpr int MAX_EVENTS = 10;
@@ -30,47 +33,33 @@ struct IOEvent//注册的IO事件
 class EventLoop
 {
 public:
-    EventLoop();
+    EventLoop(){}
 
-    virtual void processEvents() {};
+    virtual void processEvents() {}
 
     //operator for IO event
-    virtual void addIoEvent(int fd, ioCallback proc, int mask, std::any args) {};
+    virtual void addIoEvent(int fd, ioCallback proc, int mask, std::any args) {}
     //delete only mask event for fd in epoll
-    virtual void delIoEvent(int fd, int mask) {};
+    virtual void delIoEvent(int fd, int mask) {}
     //delete event for fd in epoll
-    virtual void delIoEvent(int fd) {};
+    virtual void delIoEvent(int fd) {}
     //get all fds this loop is listening
-    std::unordered_set<int>& getAllListenings() { return m_listening; }
+    virtual std::unordered_set<int>& getAllListenings() {}
 
-    void addTask(pendingFunc func, std::any args);
-    virtual void runTask() {};
+    virtual void addTask(pendingFunc func, std::any args) {}
+    virtual void runTask() {}
 
-    std::shared_ptr<TimerQueue>& getTimerQueue() { return m_timer_queue; }
+    virtual std::shared_ptr<TimerQueue>& getTimerQueue() {}
     //operator for timer event
-    int runAt(timerCallback cb, std::any args, time_t ts);
-    int runAfter(timerCallback cb, std::any args, int sec, int millis = 0);
-    int runEvery(timerCallback cb, std::any args, int sec, int millis = 0);
-    void delTimer(int timer_id);
+    virtual int runAt(timerCallback cb, std::any args, time_t ts) {}
+    virtual int runAfter(timerCallback cb, std::any args, int sec, int millis = 0){}
+    virtual int runEvery(timerCallback cb, std::any args, int sec, int millis = 0){}
+    virtual void delTimer(int timer_id){}
+
+    static std::shared_ptr<EventLoop> create(const int32_t flag);
 
     virtual ~EventLoop() = default;
-
-protected:
-    
-    //map: fd->IOEvent
-    std::unordered_map<int, IOEvent> m_io_events;
-    using ioevIterator = std::unordered_map<int, IOEvent>::iterator;
-    std::shared_ptr<TimerQueue> m_timer_queue;
-    //此队列用于:暂存将要执行的任务
-    std::vector<std::pair<pendingFunc, std::any> > m_pending_factors;
-
-    std::unordered_set<int> m_listening{};
-
-    std::unique_ptr<bsp_perf::shared::BspLogger> m_logger;
-
-    friend void timerQueueCallback(EventLoop& loop, int fd, std::any args);
 };
 
 }
-
 #endif

@@ -1,1 +1,0 @@
-/usr/bin/c++ -fPIC  -O0 -rdynamic -g -Wall -Wextra -g -L/opt/cross_env/x86/install/lib -lspdlog -pthread -Wl,-rpath,/opt/cross_env/x86/install/lib -shared -Wl,-soname,libbsp_shared.so -o libbsp_shared.so CMakeFiles/bsp_shared.dir/BspLogger.cpp.o  -Wl,-rpath,:::::::::::::: 

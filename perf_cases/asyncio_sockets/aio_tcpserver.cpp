@@ -32,17 +32,7 @@ int main(int argc, char* argv[])
     int32_t Poll_flag = 0;
     parser.getOptionVal("--Poll", Poll_flag);
 
-    std::shared_ptr<EventLoop> loop_ptr;
-    if (Poll_flag == 1)
-    {
-        loop_ptr = std::make_shared<EventLoop_Poll>();
-    }
-    else
-    {
-        loop_ptr = std::make_shared<EventLoop_Epoll>();
-    }
-    
-    
+    auto loop_ptr = bsp_sockets::EventLoop::create(Poll_flag);
 
     std::shared_ptr<TcpServer> server = std::make_shared<TcpServer>(loop_ptr, std::move(parser));
     std::shared_ptr<BspLogger> logger = std::make_shared<BspLogger>("aio_tcpserver");

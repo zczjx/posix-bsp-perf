@@ -1,1 +1,0 @@
-/usr/bin/c++  -O0 -rdynamic -g -Wall -Wextra -g CMakeFiles/ddrRWPerf.dir/main.cpp.o -o ddrRWPerf  -Wl,-rpath,/home/builder/build/src/framework:/home/builder/build/src/profiler:/home/builder/build/src/shared: ../../src/framework/libcase_framework.so ../../src/profiler/libbsp_profiler.so ../../src/shared/libbsp_shared.so 

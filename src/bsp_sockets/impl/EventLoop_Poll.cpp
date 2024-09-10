@@ -23,7 +23,9 @@ namespace bsp_sockets
 {
 using namespace bsp_perf::shared;
 
-EventLoop_Poll::EventLoop_Poll()
+EventLoop_Poll::EventLoop_Poll():
+    m_timer_queue{std::make_shared<TimerQueue>()},
+    m_logger{std::make_unique<BspLogger>("EventLoop")}
     
 {
     //std::cout<< "Eventloop 第 " << ++total_construct_times <<"构造"<<std::endl;
@@ -31,6 +33,11 @@ EventLoop_Poll::EventLoop_Poll()
     for(int i=0; i<1024; ++i)
     {
         m_fds[i].fd = -1;
+    }
+
+    if (nullptr == m_timer_queue)
+    {
+        throw BspSocketException("new TimerQueue");
     }
 
     auto timerQueueCallback = [](std::shared_ptr<EventLoop> loop, int fd, std::any args)
@@ -255,6 +262,46 @@ void EventLoop_Poll::runTask()
     }
     m_pending_factors.clear();
 }
+
+    int EventLoop_Poll::runAt(timerCallback cb, std::any args, time_t ts)
+    {
+        timerEvent te(cb, args, ts);
+        return m_timer_queue->addTimer(te);
+    }
+
+    int EventLoop_Poll::runAfter(timerCallback cb, std::any args, int sec, int millis)
+    {
+        struct timespec tpc;
+        clock_gettime(CLOCK_REALTIME, &tpc);
+        uint64_t ts = tpc.tv_sec * 1000 + tpc.tv_nsec / 1000000UL;
+        ts += sec * 1000 + millis;
+        runAt(cb, args, ts);
+    }
+
+    int EventLoop_Poll::runEvery(timerCallback cb, std::any args, int sec, int millis)
+    {
+        uint32_t interval = sec * 1000 + millis;
+        struct timespec tpc;
+        clock_gettime(CLOCK_REALTIME, &tpc);
+        uint64_t ts = tpc.tv_sec * 1000 + tpc.tv_nsec / 1000000UL + interval;
+        timerEvent te(cb, args, ts, interval);
+        return m_timer_queue->addTimer(te);
+    }
+
+    void EventLoop_Poll::delTimer(int timer_id)
+    {
+        m_timer_queue->delTimer(timer_id);
+    }
+
+
+
+
+void EventLoop_Poll::addTask(pendingFunc func, std::any args)
+{
+    std::pair<pendingFunc, std::any> item(func, args);
+    m_pending_factors.push_back(item);
+}
+
 
 } //namespace bsp_sockets
 

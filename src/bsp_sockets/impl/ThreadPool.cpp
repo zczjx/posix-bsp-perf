@@ -59,16 +59,7 @@ static void onMsgComing(std::shared_ptr<EventLoop> loop, int fd, std::any args)
 
 static std::any threadDomain(std::shared_ptr<ThreadQueue<queueMsg>> t_queue, std::weak_ptr<TcpServer> server)
 {
-    std::shared_ptr<EventLoop> loop;
-    if (server.lock()->m_poll_flag == 1)
-    {
-        loop = std::make_shared<EventLoop_Poll>();
-    }
-    else
-    {
-        loop = std::make_shared<EventLoop_Epoll>();
-    }
-    
+    auto loop = bsp_sockets::EventLoop::create(server.lock()->m_poll_flag);
 
     t_queue->setLoop(loop, onMsgComing, std::make_pair(t_queue, server));
     std::cout << "Thread in pool ID: " << std::this_thread::get_id() << std::endl;
