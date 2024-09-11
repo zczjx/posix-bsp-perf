@@ -251,6 +251,18 @@ void EventLoop_Poll::delIoEvent(int fd)
 
 }
 
+std::unordered_set<int>& EventLoop_Poll::getAllListenings()
+{
+    return m_listening;
+}
+
+void EventLoop_Poll::addTask(pendingFunc func, std::any args)
+{
+    std::pair<pendingFunc, std::any> item(func, args);
+    m_pending_factors.push_back(item);
+}
+
+
 void EventLoop_Poll::runTask()
 {
     std::vector<std::pair<pendingFunc, std::any> >::iterator it;
@@ -263,43 +275,40 @@ void EventLoop_Poll::runTask()
     m_pending_factors.clear();
 }
 
-    int EventLoop_Poll::runAt(timerCallback cb, std::any args, time_t ts)
-    {
-        timerEvent te(cb, args, ts);
-        return m_timer_queue->addTimer(te);
-    }
-
-    int EventLoop_Poll::runAfter(timerCallback cb, std::any args, int sec, int millis)
-    {
-        struct timespec tpc;
-        clock_gettime(CLOCK_REALTIME, &tpc);
-        uint64_t ts = tpc.tv_sec * 1000 + tpc.tv_nsec / 1000000UL;
-        ts += sec * 1000 + millis;
-        runAt(cb, args, ts);
-    }
-
-    int EventLoop_Poll::runEvery(timerCallback cb, std::any args, int sec, int millis)
-    {
-        uint32_t interval = sec * 1000 + millis;
-        struct timespec tpc;
-        clock_gettime(CLOCK_REALTIME, &tpc);
-        uint64_t ts = tpc.tv_sec * 1000 + tpc.tv_nsec / 1000000UL + interval;
-        timerEvent te(cb, args, ts, interval);
-        return m_timer_queue->addTimer(te);
-    }
-
-    void EventLoop_Poll::delTimer(int timer_id)
-    {
-        m_timer_queue->delTimer(timer_id);
-    }
-
-
-
-
-void EventLoop_Poll::addTask(pendingFunc func, std::any args)
+int EventLoop_Poll::runAt(timerCallback cb, std::any args, time_t ts)
 {
-    std::pair<pendingFunc, std::any> item(func, args);
-    m_pending_factors.push_back(item);
+    timerEvent te(cb, args, ts);
+    return m_timer_queue->addTimer(te);
+}
+
+int EventLoop_Poll::runAfter(timerCallback cb, std::any args, int sec, int millis)
+{
+    struct timespec tpc;
+    clock_gettime(CLOCK_REALTIME, &tpc);
+    uint64_t ts = tpc.tv_sec * 1000 + tpc.tv_nsec / 1000000UL;
+    ts += sec * 1000 + millis;
+    runAt(cb, args, ts);
+}
+
+int EventLoop_Poll::runEvery(timerCallback cb, std::any args, int sec, int millis)
+{
+    uint32_t interval = sec * 1000 + millis;
+    struct timespec tpc;
+    clock_gettime(CLOCK_REALTIME, &tpc);
+    uint64_t ts = tpc.tv_sec * 1000 + tpc.tv_nsec / 1000000UL + interval;
+    timerEvent te(cb, args, ts, interval);
+    return m_timer_queue->addTimer(te);
+}
+
+void EventLoop_Poll::delTimer(int timer_id)
+{
+    m_timer_queue->delTimer(timer_id);
+}
+
+
+std::shared_ptr<TimerQueue>& EventLoop_Poll::getTimerQueue()
+{
+    return m_timer_queue;
 }
 
 

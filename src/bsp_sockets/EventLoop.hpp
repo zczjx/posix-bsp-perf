@@ -33,32 +33,31 @@ struct IOEvent//注册的IO事件
 class EventLoop
 {
 public:
-    EventLoop(){}
 
-    virtual void processEvents() {}
+    virtual void processEvents() = 0;
 
     //operator for IO event
-    virtual void addIoEvent(int fd, ioCallback proc, int mask, std::any args) {}
+    virtual void addIoEvent(int fd, ioCallback proc, int mask, std::any args) = 0;
     //delete only mask event for fd in epoll
-    virtual void delIoEvent(int fd, int mask) {}
+    virtual void delIoEvent(int fd, int mask) = 0;
     //delete event for fd in epoll
-    virtual void delIoEvent(int fd) {}
+    virtual void delIoEvent(int fd) = 0;
     //get all fds this loop is listening
-    virtual std::unordered_set<int>& getAllListenings() {}
+    virtual std::unordered_set<int>& getAllListenings() = 0;
 
-    virtual void addTask(pendingFunc func, std::any args) {}
-    virtual void runTask() {}
+    virtual void addTask(pendingFunc func, std::any args) = 0;
+    virtual void runTask() = 0;
 
-    virtual std::shared_ptr<TimerQueue>& getTimerQueue() {}
+    virtual std::shared_ptr<TimerQueue>& getTimerQueue() = 0;
     //operator for timer event
-    virtual int runAt(timerCallback cb, std::any args, time_t ts) {}
-    virtual int runAfter(timerCallback cb, std::any args, int sec, int millis = 0){}
-    virtual int runEvery(timerCallback cb, std::any args, int sec, int millis = 0){}
-    virtual void delTimer(int timer_id){}
+    virtual int runAt(timerCallback cb, std::any args, time_t ts) =0;
+    virtual int runAfter(timerCallback cb, std::any args, int sec, int millis = 0) = 0;
+    virtual int runEvery(timerCallback cb, std::any args, int sec, int millis = 0) = 0;
+    virtual void delTimer(int timer_id)  = 0;
 
     static std::shared_ptr<EventLoop> create(const int32_t flag);
 
-    virtual ~EventLoop() = default;
+
 };
 
 }

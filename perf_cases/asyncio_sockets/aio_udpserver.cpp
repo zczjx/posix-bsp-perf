@@ -1,5 +1,7 @@
 #include<bsp_sockets/UdpServer.hpp>
 #include<bsp_sockets/EventLoop.hpp>
+#include <bsp_sockets/EventLoop_Epoll.hpp>
+#include <bsp_sockets/EventLoop_Poll.hpp>
 #include <shared/BspLogger.hpp>
 #include <iostream>
 
@@ -22,9 +24,13 @@ int main(int argc, char* argv[])
     ArgParser parser("Asyncio Sockets Perf Case: UDP Server");
     parser.addOption("--ip", std::string("127.0.0.1"), "tcp server ip address");
     parser.addOption("--port", int32_t(12347), "port number for the udp server");
+    parser.addOption("--Poll", int32_t(0), "choose Poll or Epoll for Eventloop");
     parser.parseArgs(argc, argv);
 
-    std::shared_ptr<EventLoop> loop_ptr = std::make_shared<EventLoop>();
+    int32_t Poll_flag = 0;
+    parser.getOptionVal("--Poll", Poll_flag);
+
+    auto loop_ptr = bsp_sockets::EventLoop::create(Poll_flag);
 
     std::shared_ptr<UdpServer> server = std::make_shared<UdpServer>(loop_ptr, std::move(parser));
     std::shared_ptr<BspLogger> logger = std::make_shared<BspLogger>("aio_udpserver");

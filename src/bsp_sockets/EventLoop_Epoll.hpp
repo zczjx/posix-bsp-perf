@@ -21,7 +21,7 @@ public:
     //delete event for fd in epoll
     void delIoEvent(int fd) override;
 
-    std::unordered_set<int>& getAllListenings() { return m_listening; }
+    std::unordered_set<int>& getAllListenings() override;
 
     void addTask(pendingFunc func, std::any args) override;
 
@@ -32,7 +32,7 @@ public:
     int runEvery(timerCallback cb, std::any args, int sec, int millis = 0) override;
     void delTimer(int timer_id) override;
 
-    std::shared_ptr<TimerQueue>& getTimerQueue() { return m_timer_queue; }
+    std::shared_ptr<TimerQueue>& getTimerQueue() override;
 
 
 private:

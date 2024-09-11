@@ -199,6 +199,17 @@ using namespace bsp_perf::shared;
         }
     }
 
+    std::unordered_set<int>& EventLoop_Epoll::getAllListenings()
+    {
+        return m_listening;
+    }
+
+    void EventLoop_Epoll::addTask(pendingFunc func, std::any args)
+    {
+        std::pair<pendingFunc, std::any> item(func, args);
+        m_pending_factors.push_back(item);
+    }
+
     void EventLoop_Epoll::runTask()
     {
         std::vector<std::pair<pendingFunc, std::any> >::iterator it;
@@ -241,14 +252,9 @@ using namespace bsp_perf::shared;
         m_timer_queue->delTimer(timer_id);
     }
 
-
-
-
-
-    void EventLoop_Epoll::addTask(pendingFunc func, std::any args)
+    std::shared_ptr<TimerQueue>& EventLoop_Epoll::getTimerQueue()
     {
-        std::pair<pendingFunc, std::any> item(func, args);
-        m_pending_factors.push_back(item);
+        return m_timer_queue;
     }
 
 
