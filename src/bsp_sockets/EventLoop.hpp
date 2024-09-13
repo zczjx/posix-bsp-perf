@@ -10,6 +10,7 @@
 #include <functional>
 #include <iostream>
 #include <memory>
+#include <poll.h>
 
 
 
@@ -30,6 +31,27 @@ struct IOEvent//注册的IO事件
     std::any rcb_args{nullptr};   //extra arguments for read_cb
     std::any wcb_args{nullptr};  //extra arguments for write_cb
 };
+
+struct EventLoopParams
+{
+    int m_epoll_fd{-1};
+    struct epoll_event m_fired_events[MAX_EVENTS];
+
+    struct pollfd m_fds[1024];
+    int m_nfds{0};
+        
+    //map: fd->IOEvent
+    std::unordered_map<int, IOEvent> m_io_events;
+    using ioevIterator = std::unordered_map<int, IOEvent>::iterator;
+    std::shared_ptr<TimerQueue> m_timer_queue;
+    //此队列用于:暂存将要执行的任务
+    std::vector<std::pair<pendingFunc, std::any> > m_pending_factors;
+
+    std::unordered_set<int> m_listening{};
+
+    std::unique_ptr<bsp_perf::shared::BspLogger> m_logger;
+};
+
 class EventLoop
 {
 public:
@@ -55,7 +77,7 @@ public:
     virtual int runEvery(timerCallback cb, std::any args, int sec, int millis = 0) = 0;
     virtual void delTimer(int timer_id)  = 0;
 
-    static std::shared_ptr<EventLoop> create(const int32_t flag);
+    static std::shared_ptr<EventLoop> create(const std::string flag);
 
 
 };

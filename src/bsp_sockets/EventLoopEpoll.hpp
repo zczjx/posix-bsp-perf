@@ -7,10 +7,10 @@
 namespace bsp_sockets
 {
 
-class EventLoop_Epoll: public EventLoop, public std::enable_shared_from_this<EventLoop_Epoll>
+class EventLoopEpoll: public EventLoop, public std::enable_shared_from_this<EventLoopEpoll>
 {
 public:
-    EventLoop_Epoll();
+    EventLoopEpoll();
 
     void processEvents() override;
 
@@ -36,19 +36,7 @@ public:
 
 
 private:
-    int m_epoll_fd{-1};
-    struct epoll_event m_fired_events[MAX_EVENTS];
-        
-    //map: fd->IOEvent
-    std::unordered_map<int, IOEvent> m_io_events;
-    using ioevIterator = std::unordered_map<int, IOEvent>::iterator;
-    std::shared_ptr<TimerQueue> m_timer_queue;
-    //此队列用于:暂存将要执行的任务
-    std::vector<std::pair<pendingFunc, std::any> > m_pending_factors;
-
-    std::unordered_set<int> m_listening{};
-
-    std::unique_ptr<bsp_perf::shared::BspLogger> m_logger;
+    EventLoopParams m_params;
 
     friend void timerQueueCallback(EventLoop& loop, int fd, std::any args);
 

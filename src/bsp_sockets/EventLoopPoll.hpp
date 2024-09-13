@@ -2,7 +2,7 @@
 #define __EVENT_LOOP_POLL_H__
 
 
-#include <poll.h>
+
 #include "EventLoop.hpp"
 
 //#define USE_EPOLL
@@ -10,10 +10,10 @@
 namespace bsp_sockets
 {
 
-class EventLoop_Poll : public EventLoop, public std::enable_shared_from_this<EventLoop_Poll>
+class EventLoopPoll : public EventLoop, public std::enable_shared_from_this<EventLoopPoll>
 {
 public:
-    EventLoop_Poll();
+    EventLoopPoll();
 
     void processEvents() override;
 
@@ -40,19 +40,7 @@ public:
     
 
 private:
-    struct pollfd m_fds[1024];
-    int m_nfds{0};
-
-    //map: fd->IOEvent
-    std::unordered_map<int, IOEvent> m_io_events;
-    using ioevIterator = std::unordered_map<int, IOEvent>::iterator;
-    std::shared_ptr<TimerQueue> m_timer_queue;
-    //此队列用于:暂存将要执行的任务
-    std::vector<std::pair<pendingFunc, std::any> > m_pending_factors;
-
-    std::unordered_set<int> m_listening{};
-
-    std::unique_ptr<bsp_perf::shared::BspLogger> m_logger;
+    EventLoopParams m_params;
 
     friend void timerQueueCallback(EventLoop& loop, int fd, std::any args);
 

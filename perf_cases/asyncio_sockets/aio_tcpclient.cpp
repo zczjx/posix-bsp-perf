@@ -1,6 +1,6 @@
 #include <bsp_sockets/EventLoop.hpp>
-#include <bsp_sockets/EventLoop_Epoll.hpp>
-#include <bsp_sockets/EventLoop_Poll.hpp>
+#include <bsp_sockets/EventLoopEpoll.hpp>
+#include <bsp_sockets/EventLoopPoll.hpp>
 #include <bsp_sockets/TcpClient.hpp>
 #include <shared/BspLogger.hpp>
 #include <shared/ArgParser.hpp>
@@ -67,11 +67,11 @@ void domain(int argc, char* argv[])
     parser.addOption("--server_port", int32_t(12345), "port number for the tcp server");
     parser.addOption("--name", std::string("aio_tcpclient"), "name of the tcp client");
     parser.addOption("--thread_num", int32_t(30), "thread number for the tcp server");
-    parser.addOption("--Poll", int32_t(0), "choose Poll or Epoll for Eventloop");
+    parser.addOption("--poll", std::string("epoll"), "choose Poll or Epoll for Eventloop");
     parser.parseArgs(argc, argv);
 
-    int32_t Poll_flag = 0;
-    parser.getOptionVal("--Poll", Poll_flag);
+    std::string Poll_flag{};
+    parser.getOptionVal("--poll", Poll_flag);
 
     auto loop_ptr = bsp_sockets::EventLoop::create(Poll_flag);
 

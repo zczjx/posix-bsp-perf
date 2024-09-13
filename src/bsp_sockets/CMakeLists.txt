@@ -11,8 +11,8 @@ set(CMAKE_CXX_STANDARD 17)
 # Add the source files
 set(SOURCES
   impl/EventLoop.cpp
-  impl/EventLoop_Epoll.cpp
-  impl/EventLoop_Poll.cpp
+  impl/EventLoopEpoll.cpp
+  impl/EventLoopPoll.cpp
   impl/IOBuffer.cpp
   impl/TcpClient.cpp
   impl/TcpConnection.cpp
