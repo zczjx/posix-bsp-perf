@@ -1,4 +1,6 @@
 #include <bsp_sockets/EventLoop.hpp>
+#include <bsp_sockets/EventLoopEpoll.hpp>
+#include <bsp_sockets/EventLoopPoll.hpp>
 #include <bsp_sockets/UdpClient.hpp>
 #include <shared/BspLogger.hpp>
 #include <shared/ArgParser.hpp>
@@ -62,9 +64,13 @@ void domain(int argc, char* argv[])
     parser.addOption("--server_ip", std::string("127.0.0.1"), "UDP server ip address");
     parser.addOption("--server_port", int32_t(12347), "port number for the udp server");
     parser.addOption("--thread_num", int32_t(1), "thread number for the udp server");
+    parser.addOption("--poll", std::string("epoll"), "choose Poll or Epoll for Eventloop");
     parser.parseArgs(argc, argv);
 
-    std::shared_ptr<EventLoop> loop_ptr = std::make_shared<EventLoop>();
+    std::string Poll_flag{};
+    parser.getOptionVal("--poll", Poll_flag);
+
+    auto loop_ptr = bsp_sockets::EventLoop::create(Poll_flag);
 
     std::shared_ptr<UdpClient> client = std::make_shared<UdpClient>(loop_ptr, std::move(parser));
 

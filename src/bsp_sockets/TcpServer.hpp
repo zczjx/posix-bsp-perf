@@ -28,6 +28,7 @@ using TcpServerParams = struct TcpServerParams
     int port{-1};
     int thread_num{0};
     int max_connections{0};
+    std::string pollType{"epoll"};
 };
 class TcpServer: public std::enable_shared_from_this<TcpServer>
 {
@@ -67,6 +68,8 @@ public:
     std::shared_ptr<EventLoop> getEventLoop() { return m_loop; }
     std::shared_ptr<ThreadPool> getThreadPool() { return m_thread_pool; }
 
+    std::string getPollType(){ return m_server_params.pollType;}
+
 public:
     MsgDispatcher& getMsgDispatcher() { return m_msg_dispatcher; }
     using connectionCallback = std::function<void(std::shared_ptr<ISocketHelper> conn)>;
@@ -74,6 +77,8 @@ public:
     void setConnectionCloseCallback(connectionCallback cb) { onConnectionClose = cb; }
     connectionCallback onConnectionEstablish{nullptr};//用户设置连接建立后的回调函数
     connectionCallback onConnectionClose{nullptr};//用户设置连接释放后的回调函数
+
+
 
 private:
 
@@ -95,6 +100,8 @@ private:
 
     std::vector<std::shared_ptr<TcpConnection>> m_connections_pool{};//连接池
     MsgDispatcher m_msg_dispatcher{};
+
+
 };
 
 }
