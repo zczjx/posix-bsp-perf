@@ -71,14 +71,14 @@ void domain(int argc, char* argv[])
     parser.addOption("--server_port", int32_t(12345), "port number for the tcp server");
     parser.addOption("--name", std::string("aio_tcpclient"), "name of the tcp client");
     parser.addOption("--thread_num", int32_t(30), "thread number for the tcp server");
-    parser.addOption("--poll", std::string("libevent"), "choose Poll or Epoll or Libevent for Eventloop");
+    parser.addOption("--poll", std::string("epoll"), "choose Poll or Epoll for Eventloop");
     parser.parseArgs(argc, argv);
 
     std::string Poll_flag{};
     parser.getOptionVal("--poll", Poll_flag);
 
-    auto loop_ptr = bsp_sockets::IEventLoop::create(Poll_flag);
     BSP_TRACE_EVENT_BEGIN("aio tcpclient");
+    auto loop_ptr = bsp_sockets::IEventLoop::create(Poll_flag);
     BSP_TRACE_EVENT_BEGIN("aio tcpclient create");
     std::shared_ptr<TcpClient> client = std::make_shared<TcpClient>(loop_ptr, std::move(parser));
     BSP_TRACE_EVENT_END();

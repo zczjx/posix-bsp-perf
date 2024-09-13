@@ -37,8 +37,11 @@ int main(int argc, char* argv[])
     auto loop_ptr = bsp_sockets::IEventLoop::create(Poll_flag);
     BspTrace perfTracer("./aio_tcpserver.perfetto");
 
+    std::string Poll_flag{};
+    parser.getOptionVal("--poll", Poll_flag);
+
     BSP_TRACE_EVENT_BEGIN("aio tcpserver");
-    std::shared_ptr<EventLoop> loop_ptr = std::make_shared<EventLoop>();
+    auto loop_ptr = bsp_sockets::EventLoop::create(Poll_flag);
 
     BSP_TRACE_EVENT_BEGIN("aio tcpserver create");
     std::shared_ptr<TcpServer> server = std::make_shared<TcpServer>(loop_ptr, std::move(parser));

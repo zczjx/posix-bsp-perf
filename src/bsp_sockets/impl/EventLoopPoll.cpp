@@ -50,7 +50,6 @@ EventLoopPoll::EventLoopPoll():
             it->cb(loop, it->cb_data);
         }
     };
-
     addIoEvent(m_params.m_timer_queue->getNotifier(), timerQueueCallback, POLLIN, m_params.m_timer_queue);
 }
 
@@ -60,7 +59,6 @@ void EventLoopPoll::processEvents()
     {
         thread_local size_t tid = std::hash<std::thread::id>{}(std::this_thread::get_id());
         int nfds = ::poll(m_params.m_fds, m_params.m_nfds, -1);
-
         for (int i = 0; i < m_params.m_nfds; ++i)
         {
             int fd= m_params.m_fds[i].fd;
@@ -121,7 +119,6 @@ void EventLoopPoll::addIoEvent(int fd, ioCallback proc, int mask, std::any args)
     {
         mask = POLLOUT;
     }
-
     int f_mask = 0;
     EventLoopParams::ioevIterator it = m_params.m_io_events.find(fd);
     if (it == m_params.m_io_events.end())
@@ -228,7 +225,6 @@ void EventLoopPoll::delIoEvent(int fd)
     {
         return;
     }
-
     m_params.m_io_events.erase(it);
     m_params.m_listening.erase(fd);
 
@@ -307,5 +303,9 @@ std::shared_ptr<TimerQueue>& EventLoopPoll::getTimerQueue()
     return m_params.m_timer_queue;
 }
 
+<<<<<<< HEAD
+=======
+
+>>>>>>> cherry pick the final change from master into trace branch
 } //namespace bsp_sockets
 
