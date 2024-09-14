@@ -144,7 +144,10 @@ void TimerQueue::heapDel(int pos)
 
     m_count--;
     m_event_list.pop_back();
-    heapHold(pos);
+
+
+    heapHold(pos);//sink
+         
 }
 
 void TimerQueue::heapPop()
@@ -198,5 +201,6 @@ void TimerQueue::heapHold(int pos)
         heapHold(min_pos);
     }
 }
+
 
 } // namespace bsp_sockets

@@ -41,6 +41,7 @@ TcpServer::TcpServer(std::shared_ptr<EventLoop> loop, bsp_perf::shared::ArgParse
     m_args.getOptionVal("--port", m_server_params.port);
     m_args.getOptionVal("--thread_num", m_server_params.thread_num);
     m_args.getOptionVal("--max_connections", m_server_params.max_connections);
+    m_args.getOptionVal("--poll", m_server_params.pollType);
 
     m_logger->setPattern();
     ::bzero(&m_conn_addr, sizeof(m_conn_addr));
@@ -203,6 +204,7 @@ void TcpServer::doAccept()
             {
                 throw BspSocketException("open()");
             }
+            conn_full = false;
         }
         else
         {
@@ -247,6 +249,7 @@ void TcpServer::doAccept()
                     else
                     {
                         m_connections_pool[connfd] = std::make_shared<TcpConnection>(connfd, m_loop, shared_from_this());
+                        m_connections_pool[connfd]->activate(connfd,m_loop);
                     }
                 }
             }

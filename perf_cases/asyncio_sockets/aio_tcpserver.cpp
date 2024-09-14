@@ -1,5 +1,7 @@
 #include<bsp_sockets/TcpServer.hpp>
 #include<bsp_sockets/EventLoop.hpp>
+#include <bsp_sockets/EventLoopEpoll.hpp>
+#include <bsp_sockets/EventLoopPoll.hpp>
 #include <shared/BspLogger.hpp>
 #include <iostream>
 
@@ -24,9 +26,13 @@ int main(int argc, char* argv[])
     parser.addOption("--port", int32_t(12345), "port number for the tcp server");
     parser.addOption("--thread_num", int32_t(10), "thread number for the tcp server");
     parser.addOption("--max_connections", int32_t(1024), "thread number for the tcp server");
+    parser.addOption("--poll", std::string("epoll"), "choose Poll or Epoll for Eventloop");
     parser.parseArgs(argc, argv);
 
-    std::shared_ptr<EventLoop> loop_ptr = std::make_shared<EventLoop>();
+    std::string Poll_flag{};
+    parser.getOptionVal("--poll", Poll_flag);
+
+    auto loop_ptr = bsp_sockets::EventLoop::create(Poll_flag);
 
     std::shared_ptr<TcpServer> server = std::make_shared<TcpServer>(loop_ptr, std::move(parser));
     std::shared_ptr<BspLogger> logger = std::make_shared<BspLogger>("aio_tcpserver");
