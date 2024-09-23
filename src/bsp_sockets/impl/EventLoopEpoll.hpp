@@ -39,8 +39,6 @@ private:
     EventLoopParams m_params{};
 
     friend void timerQueueCallback(IEventLoop& loop, int fd, std::any args);
-
-
 };
 
 }

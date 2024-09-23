@@ -36,13 +36,12 @@ struct EventLoopParams
 
     struct pollfd m_fds[1024];
     int m_nfds{0};
-        
     //map: fd->IOEvent
-    std::unordered_map<int, IOEvent> m_io_events;
+    std::unordered_map<int, IOEvent> m_io_events{};
     using ioevIterator = std::unordered_map<int, IOEvent>::iterator;
-    std::shared_ptr<TimerQueue> m_timer_queue;
+    std::shared_ptr<TimerQueue> m_timer_queue{nullptr};
     //此队列用于:暂存将要执行的任务
-    std::vector<std::pair<pendingFunc, std::any> > m_pending_factors;
+    std::vector<std::pair<pendingFunc, std::any> > m_pending_factors{};
 
     std::unordered_set<int> m_listening{};
 
