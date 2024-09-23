@@ -1,19 +1,16 @@
-#ifndef __EVENT_LOOP_POLL_H__
-#define __EVENT_LOOP_POLL_H__
+#ifndef __EVENT_LOOP_EPOLL_H__
+#define __EVENT_LOOP_EPOLL_H__
 
+#include <bsp_sockets/EventLoop.hpp>
 
-
-#include "EventLoop.hpp"
-
-//#define USE_EPOLL
 
 namespace bsp_sockets
 {
 
-class EventLoopPoll : public EventLoop, public std::enable_shared_from_this<EventLoopPoll>
+class EventLoopEpoll: public EventLoop, public std::enable_shared_from_this<EventLoopEpoll>
 {
 public:
-    EventLoopPoll();
+    EventLoopEpoll();
 
     void processEvents() override;
 
@@ -35,14 +32,14 @@ public:
     int runEvery(timerCallback cb, std::any args, int sec, int millis = 0) override;
     void delTimer(int timer_id) override;
 
-
     std::shared_ptr<TimerQueue>& getTimerQueue() override;
-    
+
 
 private:
-    EventLoopParams m_params;
+    EventLoopParams m_params{};
 
     friend void timerQueueCallback(EventLoop& loop, int fd, std::any args);
+
 
 };
 

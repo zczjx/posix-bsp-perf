@@ -1,4 +1,4 @@
-#include <bsp_sockets/EventLoopPoll.hpp>
+#include "EventLoopPoll.hpp"
 #include "BspSocketException.hpp"
 #include "TimerQueue.hpp"
 
@@ -24,12 +24,11 @@ namespace bsp_sockets
 using namespace bsp_perf::shared;
 
 EventLoopPoll::EventLoopPoll():
-    m_params{-1,{},{},0,{},std::make_shared<TimerQueue>(),
-        {},{},std::make_unique<BspLogger>("EventLoopPoll")}
-    
+    m_params{
+        .m_timer_queue = std::make_shared<TimerQueue>(),
+        .m_logger =std::make_unique<BspLogger>("EventLoopPoll")}
+
 {
-    //std::cout<< "Eventloop 第 " << ++total_construct_times <<"构造"<<std::endl;
-    //std::cout<< this << "第" << ++m_construct_times <<"次构造" << std::endl;
     for(int i=0; i<1024; ++i)
     {
         m_params.m_fds[i].fd = -1;
@@ -51,7 +50,7 @@ EventLoopPoll::EventLoopPoll():
             it->cb(loop, it->cb_data);
         }
     };
-    //std::cout << this << "添加事件" << m_timer_queue -> getNotifier() << "@67行 in Eventloop.cpp" << std::endl;
+
     addIoEvent(m_params.m_timer_queue->getNotifier(), timerQueueCallback, POLLIN, m_params.m_timer_queue);
 }
 
@@ -61,8 +60,7 @@ void EventLoopPoll::processEvents()
     {
         thread_local size_t tid = std::hash<std::thread::id>{}(std::this_thread::get_id());
         int nfds = ::poll(m_params.m_fds, m_params.m_nfds, -1);
-        //std::cout << this <<" " << nfds << "@57行in EventLoop.cpp"<<std::endl;
-        //std::cout << this << " " << m_nfds << "@58行 in EventLoop.cpp"<< std::endl;
+
         for (int i = 0; i < m_params.m_nfds; ++i)
         {
             int fd= m_params.m_fds[i].fd;
@@ -123,7 +121,7 @@ void EventLoopPoll::addIoEvent(int fd, ioCallback proc, int mask, std::any args)
     {
         mask = POLLOUT;
     }
-    
+
     int f_mask = 0;
     EventLoopParams::ioevIterator it = m_params.m_io_events.find(fd);
     if (it == m_params.m_io_events.end())
@@ -167,9 +165,7 @@ void EventLoopPoll::addIoEvent(int fd, ioCallback proc, int mask, std::any args)
                 m_params.m_fds[i].events = f_mask;
                 break;
             }
-            
         }
-        
     }
     m_params.m_listening.insert(fd); //加入到监听集合中
 }
@@ -232,7 +228,7 @@ void EventLoopPoll::delIoEvent(int fd)
     {
         return;
     }
-    std::cout << "删除事件" << fd << std::endl;
+
     m_params.m_io_events.erase(it);
     m_params.m_listening.erase(fd);
 
@@ -310,7 +306,6 @@ std::shared_ptr<TimerQueue>& EventLoopPoll::getTimerQueue()
 {
     return m_params.m_timer_queue;
 }
-
 
 } //namespace bsp_sockets
 
