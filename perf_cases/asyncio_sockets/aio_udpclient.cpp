@@ -1,6 +1,4 @@
 #include <bsp_sockets/EventLoop.hpp>
-#include <bsp_sockets/EventLoopEpoll.hpp>
-#include <bsp_sockets/EventLoopPoll.hpp>
 #include <bsp_sockets/UdpClient.hpp>
 #include <shared/BspLogger.hpp>
 #include <shared/ArgParser.hpp>
