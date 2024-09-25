@@ -1,6 +1,7 @@
 #include "EventLoopEpoll.hpp"
 #include "BspSocketException.hpp"
 #include "TimerQueue.hpp"
+#include <profiler/BspTrace.hpp>
 
 #include <sys/epoll.h>
 #include <stdio.h>
@@ -56,6 +57,7 @@ void EventLoopEpoll::processEvents()
 {
     while (true)
     {
+        BSP_TRACE_EVENT_BEGIN("EventLoopEpoll::processEvents");
         thread_local size_t tid = std::hash<std::thread::id>{}(std::this_thread::get_id());
         int nfds = ::epoll_wait(m_params.m_epoll_fd, m_params.m_fired_events, MAX_EVENTS, 10);
         for (int i = 0; i < nfds; ++i)
@@ -94,6 +96,7 @@ void EventLoopEpoll::processEvents()
             }
         }
         runTask();
+        BSP_TRACE_EVENT_END();
     }
 }
 
@@ -214,6 +217,7 @@ void EventLoopEpoll::addTask(pendingFunc func, std::any args)
 
 void EventLoopEpoll::runTask()
 {
+    BSP_TRACE_EVENT_BEGIN("EventLoopEpoll::runTask");
     std::vector<std::pair<pendingFunc, std::any> >::iterator it;
     for (it = m_params.m_pending_factors.begin(); it != m_params.m_pending_factors.end(); ++it)
     {
@@ -222,6 +226,7 @@ void EventLoopEpoll::runTask()
         func(shared_from_this(), args);
     }
     m_params.m_pending_factors.clear();
+    BSP_TRACE_EVENT_END();
 }
 
 int EventLoopEpoll::runAt(timerCallback cb, std::any args, time_t ts)
