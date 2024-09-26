@@ -10,6 +10,7 @@
 #include <functional>
 #include <iostream>
 #include <memory>
+#include <poll.h>
 
 namespace bsp_sockets
 {
@@ -27,49 +28,53 @@ struct IOEvent//注册的IO事件
     std::any rcb_args{nullptr};   //extra arguments for read_cb
     std::any wcb_args{nullptr};  //extra arguments for write_cb
 };
-class EventLoop : public std::enable_shared_from_this<EventLoop>
+
+struct EventLoopParams
 {
-public:
-    EventLoop();
-
-    void processEvents();
-
-    //operator for IO event
-    void addIoEvent(int fd, ioCallback proc, int mask, std::any args);
-    //delete only mask event for fd in epoll
-    void delIoEvent(int fd, int mask);
-    //delete event for fd in epoll
-    void delIoEvent(int fd);
-    //get all fds this loop is listening
-    std::unordered_set<int>& getAllListenings() { return m_listening; }
-
-    void addTask(pendingFunc func, std::any args);
-    void runTask();
-
-    std::shared_ptr<TimerQueue>& getTimerQueue() { return m_timer_queue; }
-    //operator for timer event
-    int runAt(timerCallback cb, std::any args, time_t ts);
-    int runAfter(timerCallback cb, std::any args, int sec, int millis = 0);
-    int runEvery(timerCallback cb, std::any args, int sec, int millis = 0);
-    void delTimer(int timer_id);
-
-private:
     int m_epoll_fd{-1};
     struct epoll_event m_fired_events[MAX_EVENTS];
+
+    struct pollfd m_fds[1024];
+    int m_nfds{0};
     //map: fd->IOEvent
-    std::unordered_map<int, IOEvent> m_io_events;
+    std::unordered_map<int, IOEvent> m_io_events{};
     using ioevIterator = std::unordered_map<int, IOEvent>::iterator;
-    std::shared_ptr<TimerQueue> m_timer_queue;
+    std::shared_ptr<TimerQueue> m_timer_queue{nullptr};
     //此队列用于:暂存将要执行的任务
-    std::vector<std::pair<pendingFunc, std::any> > m_pending_factors;
+    std::vector<std::pair<pendingFunc, std::any> > m_pending_factors{};
 
     std::unordered_set<int> m_listening{};
 
     std::unique_ptr<bsp_perf::shared::BspLogger> m_logger;
+};
 
-    friend void timerQueueCallback(EventLoop& loop, int fd, std::any args);
+class EventLoop
+{
+public:
+
+    virtual void processEvents() = 0;
+
+    //operator for IO event
+    virtual void addIoEvent(int fd, ioCallback proc, int mask, std::any args) = 0;
+    //delete only mask event for fd in epoll
+    virtual void delIoEvent(int fd, int mask) = 0;
+    //delete event for fd in epoll
+    virtual void delIoEvent(int fd) = 0;
+    //get all fds this loop is listening
+    virtual std::unordered_set<int>& getAllListenings() = 0;
+
+    virtual void addTask(pendingFunc func, std::any args) = 0;
+    virtual void runTask() = 0;
+
+    virtual std::shared_ptr<TimerQueue>& getTimerQueue() = 0;
+    //operator for timer event
+    virtual int runAt(timerCallback cb, std::any args, time_t ts) =0;
+    virtual int runAfter(timerCallback cb, std::any args, int sec, int millis = 0) = 0;
+    virtual int runEvery(timerCallback cb, std::any args, int sec, int millis = 0) = 0;
+    virtual void delTimer(int timer_id)  = 0;
+
+    static std::shared_ptr<EventLoop> create(const std::string flag);
 };
 
 }
-
 #endif
