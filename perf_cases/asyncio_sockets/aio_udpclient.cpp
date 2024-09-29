@@ -1,4 +1,4 @@
-#include <bsp_sockets/EventLoop.hpp>
+#include <bsp_sockets/IEventLoop.hpp>
 #include <bsp_sockets/UdpClient.hpp>
 #include <shared/BspLogger.hpp>
 #include <shared/ArgParser.hpp>
@@ -70,7 +70,7 @@ void domain(int argc, char* argv[])
     std::string Poll_flag{};
     parser.getOptionVal("--poll", Poll_flag);
 
-    auto loop_ptr = bsp_sockets::EventLoop::create(Poll_flag);
+    auto loop_ptr = bsp_sockets::IEventLoop::create(Poll_flag);
 
     std::shared_ptr<UdpClient> client = std::make_shared<UdpClient>(loop_ptr, std::move(parser));
 

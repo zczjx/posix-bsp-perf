@@ -8,7 +8,7 @@
 
 namespace bsp_sockets
 {
-class EventLoop;
+class IEventLoop;
 static constexpr int MSG_HEAD_LENGTH = sizeof(size_t) + sizeof(int);
 static constexpr int MSG_LENGTH_LIMIT = 65536 - MSG_HEAD_LENGTH;
 
@@ -25,9 +25,9 @@ using msgHead = struct msgHead
 
 using msgTask = struct msgTask
 {
-    msgTask(std::function<void(std::shared_ptr<EventLoop>, std::any)> task, std::any args):
+    msgTask(std::function<void(std::shared_ptr<IEventLoop>, std::any)> task, std::any args):
         task(task), args(args) {}
-    std::function<void(std::shared_ptr<EventLoop>, std::any)> task;
+    std::function<void(std::shared_ptr<IEventLoop>, std::any)> task;
     std::any args;
  };//for NEW_TASK, 向sub-thread下发待执行任务
 

@@ -18,25 +18,25 @@ namespace bsp_sockets
 
 using namespace bsp_perf::shared;
 
-static void readCallback(std::shared_ptr<EventLoop> loop, int fd, std::any args)
+static void readCallback(std::shared_ptr<IEventLoop> loop, int fd, std::any args)
 {
     std::shared_ptr<TcpClient> client = std::any_cast<std::shared_ptr<TcpClient>>(args);
     client->handleRead();
 }
 
-static void writeCallback(std::shared_ptr<EventLoop> loop, int fd, std::any args)
+static void writeCallback(std::shared_ptr<IEventLoop> loop, int fd, std::any args)
 {
     std::shared_ptr<TcpClient> client = std::any_cast<std::shared_ptr<TcpClient>>(args);
     client->handleWrite();
 }
 
-static void reConnectCallback(std::shared_ptr<EventLoop> loop, std::any usr_data)
+static void reConnectCallback(std::shared_ptr<IEventLoop> loop, std::any usr_data)
 {
     std::shared_ptr<TcpClient> client = std::any_cast<std::shared_ptr<TcpClient>>(usr_data);
     client->doConnect();
 }
 
-static void connectEventCallback(std::shared_ptr<EventLoop> loop, int fd, std::any args)
+static void connectEventCallback(std::shared_ptr<IEventLoop> loop, int fd, std::any args)
 {
     std::shared_ptr<TcpClient> client = std::any_cast<std::shared_ptr<TcpClient>>(args);
     loop->delIoEvent(fd);
@@ -65,7 +65,7 @@ static void connectEventCallback(std::shared_ptr<EventLoop> loop, int fd, std::a
     }
 }
 
-TcpClient::TcpClient(std::shared_ptr<EventLoop> loop, ArgParser&& args):
+TcpClient::TcpClient(std::shared_ptr<IEventLoop> loop, ArgParser&& args):
     m_loop(loop),
     m_args{std::move(args)},
     m_logger{std::make_unique<BspLogger>("TcpClient")}

@@ -4,7 +4,7 @@
 #include "impl/ISocketHelper.hpp"
 #include "impl/MsgDispatcher.hpp"
 
-#include "EventLoop.hpp"
+#include "IEventLoop.hpp"
 #include <shared/BspLogger.hpp>
 #include <shared/ArgParser.hpp>
 
@@ -30,7 +30,7 @@ using UdpServerParams = struct UdpServerParams
 class UdpServer: public ISocketHelper, public std::enable_shared_from_this<UdpServer>
 {
 public:
-    UdpServer(std::shared_ptr<EventLoop> loop, ArgParser&& args);
+    UdpServer(std::shared_ptr<IEventLoop> loop, ArgParser&& args);
 
     virtual ~UdpServer();
 
@@ -48,7 +48,7 @@ public:
     void addMsgCallback(std::string& cmd_name, msgCallback msg_cb, std::any usr_data)
     { m_msg_dispatcher.addMsgCallback(cmd_name, msg_cb, usr_data); }
 
-    std::shared_ptr<EventLoop> getEventLoop() { return m_loop; }
+    std::shared_ptr<IEventLoop> getEventLoop() { return m_loop; }
 
     void handleRead();
 
@@ -64,7 +64,7 @@ private:
     ArgParser m_args;
 
     int m_sockfd{-1};
-    std::shared_ptr<EventLoop> m_loop{nullptr};
+    std::shared_ptr<IEventLoop> m_loop{nullptr};
 
     struct sockaddr m_latest_client_addr{};
 

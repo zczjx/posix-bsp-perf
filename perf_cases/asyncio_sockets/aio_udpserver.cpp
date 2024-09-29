@@ -1,5 +1,5 @@
 #include<bsp_sockets/UdpServer.hpp>
-#include<bsp_sockets/EventLoop.hpp>
+#include<bsp_sockets/IEventLoop.hpp>
 #include <shared/BspLogger.hpp>
 #include <iostream>
 
@@ -28,7 +28,7 @@ int main(int argc, char* argv[])
     std::string Poll_flag{};
     parser.getOptionVal("--poll", Poll_flag);
 
-    auto loop_ptr = bsp_sockets::EventLoop::create(Poll_flag);
+    auto loop_ptr = bsp_sockets::IEventLoop::create(Poll_flag);
 
     std::shared_ptr<UdpServer> server = std::make_shared<UdpServer>(loop_ptr, std::move(parser));
     std::shared_ptr<BspLogger> logger = std::make_shared<BspLogger>("aio_udpserver");

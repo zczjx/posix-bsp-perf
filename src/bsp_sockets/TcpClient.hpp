@@ -5,7 +5,7 @@
 #include <sys/socket.h>
 #include <netinet/in.h>
 
-#include "EventLoop.hpp"
+#include "IEventLoop.hpp"
 #include "impl/ISocketHelper.hpp"
 #include "impl/IOBuffer.hpp"
 #include "impl/MsgDispatcher.hpp"
@@ -32,7 +32,7 @@ using TcpClientParams = struct TcpClientParams
 class TcpClient: public ISocketHelper, public std::enable_shared_from_this<TcpClient>
 {
 public:
-    TcpClient(std::shared_ptr<EventLoop> loop, ArgParser&& args);
+    TcpClient(std::shared_ptr<IEventLoop> loop, ArgParser&& args);
     virtual ~TcpClient() { stop(); }
 
     TcpClient(const TcpClient&) = delete;
@@ -88,7 +88,7 @@ public:
 
     void setNetConnected(bool connected) { m_net_connected = connected; }
 
-    std::shared_ptr<EventLoop> getEventLoop() { return m_loop; }
+    std::shared_ptr<IEventLoop> getEventLoop() { return m_loop; }
 
 private:
     TcpClientParams m_client_params;
@@ -97,7 +97,7 @@ private:
     bool m_net_connected{false};
     int m_sockfd{-1}; // must set to -1 as default value, otherwise a random value socket fd will have side effect on other thread socket fd
 
-    std::shared_ptr<EventLoop> m_loop{nullptr};
+    std::shared_ptr<IEventLoop> m_loop{nullptr};
     std::atomic_bool m_running{false};
     MsgDispatcher m_msg_dispatcher{};
     //when connection success, call _onconnection(_onconn_args)

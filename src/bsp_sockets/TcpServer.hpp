@@ -4,7 +4,7 @@
 #include "impl/ThreadPool.hpp"
 #include "impl/TcpConnection.hpp"
 #include "impl/ISocketHelper.hpp"
-#include "EventLoop.hpp"
+#include "IEventLoop.hpp"
 
 #include "impl/MsgDispatcher.hpp"
 #include <shared/BspLogger.hpp>
@@ -34,7 +34,7 @@ using TcpServerParams = struct TcpServerParams
 class TcpServer: public std::enable_shared_from_this<TcpServer>
 {
 public:
-    TcpServer(std::shared_ptr<EventLoop> loop, ArgParser&& args);
+    TcpServer(std::shared_ptr<IEventLoop> loop, ArgParser&& args);
 
     virtual ~TcpServer();//TcpServer类使用时往往具有程序的完全生命周期，其实并不需要析构函数
 
@@ -66,7 +66,7 @@ public:
 
     void insertConnectionToPool(std::shared_ptr<TcpConnection> conn, int connection_fd);
 
-    std::shared_ptr<EventLoop> getEventLoop() { return m_loop; }
+    std::shared_ptr<IEventLoop> getEventLoop() { return m_loop; }
     std::shared_ptr<ThreadPool> getThreadPool() { return m_thread_pool; }
 
     std::string getPollType(){ return m_server_params.pollType;}
@@ -86,7 +86,7 @@ private:
     TcpServerParams m_server_params;
     int m_sockfd{-1};
     int m_reservfd{-1};
-    std::shared_ptr<EventLoop> m_loop{nullptr};
+    std::shared_ptr<IEventLoop> m_loop{nullptr};
     std::shared_ptr<ThreadPool> m_thread_pool{nullptr};
     struct sockaddr_in m_conn_addr{};
     socklen_t m_addrlen{sizeof(struct sockaddr_in)};

@@ -32,7 +32,7 @@ static void connectOnClose(std::shared_ptr<ISocketHelper> conn)
     std::cout << "TcpServer onConnectionClose fd: " << conn->getFd() << std::endl;
 }
 
-TcpServer::TcpServer(std::shared_ptr<EventLoop> loop, bsp_perf::shared::ArgParser&& args):
+TcpServer::TcpServer(std::shared_ptr<IEventLoop> loop, bsp_perf::shared::ArgParser&& args):
     m_loop(loop),
     m_args{std::move(args)},
     m_logger{std::make_unique<BspLogger>("TcpServer")}
@@ -145,7 +145,7 @@ void TcpServer::startLoop()
         }
     }
 
-    auto accepterCb = [](std::shared_ptr<EventLoop> loop, int fd, std::any args)
+    auto accepterCb = [](std::shared_ptr<IEventLoop> loop, int fd, std::any args)
     {
         auto server = std::any_cast<std::shared_ptr<TcpServer>>(args);
         server->doAccept();

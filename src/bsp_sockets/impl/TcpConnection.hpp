@@ -1,7 +1,7 @@
 #ifndef TCP_CONNECTION_HPP
 #define TCP_CONNECTION_HPP
 
-#include <bsp_sockets/EventLoop.hpp>
+#include <bsp_sockets/IEventLoop.hpp>
 #include "ISocketHelper.hpp"
 #include <shared/BspLogger.hpp>
 #include "IOBuffer.hpp"
@@ -16,9 +16,9 @@ class TcpServer;
 class TcpConnection: public ISocketHelper, public std::enable_shared_from_this<TcpConnection>
 {
 public:
-    TcpConnection(int conn_fd, std::shared_ptr<EventLoop> loop, std::weak_ptr<TcpServer> server);
+    TcpConnection(int conn_fd, std::shared_ptr<IEventLoop> loop, std::weak_ptr<TcpServer> server);
 
-    void activate(int conn_fd, std::shared_ptr<EventLoop> loop);
+    void activate(int conn_fd, std::shared_ptr<IEventLoop> loop);
 
     void handleRead();
 
@@ -32,7 +32,7 @@ public:
 
 private:
     int m_connection_fd{-1};
-    std::shared_ptr<EventLoop> m_loop{nullptr};
+    std::shared_ptr<IEventLoop> m_loop{nullptr};
     std::weak_ptr<TcpServer> m_tcp_server;
     InputBufferQueue m_inbuf_queue{};
     OutputBufferQueue m_outbuf_queue{};
