@@ -1,7 +1,6 @@
 FROM zczjx/bsp-perf-build-env-x86-base:latest
 
-RUN apt-get update && \
-    apt-get install -y x11-apps
+RUN apt-get update
 # 定义构建参数
 ARG USER_ID
 ARG GROUP_ID
