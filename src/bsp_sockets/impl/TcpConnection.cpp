@@ -17,7 +17,7 @@ namespace bsp_sockets
 {
 using namespace bsp_perf::shared;
 
-TcpConnection::TcpConnection(int conn_fd, std::shared_ptr<EventLoop> loop, std::weak_ptr<TcpServer> server):
+TcpConnection::TcpConnection(int conn_fd, std::shared_ptr<IEventLoop> loop, std::weak_ptr<TcpServer> server):
     m_connection_fd(conn_fd),
     m_loop(loop),
     m_tcp_server(server),
@@ -26,7 +26,7 @@ TcpConnection::TcpConnection(int conn_fd, std::shared_ptr<EventLoop> loop, std::
     m_logger->setPattern();
 }
 
-void TcpConnection::activate(int conn_fd, std::shared_ptr<EventLoop> loop)
+void TcpConnection::activate(int conn_fd, std::shared_ptr<IEventLoop> loop)
 {
     BSP_TRACE_EVENT_BEGIN("TcpConnection::activate");
     m_connection_fd = conn_fd;
@@ -53,7 +53,7 @@ void TcpConnection::activate(int conn_fd, std::shared_ptr<EventLoop> loop)
         server->incConnection();
     }
 
-    auto tcp_rcb = [](std::shared_ptr<EventLoop> loop, int fd, std::any args)
+    auto tcp_rcb = [](std::shared_ptr<IEventLoop> loop, int fd, std::any args)
     {
         std::shared_ptr<TcpConnection> conn = std::any_cast<std::shared_ptr<TcpConnection>>(args);
         conn->handleRead();
@@ -180,7 +180,7 @@ int TcpConnection::sendData(size_t cmd_id, std::vector<uint8_t>& data)
         return -1;
     }
 
-    auto tcp_wcb = [](std::shared_ptr<EventLoop> loop, int fd, std::any args)
+    auto tcp_wcb = [](std::shared_ptr<IEventLoop> loop, int fd, std::any args)
     {
         std::shared_ptr<TcpConnection> conn = std::any_cast<std::shared_ptr<TcpConnection>>(args);
         conn->handleWrite();

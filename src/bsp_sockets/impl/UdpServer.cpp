@@ -16,13 +16,13 @@ namespace bsp_sockets
 
 using namespace bsp_perf::shared;
 
-static void readCallback(std::shared_ptr<EventLoop> loop, int fd, std::any args)
+static void readCallback(std::shared_ptr<IEventLoop> loop, int fd, std::any args)
 {
     std::shared_ptr<UdpServer> server = std::any_cast<std::shared_ptr<UdpServer>>(args);
     server->handleRead();
 }
 
-UdpServer::UdpServer(std::shared_ptr<EventLoop> loop, ArgParser&& args):
+UdpServer::UdpServer(std::shared_ptr<IEventLoop> loop, ArgParser&& args):
     m_rbuf(MSG_LENGTH_LIMIT),
     m_wbuf(MSG_LENGTH_LIMIT),
     m_loop(loop),

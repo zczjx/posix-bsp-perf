@@ -1,13 +1,13 @@
 #ifndef __EVENT_LOOP_EPOLL_H__
 #define __EVENT_LOOP_EPOLL_H__
 
-#include <bsp_sockets/EventLoop.hpp>
+#include <bsp_sockets/IEventLoop.hpp>
 
 
 namespace bsp_sockets
 {
 
-class EventLoopEpoll: public EventLoop, public std::enable_shared_from_this<EventLoopEpoll>
+class EventLoopEpoll: public IEventLoop, public std::enable_shared_from_this<EventLoopEpoll>
 {
 public:
     EventLoopEpoll();
@@ -38,7 +38,7 @@ public:
 private:
     EventLoopParams m_params{};
 
-    friend void timerQueueCallback(EventLoop& loop, int fd, std::any args);
+    friend void timerQueueCallback(IEventLoop& loop, int fd, std::any args);
 
 
 };

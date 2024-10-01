@@ -3,7 +3,7 @@
 
 #include "impl/ISocketHelper.hpp"
 #include "impl/MsgDispatcher.hpp"
-#include "EventLoop.hpp"
+#include "IEventLoop.hpp"
 #include <shared/BspLogger.hpp>
 #include <shared/ArgParser.hpp>
 
@@ -23,7 +23,7 @@ using UdpClientParams = struct UdpClientParams
 class UdpClient: public ISocketHelper, public std::enable_shared_from_this<UdpClient>
 {
 public:
-    UdpClient(std::shared_ptr<EventLoop> loop, ArgParser&& args);
+    UdpClient(std::shared_ptr<IEventLoop> loop, ArgParser&& args);
 
     virtual ~UdpClient();
 
@@ -42,7 +42,7 @@ public:
     void addMsgCallback(std::string& cmd_name, msgCallback msg_cb, std::any usr_data)
     { m_msg_dispatcher.addMsgCallback(cmd_name, msg_cb, usr_data); }
 
-    std::shared_ptr<EventLoop> getEventLoop() { return m_loop; }
+    std::shared_ptr<IEventLoop> getEventLoop() { return m_loop; }
 
     void handleRead();
 
@@ -70,7 +70,7 @@ private:
     int m_sockfd{-1};
     std::vector<uint8_t> m_rbuf{};
     std::vector<uint8_t> m_wbuf{};
-    std::shared_ptr<EventLoop> m_loop{nullptr};
+    std::shared_ptr<IEventLoop> m_loop{nullptr};
     MsgDispatcher m_msg_dispatcher{};
 
     std::atomic_bool m_running{false};

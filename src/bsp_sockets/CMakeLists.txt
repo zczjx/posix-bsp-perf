@@ -10,7 +10,7 @@ set(CMAKE_CXX_STANDARD 17)
 
 # Add the source files
 set(SOURCES
-  impl/EventLoop.cpp
+  impl/IEventLoop.cpp
   impl/EventLoopEpoll.cpp
   impl/EventLoopPoll.cpp
   impl/IOBuffer.cpp

@@ -13,9 +13,9 @@
 namespace bsp_sockets
 {
 
-class EventLoop;
+class IEventLoop;
 
-using timerCallback = std::function<void(std::shared_ptr<EventLoop> loop, std::any usr_data)>; //Timer事件回调函数
+using timerCallback = std::function<void(std::shared_ptr<IEventLoop> loop, std::any usr_data)>; //Timer事件回调函数
 using timerEvent  = struct timerEvent//注册的Timer事件
 {
     timerEvent(timerCallback timer_cb, std::any data, uint64_t arg_ts, uint32_t arg_interval = 0):

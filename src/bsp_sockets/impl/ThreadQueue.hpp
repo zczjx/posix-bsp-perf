@@ -39,7 +39,7 @@ SOFTWARE.
 #include <unistd.h>
 
 #include <shared/BspLogger.hpp>
-#include <bsp_sockets/EventLoop.hpp>
+#include <bsp_sockets/IEventLoop.hpp>
 #include "BspSocketException.hpp"
 
 namespace bsp_sockets
@@ -99,10 +99,10 @@ public:
         std::swap(tmp_queue, m_queue);
     }
 
-    std::shared_ptr<EventLoop> getLoop() { return m_loop; }
+    std::shared_ptr<IEventLoop> getLoop() { return m_loop; }
 
     //set loop and install message comming event's callback: proc
-    void setLoop(std::shared_ptr<EventLoop> loop, ioCallback proc, std::any args)
+    void setLoop(std::shared_ptr<IEventLoop> loop, ioCallback proc, std::any args)
     {
         m_loop = loop;
         m_loop->addIoEvent(m_event_fd, proc, EPOLLIN, args);
@@ -111,7 +111,7 @@ public:
 private:
     std::unique_ptr<bsp_perf::shared::BspLogger> m_logger;
     int m_event_fd{-1};
-    std::shared_ptr<EventLoop> m_loop{nullptr};
+    std::shared_ptr<IEventLoop> m_loop{nullptr};
     std::queue<T> m_queue{};
     std::mutex m_mutex{};
 };

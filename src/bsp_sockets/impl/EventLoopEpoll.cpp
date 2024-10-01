@@ -38,7 +38,7 @@ EventLoopEpoll::EventLoopEpoll():
         throw BspSocketException("new TimerQueue");
     }
 
-    auto timerQueueCallback = [](std::shared_ptr<EventLoop> loop, int fd, std::any args)
+    auto timerQueueCallback = [](std::shared_ptr<IEventLoop> loop, int fd, std::any args)
     {
         std::vector<timerEvent> fired_evs;
         auto& tq = loop->getTimerQueue();

@@ -1,5 +1,5 @@
-#ifndef __EVENT_LOOP_H__
-#define __EVENT_LOOP_H__
+#ifndef __IEVENT_LOOP_H__
+#define __IEVENT_LOOP_H__
 
 #include "impl/TimerQueue.hpp"
 #include <shared/BspLogger.hpp>
@@ -16,9 +16,9 @@ namespace bsp_sockets
 {
 static constexpr int MAX_EVENTS = 10;
 
-using ioCallback = std::function<void(std::shared_ptr<EventLoop> loop, int fd, std::any args)>;
+using ioCallback = std::function<void(std::shared_ptr<IEventLoop> loop, int fd, std::any args)>;
 //让当前loop在一次poll循环后执行指定任务
-using pendingFunc = std::function<void(std::shared_ptr<EventLoop>, std::any)>;
+using pendingFunc = std::function<void(std::shared_ptr<IEventLoop>, std::any)>;
 
 struct IOEvent//注册的IO事件
 {
@@ -48,7 +48,7 @@ struct EventLoopParams
     std::unique_ptr<bsp_perf::shared::BspLogger> m_logger;
 };
 
-class EventLoop
+class IEventLoop
 {
 public:
 
@@ -73,7 +73,10 @@ public:
     virtual int runEvery(timerCallback cb, std::any args, int sec, int millis = 0) = 0;
     virtual void delTimer(int timer_id)  = 0;
 
-    static std::shared_ptr<EventLoop> create(const std::string flag);
+
+    static std::shared_ptr<IEventLoop> create(const std::string flag);
+
+
 };
 
 }
