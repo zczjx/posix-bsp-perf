@@ -77,6 +77,7 @@ void domain(int argc, char* argv[])
     std::string Poll_flag{};
     parser.getOptionVal("--poll", Poll_flag);
 
+
     BSP_TRACE_EVENT_BEGIN("aio tcpclient");
     auto loop_ptr = bsp_sockets::IEventLoop::create(Poll_flag);
     BSP_TRACE_EVENT_BEGIN("aio tcpclient create");

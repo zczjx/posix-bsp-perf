@@ -51,10 +51,6 @@ EventLoopPoll::EventLoopPoll():
             it->cb(loop, it->cb_data);
         }
     };
-<<<<<<< HEAD
-=======
-
->>>>>>> revise small issues of bsp sockets
     addIoEvent(m_params.m_timer_queue->getNotifier(), timerQueueCallback, POLLIN, m_params.m_timer_queue);
 }
 
@@ -65,10 +61,6 @@ void EventLoopPoll::processEvents()
         BSP_TRACE_EVENT_BEGIN("EventLoopPoll::processEvents");
         thread_local size_t tid = std::hash<std::thread::id>{}(std::this_thread::get_id());
         int nfds = ::poll(m_params.m_fds, m_params.m_nfds, -1);
-<<<<<<< HEAD
-=======
-
->>>>>>> revise small issues of bsp sockets
         for (int i = 0; i < m_params.m_nfds; ++i)
         {
             int fd= m_params.m_fds[i].fd;
@@ -130,10 +122,6 @@ void EventLoopPoll::addIoEvent(int fd, ioCallback proc, int mask, std::any args)
     {
         mask = POLLOUT;
     }
-<<<<<<< HEAD
-=======
-
->>>>>>> revise small issues of bsp sockets
     int f_mask = 0;
     EventLoopParams::ioevIterator it = m_params.m_io_events.find(fd);
     if (it == m_params.m_io_events.end())

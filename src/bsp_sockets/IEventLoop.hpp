@@ -11,11 +11,6 @@
 #include <iostream>
 #include <memory>
 #include <poll.h>
-
-
-
-
-
 namespace bsp_sockets
 {
 static constexpr int MAX_EVENTS = 10;
@@ -25,7 +20,6 @@ using ioCallback = std::function<void(std::shared_ptr<IEventLoop> loop, int fd, 
 using pendingFunc = std::function<void(std::shared_ptr<IEventLoop>, std::any)>;
 
 //using libCallback = std::function<void(evutil_socket_t fd, short what, void *arg)>;
-
 struct IOEvent//注册的IO事件
 {
     int mask{0x00};             //EPOLLIN EPOLLOUT
@@ -42,8 +36,6 @@ struct EventLoopParams
 
     struct pollfd m_fds[1024];
     int m_nfds{0};
-
-
     //map: fd->IOEvent
     std::unordered_map<int, IOEvent> m_io_events{};
     using ioevIterator = std::unordered_map<int, IOEvent>::iterator;
