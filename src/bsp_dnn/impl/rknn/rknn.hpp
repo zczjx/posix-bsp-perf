@@ -10,7 +10,7 @@ class rknn : public IDnn<T>
 {
 
 public:
-    explicit rknn(const std::string& preProcessPluginPath, const std::string& postProcessPluginPath);
+    explicit rknn(const std::string& pluginPath);
     rknn(const rknn&) = delete;
     rknn& operator=(const rknn&) = delete;
     rknn(rknn&&) = delete;

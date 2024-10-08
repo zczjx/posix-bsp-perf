@@ -23,7 +23,7 @@ public:
      * - "rknn" for RKNN DNN
      * @return std::unique_ptr<IDnn> A unique pointer to the created DNN instance.
      */
-    static std::unique_ptr<IDnn<T>> create(const std::string& dnnType, const std::string& preProcessPluginPath, const std::string& postProcessPluginPath);
+    static std::unique_ptr<IDnn<T>> create(const std::string& dnnType, const std::string& pluginPath);
 
 
     virtual ~IDnn() = default;

@@ -5,7 +5,7 @@ namespace bsp_dnn
 {
 
 template <typename T>
-std::unique_ptr<IDnn<T>> IDnn<T>::create(const std::string& dnnType, const std::string& preProcessPluginPath, const std::string& postProcessPluginPath)
+std::unique_ptr<IDnn<T>> IDnn<T>::create(const std::string& dnnType, const std::string& pluginPath)
 {
     if (dnnType.compare("trt"))
     {
@@ -14,7 +14,7 @@ std::unique_ptr<IDnn<T>> IDnn<T>::create(const std::string& dnnType, const std::
     }
     else if (dnnType.compare("rknn"))
     {
-        return std::make_unique<rknn<T>>(preProcessPluginPath, postProcessPluginPath);
+        return std::make_unique<rknn<T>>(pluginPath);
     }
     else
     {
