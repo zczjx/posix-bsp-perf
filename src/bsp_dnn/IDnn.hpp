@@ -8,7 +8,8 @@
 namespace bsp_dnn {
 
 template<typename T>
-class IDnn {
+class IDnn
+{
 public:
 
     /**
