@@ -10,12 +10,12 @@ class rknn : public IDnn<T>
 {
 
 public:
-    explicit rknn(const std::string& pluginPath);
+    explicit rknn(const std::string& pluginPath="");
     rknn(const rknn&) = delete;
     rknn& operator=(const rknn&) = delete;
     rknn(rknn&&) = delete;
     rknn& operator=(rknn&&) = delete;
-    ~rknn() = default;
+    ~rknn();
 
     // Pure virtual function for loading a model
     virtual void loadModel(const std::string& modelPath);
@@ -34,9 +34,9 @@ protected:
     virtual void runPostProcess(const std::vector<T>& inputData, std::vector<T>& outputData);
 
 private:
-    std::shared_ptr<void> m_rknnContext;
-    std::shared_ptr<dnnPluginHandle> m_dnnPluginHandle;
-    std::shared_ptr<dnnPluginFuncs> m_dnnPluginFuncs;
+    std::shared_ptr<void> m_pluginLibraryHandle{nullptr};
+    std::shared_ptr<IDnnPlugin> m_dnnPluginHandle{nullptr};
+    std::unique_ptr<BspLogger> m_logger;
 };
 } // namespace bsp_dnn
 

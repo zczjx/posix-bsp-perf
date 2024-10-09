@@ -1,19 +1,25 @@
-// IPlugin.h
-#ifndef IPLUGIN_H
-#define IPLUGIN_H
+#ifndef IDNN_PLUGIN_HPP
+#define IDNN_PLUGIN_HPP
 
-class IPlugin {
+namespace bsp_dnn
+{
+
+class IDnnPlugin
+{
 public:
-    virtual void execute() = 0; // 纯虚函数
-    virtual ~IPlugin() {}
+    virtual void preProcess() = 0; // 纯虚函数
+    virtual void postProcess() = 0; // 纯虚函数
+    virtual ~IDnnPlugin() = default;
 };
 
-#define CREATE_PLUGIN_INSTANCE() \
-    extern "C" IPlugin* create() { \
-        return new MyPlugin(); \
+}
+
+#define CREATE_PLUGIN_INSTANCE(PLUGIN_CLASS) \
+    extern "C" bsp_dnn::IDnnPlugin* create() { \
+        return new PLUGIN_CLASS(); \
     } \
-    extern "C" void destroy(IPlugin* plugin) { \
+    extern "C" void destroy(bsp_dnn::IDnnPlugin* plugin) { \
         delete plugin; \
     }
 
-#endif // IPLUGIN_H
+#endif // IDNN_PLUGIN_HPP
