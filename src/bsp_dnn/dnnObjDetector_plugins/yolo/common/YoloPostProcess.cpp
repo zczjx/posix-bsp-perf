@@ -62,18 +62,6 @@ void YoloPostProcess::inverseSortWithIndices(std::vector<float> &input, std::vec
     }
 }
 
-template <typename T>
-float YoloPostProcess::calculateOverlap(const bboxRect<T>& bbox1, const bboxRect<T>& bbox2)
-{
-    float w = fmax(0.f, fmin(bbox1.right, bbox2.right) - fmax(bbox1.left, bbox2.left) + 1.0);
-    float h = fmax(0.f, fmin(bbox1.bottom, bbox2.bottom) - fmax(bbox1.top, bbox2.top) + 1.0);
-    float i = w * h;
-    float u = (bbox1.right - bbox1.left + 1.0) * (bbox1.bottom - bbox1.top + 1.0)
-            + (bbox2.right - bbox2.left + 1.0) * (bbox2.bottom - bbox2.top + 1.0) - i;
-
-    return u <= 0.f ? 0.f : (i / u);
-}
-
 int YoloPostProcess::nms(int validCount, std::vector<float> &filterBoxes, std::vector<int> classIds,
         std::vector<int> &order, int filterId, float threshold)
 {
@@ -93,23 +81,24 @@ int YoloPostProcess::nms(int validCount, std::vector<float> &filterBoxes, std::v
             {
                 continue;
             }
-      float xmin0 = filterBoxes[n * 4 + 0];
-      float ymin0 = filterBoxes[n * 4 + 1];
-      float xmax0 = filterBoxes[n * 4 + 0] + filterBoxes[n * 4 + 2];
-      float ymax0 = filterBoxes[n * 4 + 1] + filterBoxes[n * 4 + 3];
 
-      float xmin1 = filterBoxes[m * 4 + 0];
-      float ymin1 = filterBoxes[m * 4 + 1];
-      float xmax1 = filterBoxes[m * 4 + 0] + filterBoxes[m * 4 + 2];
-      float ymax1 = filterBoxes[m * 4 + 1] + filterBoxes[m * 4 + 3];
+            bboxRect<float> bbox1;
+            bbox1.left = filterBoxes[n * 4 + 0];
+            bbox1.top = filterBoxes[n * 4 + 1];
+            bbox1.right = filterBoxes[n * 4 + 0] + filterBoxes[n * 4 + 2];
+            bbox1.bottom = filterBoxes[n * 4 + 1] + filterBoxes[n * 4 + 3];
+            bboxRect<float> bbox2;
+            bbox2.left = filterBoxes[m * 4 + 0];
+            bbox2.top = filterBoxes[m * 4 + 1];
+            bbox2.right = filterBoxes[m * 4 + 0] + filterBoxes[m * 4 + 2];
+            bbox2.bottom = filterBoxes[m * 4 + 1] + filterBoxes[m * 4 + 3];
+            float iou = calculateOverlap(bbox1, bbox2);
 
-      float iou = calculateOverlap(xmin0, ymin0, xmax0, ymax0, xmin1, ymin1, xmax1, ymax1);
-
-      if (iou > threshold)
-      {
-        order[j] = -1;
-      }
-    }
+            if (iou > threshold)
+            {
+                order[j] = -1;
+            }
+        }
   }
   return 0;
 
@@ -126,7 +115,7 @@ int YoloPostProcess::runPostProcess(const ObjDetectParams& params, std::vector<I
     for (int i = 0; i < inputData.size(); i++)
     {
         int stride = BASIC_STRIDE * (i + 1);
-        validBoxNum += doProcess(params, stride, inputData[i], filterBoxes, objScores, classId);
+        validBoxNum += doProcess(i, params, stride, inputData[i], filterBoxes, objScores, classId);
     }
 
     if (validBoxNum <= 0)
@@ -173,10 +162,77 @@ int YoloPostProcess::runPostProcess(const ObjDetectParams& params, std::vector<I
 
 }
 
-int YoloPostProcess::doProcess(const ObjDetectParams& params, int stride, IDnnEngine::dnnOutput& inputData,
+int8_t YoloPostProcess::qauntFP32ToAffine(float fp32, int8_t zp, float scale)
+{
+    float dst_val = (fp32 / scale) + zp;
+    int8_t res = (int8_t)clip(dst_val, -128, 127);
+    return res;
+}
+
+
+int YoloPostProcess::doProcess(const int idx, const ObjDetectParams& params, int stride, IDnnEngine::dnnOutput& inputData,
             std::vector<float>& bboxes, std::vector<float>& objScores, std::vector<int>& classId)
 {
+    int validCount = 0;
+    int grid_h = params.model_input_height / stride;
+    int grid_w = params.model_input_width / stride;
+    int grid_len = grid_h * grid_w;
+    int8_t thres_i8 = qauntFP32ToAffine(params.conf_threshold, params.quantize_zero_points[idx],
+                        params.quantize_scales[idx]);
 
+    int8_t *input_buf = (int8_t *)inputData.buf;
+
+    for (int a = 0; a < 3; a++)
+    {
+        for (int i = 0; i < grid_h; i++)
+        {
+            for (int j = 0; j < grid_w; j++)
+            {
+                int8_t box_confidence = input_buf[(PROP_BOX_SIZE * a + 4) * grid_len + i * grid_w + j];
+                if (box_confidence >= thres_i8)
+                {
+                    int offset = (PROP_BOX_SIZE * a) * grid_len + i * grid_w + j;
+                    int8_t *in_ptr = input_buf + offset;
+                    float box_x = (deqauntAffineToFP32(*in_ptr, params.quantize_zero_points[idx], params.quantize_scales[idx])) * 2.0 - 0.5;
+                    float box_y = (deqauntAffineToFP32(in_ptr[grid_len], params.quantize_zero_points[idx], params.quantize_scales[idx])) * 2.0 - 0.5;
+                    float box_w = (deqauntAffineToFP32(in_ptr[2 * grid_len], params.quantize_zero_points[idx], params.quantize_scales[idx])) * 2.0;
+                    float box_h = (deqauntAffineToFP32(in_ptr[3 * grid_len], params.quantize_zero_points[idx], params.quantize_scales[idx])) * 2.0;
+                    box_x = (box_x + j) * (float) stride;
+                    box_y = (box_y + i) * (float) stride;
+                    box_w = box_w * box_w * (float) anchorVec[idx][a * 2];
+                    box_h = box_h * box_h * (float) anchorVec[idx][a * 2 + 1];
+                    box_x -= (box_w / 2.0);
+                    box_y -= (box_h / 2.0);
+
+                    int8_t maxClassProbs = in_ptr[5 * grid_len];
+                    int maxClassId = 0;
+                    for (int k = 1; k < OBJ_CLASS_NUM; ++k)
+                    {
+                        int8_t prob = in_ptr[(5 + k) * grid_len];
+                        if (prob > maxClassProbs)
+                        {
+                            maxClassId = k;
+                            maxClassProbs = prob;
+                        }
+                    }
+
+                    if (maxClassProbs > thres_i8)
+                    {
+                        objScores.push_back((deqauntAffineToFP32(maxClassProbs, params.quantize_zero_points[idx], params.quantize_scales[idx]))
+                                    * (deqauntAffineToFP32(box_confidence, params.quantize_zero_points[idx], params.quantize_scales[idx])));
+                        classId.push_back(maxClassId);
+                        validCount++;
+                        bboxes.push_back(box_x);
+                        bboxes.push_back(box_y);
+                        bboxes.push_back(box_w);
+                        bboxes.push_back(box_h);
+                    }
+                }
+            }
+        }
+    }
+
+    return validCount;
 }
 
 

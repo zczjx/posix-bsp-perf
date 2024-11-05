@@ -40,7 +40,7 @@ struct ObjDetectParams
     float nms_threshold;
     float scale_width;
     float scale_height;
-    bboxRect pads;
+    bboxRect<int> pads;
     // quantization params
     std::vector<int32_t> quantize_zero_points;
     std::vector<float> quantize_scales;
