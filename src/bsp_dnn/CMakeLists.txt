@@ -10,7 +10,7 @@ set(CMAKE_CXX_STANDARD 17)
 
 # Add the source files
 set(SOURCES
-  impl/IDnn.cpp
+  impl/IDnnObjDetector.cpp
   impl/rknn/rknn.cpp
     # Add more source files here if needed
 )

@@ -1,11 +1,10 @@
-#include "IDnn.hpp"
+#include <bsp_dnn/IDnnEngine.hpp>
 #include "rknn/rknn.hpp"
 
 namespace bsp_dnn
 {
 
-template <typename T>
-std::unique_ptr<IDnn<T>> IDnn<T>::create(const std::string& dnnType, const std::string& pluginPath)
+std::unique_ptr<IDnnEngine> IDnnEngine::create(const std::string& dnnType)
 {
     if (dnnType.compare("trt"))
     {
@@ -14,7 +13,7 @@ std::unique_ptr<IDnn<T>> IDnn<T>::create(const std::string& dnnType, const std::
     }
     else if (dnnType.compare("rknn"))
     {
-        return std::make_unique<rknn<T>>(pluginPath);
+        return std::make_unique<rknn>();
     }
     else
     {
