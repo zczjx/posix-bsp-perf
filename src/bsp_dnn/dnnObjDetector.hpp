@@ -47,7 +47,7 @@ public:
     std::vector<ObjDetectOutputBox>& popOutputData();
 
     // Pure virtual function for running inference
-    int runObjDetect();
+    int runObjDetect(const ObjDetectParams& params);
 
 private:
 
@@ -64,7 +64,6 @@ private:
     std::shared_ptr<ObjDetectInput> m_dataInput{nullptr};
     std::vector<ObjDetectOutputBox> m_dataOutputVector;
     std::string m_labelTextPath;
-    ObjDetectParams m_objDetectParams;
 };
 
 } // namespace bsp_dnn

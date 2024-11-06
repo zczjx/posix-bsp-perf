@@ -8,8 +8,7 @@ namespace bsp_dnn
 dnnObjDetector::dnnObjDetector(const std::string& dnnType, const std::string& pluginPath, const std::string& labelTextPath):
     m_logger{std::make_unique<BspLogger>("dnnObjDetector")},
     m_dnnEngine{IDnnEngine::create(dnnType)},
-    m_labelTextPath{labelTextPath},
-    m_objDetectParams{}
+    m_labelTextPath{labelTextPath}
 {
     if (pluginPath.empty())
     {
@@ -88,7 +87,7 @@ int dnnObjDetector::defaultPostProcess(const std::string& labelTextPath, const O
     return 0;
 }
 
-int dnnObjDetector::runObjDetect()
+int dnnObjDetector::runObjDetect(const ObjDetectParams& params)
 {
     if ((m_pluginLibraryHandle == nullptr) || (m_dnnPluginHandle == nullptr))
     {
@@ -99,7 +98,7 @@ int dnnObjDetector::runObjDetect()
         m_dnnEngine->runInference();
         std::vector<IDnnEngine::dnnOutput> dnn_output_vector{};
         m_dnnEngine->popOutputData(dnn_output_vector);
-        return defaultPostProcess(m_labelTextPath, m_objDetectParams,
+        return defaultPostProcess(m_labelTextPath, params,
                     dnn_output_vector, m_dataOutputVector);
     }
 
@@ -109,7 +108,7 @@ int dnnObjDetector::runObjDetect()
     m_dnnEngine->runInference();
     std::vector<IDnnEngine::dnnOutput> dnn_output_vector{};
     m_dnnEngine->popOutputData(dnn_output_vector);
-    return m_dnnPluginHandle->postProcess(m_labelTextPath, m_objDetectParams,
+    return m_dnnPluginHandle->postProcess(m_labelTextPath, params,
                 dnn_output_vector, m_dataOutputVector);
 }
 
