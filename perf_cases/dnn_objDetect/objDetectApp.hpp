@@ -8,6 +8,9 @@
 #include <memory>
 #include <string>
 #include <iostream>
+#include "opencv2/core/core.hpp"
+#include "opencv2/imgcodecs.hpp"
+#include "opencv2/imgproc.hpp"
 
 namespace bsp_perf {
 namespace perf_cases {
@@ -76,6 +79,8 @@ private:
     std::string m_name {"[ObjDetectApp]:"};
     std::unique_ptr<bsp_perf::shared::BspLogger> m_logger{nullptr};
     std::unique_ptr<bsp_dnn::dnnObjDetector> m_dnnObjDetector{nullptr};
+    ObjDetectParams m_objDetectParams{};
+    
 };
 
 } // namespace perf_cases
