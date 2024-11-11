@@ -56,6 +56,8 @@ public:
 
     virtual int getInputShape(dnnInputShape& shape) = 0;
 
+    virtual int getOutputQuantParams(std::vector<int32_t>& zeroPoints, std::vector<float>& scales) = 0;
+
     virtual int pushInputData(dnnInput& inputData) = 0;
 
     virtual int popOutputData(std::vector<dnnOutput>& outputVector) = 0;

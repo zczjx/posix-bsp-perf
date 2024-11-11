@@ -43,6 +43,8 @@ public:
 
     int getInputShape(dnnInputShape& shape) override;
 
+    int getOutputQuantParams(std::vector<int32_t>& zeroPoints, std::vector<float>& scales) override;
+
     int pushInputData(dnnInput& inputData) override;
 
     int popOutputData(std::vector<dnnOutput>& outputVector)  override;

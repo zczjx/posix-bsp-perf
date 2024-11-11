@@ -40,8 +40,12 @@ int rknnYolov5::postProcess(const std::string& labelTextPath, const ObjDetectPar
         throw std::invalid_argument("The size of inputData is not equal to RKNN_YOLOV5_OUTPUT_BATCH or labelTextPath is empty.");
     }
 
-    m_yoloPostProcess.initLabelMap(labelTextPath);
-    m_yoloPostProcess.runPostProcess(params, inputData, outputData);
+    int ret = m_yoloPostProcess.initLabelMap(labelTextPath);
+    if (ret != 0)
+    {
+        return ret;
+    }
+    return m_yoloPostProcess.runPostProcess(params, inputData, outputData);
 }
 
 }   // namespace bsp_dnn

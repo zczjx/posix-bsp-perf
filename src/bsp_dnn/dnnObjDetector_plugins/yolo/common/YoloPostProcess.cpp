@@ -160,6 +160,7 @@ int YoloPostProcess::runPostProcess(const ObjDetectParams& params, std::vector<I
         detectObjCount++;
     }
 
+    return 0;
 }
 
 int8_t YoloPostProcess::qauntFP32ToAffine(float fp32, int8_t zp, float scale)

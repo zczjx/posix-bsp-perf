@@ -16,6 +16,7 @@
 
 namespace bsp_perf {
 namespace perf_cases {
+using namespace bsp_dnn;
 
 class ObjDetectApp : public bsp_perf::common::BasePerfCase
 {
@@ -68,39 +69,44 @@ private:
         m_dnnObjDetector->runObjDetect(m_objDetectParams);
         auto& objDetectOutput = m_dnnObjDetector->popOutputData();
 
+        for (const auto& obj : objDetectOutput)
+        {
+            m_logger->printStdoutLog(bsp_perf::shared::BspLogger::LogLevel::Info, "{} ObjDetectApp::onProcess() objDetectOutput: bbox: [{}, {}, {}, {}], score: {}, label: {}",
+                LOG_TAG, obj.bbox.left, obj.bbox.top, obj.bbox.right, obj.bbox.bottom, obj.score, obj.label);
+            cv::rectangle(m_orig_image, cv::Point(obj.bbox.left, obj.bbox.top), cv::Point(obj.bbox.right, obj.bbox.bottom),
+                    cv::Scalar(256, 0, 0, 256), 3);
+            cv::putText(m_orig_image, obj.label, cv::Point(obj.bbox.left, obj.bbox.top + 12), cv::FONT_HERSHEY_SIMPLEX, 0.4, cv::Scalar(256, 255, 255));
+        }
     }
 
     void onRender() override
     {
-        m_logger->printStdoutLog(bsp_perf::shared::BspLogger::LogLevel::Warn, "{} ObjDetectApp::onRender()", LOG_TAG);
-        m_logger->printFileLog(bsp_perf::shared::BspLogger::LogLevel::Warn, "{} ObjDetectApp::onRender()", LOG_TAG);
-        m_logger->printAsyncFileLog(bsp_perf::shared::BspLogger::LogLevel::Warn, "{} ObjDetectApp::onRender()", LOG_TAG);
+        cv::imshow("ObjDetectApp", m_orig_image);
+        cv::waitKey(0);
+        cv::destroyAllWindows();
     }
 
     void onRelease() override
     {
-        m_logger->printStdoutLog(bsp_perf::shared::BspLogger::LogLevel::Info, "{} ObjDetectApp::onRelease()", LOG_TAG);
-        m_logger->printFileLog(bsp_perf::shared::BspLogger::LogLevel::Info, "{} ObjDetectApp::onRelease()", LOG_TAG);
-        m_logger->printAsyncFileLog(bsp_perf::shared::BspLogger::LogLevel::Info, "{} ObjDetectApp::onRelease()", LOG_TAG);
+        m_dnnObjDetector.reset();
     }
 
 private:
-    void setObjDetectParams(bsp_dnn::ObjDetectParams& objDetectParams)
+    void setObjDetectParams(ObjDetectParams& objDetectParams)
     {
-        dnnInputShape shape;
+        IDnnEngine::dnnInputShape shape;
         m_dnnObjDetector->getInputShape(shape);
         objDetectParams.model_input_width = shape.width;
         objDetectParams.model_input_height = shape.height;
-        objDetectParams.conf_threshold = 0.5;
-        objDetectParams.nms_threshold = 0.5;
-        objDetectParams.scale_width = 1.0;
-        objDetectParams.scale_height = 1.0;
+        objDetectParams.conf_threshold = 0.25;
+        objDetectParams.nms_threshold = 0.45;
+        objDetectParams.scale_width = shape.width / m_orig_image.cols;
+        objDetectParams.scale_height = shape.height / m_orig_image.rows;
         objDetectParams.pads.left = 0;
         objDetectParams.pads.right = 0;
         objDetectParams.pads.top = 0;
         objDetectParams.pads.bottom = 0;
-        objDetectParams.quantize_zero_points = {0, 0, 0};
-        objDetectParams.quantize_scales = {1.0, 1.0, 1.0};
+        m_dnnObjDetector->getOutputQuantParams(objDetectParams.quantize_zero_points, objDetectParams.quantize_scales);
     }
 
 private:
@@ -109,7 +115,6 @@ private:
     std::unique_ptr<bsp_dnn::dnnObjDetector> m_dnnObjDetector{nullptr};
     bsp_dnn::ObjDetectParams m_objDetectParams{};
     cv::Mat m_orig_image;
-
 };
 
 } // namespace perf_cases

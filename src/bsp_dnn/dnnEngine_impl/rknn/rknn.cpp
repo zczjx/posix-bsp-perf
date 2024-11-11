@@ -156,6 +156,16 @@ int rknn::getInputShape(dnnInputShape& shape)
     return 0;
 }
 
+int rknn::getOutputQuantParams(std::vector<int32_t>& zeroPoints, std::vector<float>& scales)
+{
+    for (int i = 0; i < m_params.m_io_num.n_output; i++)
+    {
+        zeroPoints.push_back(m_params.m_output_attrs[i].zp);
+        scales.push_back(m_params.m_output_attrs[i].scale);
+    }
+    return 0;
+}
+
 int rknn::pushInputData(dnnInput& inputData)
 {
     if ((inputData.buf == nullptr) || (inputData.size == 0))

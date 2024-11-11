@@ -42,6 +42,11 @@ public:
         return m_dnnEngine->getInputShape(shape);
     }
 
+    int getOutputQuantParams(std::vector<int32_t>& zeroPoints, std::vector<float>& scales)
+    {
+        return m_dnnEngine->getOutputQuantParams(zeroPoints, scales);
+    }
+
     void pushInputData(std::shared_ptr<ObjDetectInput> dataInput);
 
     std::vector<ObjDetectOutputBox>& popOutputData();
