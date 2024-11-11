@@ -10,9 +10,9 @@
 #include <iostream>
 #include <vector>
 #include <opencv2/opencv.hpp>
-#include "opencv2/core/core.hpp"
-#include "opencv2/imgcodecs.hpp"
-#include "opencv2/imgproc.hpp"
+#include <opencv2/core/core.hpp>
+#include <opencv2/imgcodecs.hpp>
+#include <opencv2/imgproc.hpp>
 
 namespace bsp_perf {
 namespace perf_cases {
@@ -87,8 +87,10 @@ private:
 private:
     void setObjDetectParams(bsp_dnn::ObjDetectParams& objDetectParams)
     {
-        objDetectParams.model_input_width = 640;
-        objDetectParams.model_input_height = 640;
+        dnnInputShape shape;
+        m_dnnObjDetector->getInputShape(shape);
+        objDetectParams.model_input_width = shape.width;
+        objDetectParams.model_input_height = shape.height;
         objDetectParams.conf_threshold = 0.5;
         objDetectParams.nms_threshold = 0.5;
         objDetectParams.scale_width = 1.0;
