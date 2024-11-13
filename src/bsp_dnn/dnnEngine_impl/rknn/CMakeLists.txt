@@ -1,23 +1,26 @@
 # Set the minimum required version of CMake
 cmake_minimum_required(VERSION 3.12)
 
-# Set the project name
-project(dnnObjDetector VERSION 0.0.1 LANGUAGES CXX)
+project(rknn_Engine VERSION 0.0.1 LANGUAGES CXX)
 
 # Set the language version
 set(CMAKE_C_STANDARD 11)
 set(CMAKE_CXX_STANDARD 17)
 
-# Add the source files
+if(DEFINED BSP_LIB_PATH)
+    set(RKNN_RT_LIB ${BSP_LIB_PATH}/librknnrt.so)
+endif()
+else()
+    set(RKNN_RT_LIB /usr/lib/librknnrt.so)
+endif()
+
 set(SOURCES
-  dnnObjDetector.cpp
-  dnnEngine_impl/IDnnEngine.cpp
+    rknn.cpp
 )
 
 # Add the library target
 add_library(${PROJECT_NAME} SHARED ${SOURCES})
 
-# target_link_libraries(${PROJECT_NAME} PRIVATE bsp_shared)
 
 target_include_directories(${PROJECT_NAME} PRIVATE
     $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/..>
@@ -39,29 +42,8 @@ if(is_top_level)
 endif()
 
 set_target_properties(${PROJECT_NAME} PROPERTIES INSTALL_RPATH "$ORIGIN/../lib")
-target_link_libraries(${PROJECT_NAME} PRIVATE bsp_shared)
-
-option(ENABLE_RKNN "Enable support for RKNN" ON)
-option(ENABLE_TENSORRT "Enable support for TensorRT" OFF)
-
-if(ENABLE_RKNN)
-  target_link_libraries(${PROJECT_NAME} PRIVATE rknn_Engine)
-endif()
-
-
-install(TARGETS ${PROJECT_NAME}
-  RUNTIME DESTINATION bin
-  LIBRARY DESTINATION lib
+target_link_libraries(${PROJECT_NAME} PRIVATE ${RKNN_RT_LIB} bsp_shared)
+# Specify the installation directories
+install(TARGETS rknn_Engine
+    LIBRARY DESTINATION lib
 )
-
-
-install(DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/
-  DESTINATION include/${CMAKE_PROJECT_NAME}
-  FILES_MATCHING
-  PATTERN "*.h"
-  PATTERN "*.hpp"
-)
-
-add_subdirectory(dnnEngine_impl)
-add_subdirectory(dnnObjDetector_plugins)
-
