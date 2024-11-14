@@ -41,7 +41,7 @@ if(is_top_level)
 endif()
 
 set_target_properties(${PROJECT_NAME} PROPERTIES INSTALL_RPATH "$ORIGIN/../lib")
-target_link_libraries(${PROJECT_NAME} PRIVATE ${RKNN_RT_LIB} bsp_shared)
+target_link_libraries(${PROJECT_NAME} PUBLIC ${RKNN_RT_LIB} bsp_shared)
 # Specify the installation directories
 install(TARGETS rknn_Engine
     LIBRARY DESTINATION lib

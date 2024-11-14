@@ -3,6 +3,9 @@
 
 #include <string>
 #include <vector>
+#include <array>
+#include <memory>
+#include <cmath>
 #include <bsp_dnn/IDnnObjDetectorPlugin.hpp>
 
 namespace bsp_dnn

@@ -45,7 +45,7 @@ option(ENABLE_RKNN "Enable support for RKNN" ON)
 option(ENABLE_TENSORRT "Enable support for TensorRT" OFF)
 
 if(ENABLE_RKNN)
-  target_link_libraries(${PROJECT_NAME} PRIVATE rknn_Engine)
+  target_link_libraries(${PROJECT_NAME} PUBLIC rknn_Engine)
 endif()
 
 

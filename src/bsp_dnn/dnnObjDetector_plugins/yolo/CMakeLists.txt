@@ -11,9 +11,14 @@ if(DEFINED BSP_PKG_CONFIG_PATH)
     set(ENV{PKG_CONFIG_PATH} ${BSP_PKG_CONFIG_PATH})
     message(STATUS "ENV{PKG_CONFIG_PATH}: $ENV{PKG_CONFIG_PATH}")
 endif()
+
+if(DEFINED BSP_LIB_PATH)
+  set(OpenCV_DIR ${BSP_LIB_PATH}/cmake/opencv4)
+else()
+    set(OpenCV_DIR /usr/lib/cmake/opencv4)
+endif()
 # Find OpenCV package
-find_package(PkgConfig REQUIRED)
-pkg_check_modules(PC_OPENCV REQUIRED OpenCV)
+find_package(OpenCV REQUIRED)
 
 # Add all cpp files in the current directory to the project
 
@@ -25,9 +30,14 @@ add_library(${PLUGIN_NAME} SHARED
     common/YoloPostProcess.cpp
 )
 
-if(PC_OPENCV_LIBRARIES)
-  target_link_options(${PLUGIN_NAME} PRIVATE ${PC_OPENCV_LDFLAGS} "-Wl,-rpath,${PC_OPENCV_LIBRARY_DIRS}")
-  target_include_directories(${PROJECT_NAME} PUBLIC ${PC_OPENCV_INCLUDE_DIRS})
+target_include_directories(${PLUGIN_NAME} PRIVATE
+    $<BUILD_INTERFACE:${CMAKE_SOURCE_DIR}/src>
+    $<INSTALL_INTERFACE:include>
+)
+
+if(OpenCV_LIBRARIES)
+  target_link_options(${PLUGIN_NAME} PRIVATE ${OpenCV_INCLUDE_LDFLAGS} "-Wl,-rpath,${OpenCV_LIBRARY_DIRS}")
+  target_include_directories(${PLUGIN_NAME} PUBLIC ${OpenCV_INCLUDE_DIRS})
 endif()
 set_target_properties(${PLUGIN_NAME} PROPERTIES INSTALL_RPATH "$ORIGIN/../lib")
 

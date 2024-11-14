@@ -7,5 +7,6 @@ if(BUILD_PERF_CASE_COMMON)
     add_subdirectory(hello_world)
     add_subdirectory(ddr_bandwidth)
     add_subdirectory(asyncio_sockets)
+    add_subdirectory(dnn_objDetect)
 endif()
 

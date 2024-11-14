@@ -81,9 +81,7 @@ private:
 
     void onRender() override
     {
-        cv::imshow("ObjDetectApp", m_orig_image);
-        cv::waitKey(0);
-        cv::destroyAllWindows();
+        cv::imwrite("output.jpg", m_orig_image);
     }
 
     void onRelease() override
