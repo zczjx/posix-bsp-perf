@@ -30,7 +30,7 @@ std::shared_ptr<unsigned char> rknn::loadModelFile(const std::string& modelPath)
 
     if (NULL == fp)
     {
-        m_logger->printStdoutLog(BspLogger::LogLevel::Error, "Open file %s failed.", filename);
+        m_logger->printStdoutLog(BspLogger::LogLevel::Error, "Open file %s failed.", modelPath);
         return nullptr;
     }
     fseek(fp, 0, SEEK_END);
@@ -171,7 +171,7 @@ int rknn::pushInputData(dnnInput& inputData)
     if ((inputData.buf == nullptr) || (inputData.size == 0))
     {
         m_logger->printStdoutLog(BspLogger::LogLevel::Error, "inputData.buf is nullptr.");
-        return;
+        return -1;
     }
 
     m_params.m_inputs[0].index = inputData.index;

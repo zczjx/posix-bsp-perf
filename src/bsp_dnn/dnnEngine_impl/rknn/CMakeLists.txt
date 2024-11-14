@@ -9,7 +9,6 @@ set(CMAKE_CXX_STANDARD 17)
 
 if(DEFINED BSP_LIB_PATH)
     set(RKNN_RT_LIB ${BSP_LIB_PATH}/librknnrt.so)
-endif()
 else()
     set(RKNN_RT_LIB /usr/lib/librknnrt.so)
 endif()
@@ -23,7 +22,7 @@ add_library(${PROJECT_NAME} SHARED ${SOURCES})
 
 
 target_include_directories(${PROJECT_NAME} PRIVATE
-    $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/..>
+    $<BUILD_INTERFACE:${CMAKE_SOURCE_DIR}/src>
     $<INSTALL_INTERFACE:include>
 )
 

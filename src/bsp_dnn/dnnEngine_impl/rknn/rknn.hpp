@@ -17,7 +17,7 @@ using namespace bsp_perf::shared;
 struct RknnParams
 {
     std::shared_ptr<unsigned char> m_model_data{nullptr};
-    rknn_context m_rknnCtx{nullptr};
+    rknn_context m_rknnCtx;
     int32_t m_model_size;
     rknn_sdk_version m_version;
     rknn_input_output_num m_io_num;
