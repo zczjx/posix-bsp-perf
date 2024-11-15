@@ -7,3 +7,6 @@
 - example cmd
 
 ` ./dnn_objDetect --dnnType rknn --pluginPath install/lib/librknn_yolov5.so --labelTextPath ./coco_80_labels_list.txt --modelPath model/RK3588/yolov5s-640-640.rknn --imagePath ./bus.jpg `
+
+
+` ./dnn_objDetect --dnn rknn --plugin install/lib/librknn_yolov5.so --label ./coco_80_labels_list.txt --model model/RK3588/yolov5s-640-640.rknn --image ./bus.jpg `

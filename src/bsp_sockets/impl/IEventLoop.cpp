@@ -7,11 +7,11 @@
 namespace bsp_sockets{
 
 std::shared_ptr<IEventLoop> IEventLoop::create(const std::string flag) {
-    if (flag.compare("epoll"))
+    if (flag.compare("epoll") == 0)
     {
         return std::make_shared<EventLoopEpoll>();
     }
-    else if (flag.compare("poll"))
+    else if (flag.compare("poll") == 0)
     {
         return std::make_shared<EventLoopPoll>();
     }

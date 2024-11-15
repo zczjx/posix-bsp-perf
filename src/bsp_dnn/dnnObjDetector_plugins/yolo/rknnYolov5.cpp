@@ -7,7 +7,7 @@ namespace bsp_dnn
 
 int rknnYolov5::preProcess(ObjDetectInput& inputData, IDnnEngine::dnnInput& outputData)
 {
-    if (!inputData.handleType.compare("opencv4"))
+    if (inputData.handleType.compare("opencv4") != 0)
     {
         throw std::invalid_argument("Only opencv4 is supported.");
     }
