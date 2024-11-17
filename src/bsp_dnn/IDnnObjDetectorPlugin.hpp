@@ -5,6 +5,7 @@
 #include <memory>
 #include <string>
 #include <vector>
+#include <any>
 
 namespace bsp_dnn
 {
@@ -13,7 +14,8 @@ struct ObjDetectInput
 {
     /// default is opencv4, will add more types later
     std::string handleType{"opencv4"};
-    void* imageHandle{nullptr};
+    /// any should be a pointer to image type
+    std::any imageHandle;
 };
 
 template <typename T>
@@ -51,7 +53,7 @@ struct ObjDetectParams
 class IDnnObjDetectorPlugin
 {
 public:
-    virtual int preProcess(ObjDetectInput& inputData, IDnnEngine::dnnInput& outputData) = 0; // 纯虚函数
+    virtual int preProcess(const ObjDetectParams& params, ObjDetectInput& inputData, IDnnEngine::dnnInput& outputData) = 0; // 纯虚函数
     virtual int postProcess(const std::string& labelTextPath, const ObjDetectParams& params,
                     std::vector<IDnnEngine::dnnOutput>& inputData, std::vector<ObjDetectOutputBox>& outputData) = 0; // 纯虚函数
     virtual ~IDnnObjDetectorPlugin() = default;

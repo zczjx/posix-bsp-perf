@@ -35,7 +35,7 @@ public:
     struct dnnInput
     {
         size_t index{0};
-        void* buf{nullptr};
+        std::shared_ptr<uint8_t> buf{nullptr};
         size_t size{0};
         dnnInputShape shape{};
     };

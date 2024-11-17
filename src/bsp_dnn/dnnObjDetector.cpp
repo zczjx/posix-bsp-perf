@@ -103,7 +103,7 @@ int dnnObjDetector::runObjDetect(const ObjDetectParams& params)
     }
 
     IDnnEngine::dnnInput dnn_input_tensor{};
-    m_dnnPluginHandle->preProcess(*m_dataInput, dnn_input_tensor);
+    m_dnnPluginHandle->preProcess(params, *m_dataInput, dnn_input_tensor);
     m_dnnEngine->pushInputData(dnn_input_tensor);
     m_dnnEngine->runInference();
     std::vector<IDnnEngine::dnnOutput> dnn_output_vector{};

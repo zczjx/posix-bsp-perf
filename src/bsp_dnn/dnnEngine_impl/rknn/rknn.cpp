@@ -179,7 +179,7 @@ int rknn::pushInputData(dnnInput& inputData)
     m_params.m_inputs[0].size         = inputData.size;
     m_params.m_inputs[0].fmt          = m_params.m_input_attrs[0].fmt;
     m_params.m_inputs[0].pass_through = 0;
-    m_params.m_inputs[0].buf          = const_cast<void*>(inputData.buf);
+    m_params.m_inputs[0].buf          = static_cast<void*>(inputData.buf.get());
     return rknn_inputs_set(m_params.m_rknnCtx, m_params.m_io_num.n_input, m_params.m_inputs);
 }
 

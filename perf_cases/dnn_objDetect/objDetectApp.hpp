@@ -56,14 +56,15 @@ private:
         m_dnnObjDetector->loadModel(modelPath);
         std::string imagePath;
         params.getOptionVal("--imagePath", imagePath);
-        m_orig_image = cv::imread(imagePath, cv::IMREAD_COLOR);
+        m_orig_image_ptr = std::make_shared<cv::Mat>(cv::imread(imagePath, cv::IMREAD_COLOR));
     }
 
     void onProcess() override
     {
-        bsp_dnn::ObjDetectInput objDetectInput;
-        objDetectInput.handleType = "opencv4";
-        objDetectInput.imageHandle = &m_orig_image;
+        bsp_dnn::ObjDetectInput objDetectInput = {
+            .handleType = "opencv4",
+            .imageHandle = m_orig_image_ptr,
+        };
         m_dnnObjDetector->pushInputData(std::make_shared<bsp_dnn::ObjDetectInput>(objDetectInput));
         setObjDetectParams(m_objDetectParams);
         m_dnnObjDetector->runObjDetect(m_objDetectParams);
@@ -73,15 +74,15 @@ private:
         {
             m_logger->printStdoutLog(bsp_perf::shared::BspLogger::LogLevel::Info, "{} ObjDetectApp::onProcess() objDetectOutput: bbox: [{}, {}, {}, {}], score: {}, label: {}",
                 LOG_TAG, obj.bbox.left, obj.bbox.top, obj.bbox.right, obj.bbox.bottom, obj.score, obj.label);
-            cv::rectangle(m_orig_image, cv::Point(obj.bbox.left, obj.bbox.top), cv::Point(obj.bbox.right, obj.bbox.bottom),
+            cv::rectangle(*m_orig_image_ptr, cv::Point(obj.bbox.left, obj.bbox.top), cv::Point(obj.bbox.right, obj.bbox.bottom),
                     cv::Scalar(256, 0, 0, 256), 3);
-            cv::putText(m_orig_image, obj.label, cv::Point(obj.bbox.left, obj.bbox.top + 12), cv::FONT_HERSHEY_SIMPLEX, 0.4, cv::Scalar(256, 255, 255));
+            cv::putText(*m_orig_image_ptr, obj.label, cv::Point(obj.bbox.left, obj.bbox.top + 12), cv::FONT_HERSHEY_SIMPLEX, 0.4, cv::Scalar(256, 255, 255));
         }
     }
 
     void onRender() override
     {
-        cv::imwrite("output.jpg", m_orig_image);
+        cv::imwrite("output.jpg", *m_orig_image_ptr);
     }
 
     void onRelease() override
@@ -98,8 +99,8 @@ private:
         objDetectParams.model_input_height = shape.height;
         objDetectParams.conf_threshold = 0.25;
         objDetectParams.nms_threshold = 0.45;
-        objDetectParams.scale_width = shape.width / m_orig_image.cols;
-        objDetectParams.scale_height = shape.height / m_orig_image.rows;
+        objDetectParams.scale_width = shape.width / m_orig_image_ptr->cols;
+        objDetectParams.scale_height = shape.height / m_orig_image_ptr->rows;
         objDetectParams.pads.left = 0;
         objDetectParams.pads.right = 0;
         objDetectParams.pads.top = 0;
@@ -112,7 +113,7 @@ private:
     std::unique_ptr<bsp_perf::shared::BspLogger> m_logger{nullptr};
     std::unique_ptr<bsp_dnn::dnnObjDetector> m_dnnObjDetector{nullptr};
     bsp_dnn::ObjDetectParams m_objDetectParams{};
-    cv::Mat m_orig_image;
+    std::shared_ptr<cv::Mat> m_orig_image_ptr{nullptr};
 };
 
 } // namespace perf_cases
