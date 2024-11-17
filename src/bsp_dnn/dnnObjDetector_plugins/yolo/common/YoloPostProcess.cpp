@@ -115,6 +115,8 @@ int YoloPostProcess::runPostProcess(const ObjDetectParams& params, std::vector<I
     for (int i = 0; i < inputData.size(); i++)
     {
         int stride = BASIC_STRIDE * (i + 1);
+        std::cout << "runPostProcess i: " << i << std::endl;
+        std::cout << "validBoxNum: " << validBoxNum << std::endl;
         validBoxNum += doProcess(i, params, stride, inputData[i], filterBoxes, objScores, classId);
     }
 

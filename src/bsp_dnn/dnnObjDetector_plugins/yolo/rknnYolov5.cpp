@@ -20,22 +20,23 @@ int rknnYolov5::preProcess(const ObjDetectParams& params, ObjDetectInput& inputD
         throw std::invalid_argument("inputData.imageHandle is nullptr.");
     }
     cv::Mat orig_image = *orig_image_ptr;
-    cv::cvtColor(orig_image, orig_image, cv::COLOR_BGR2RGB);
-    auto img_width  = orig_image.cols;
-    auto img_height = orig_image.rows;
+    cv::Mat rgb_image;
+    cv::cvtColor(orig_image, rgb_image, cv::COLOR_BGR2RGB);
+    auto img_width  = rgb_image.cols;
+    auto img_height = rgb_image.rows;
 
     if ((img_width != params.model_input_width) || (img_height != params.model_input_height))
     {
-        cv::resize(orig_image, orig_image, cv::Size(params.model_input_width, params.model_input_height), 0, 0, cv::INTER_LINEAR);
+        cv::resize(rgb_image, rgb_image, cv::Size(params.model_input_width, params.model_input_height), 0, 0, cv::INTER_LINEAR);
     }
 
     outputData.index = 0;
     outputData.shape.width = params.model_input_width;
     outputData.shape.height = params.model_input_height;
     outputData.shape.channel = 3;
-    outputData.size = orig_image.total() * orig_image.elemSize();
+    outputData.size = rgb_image.total() * rgb_image.elemSize();
     outputData.buf.reset(new uint8_t[outputData.size]);
-    std::memcpy(outputData.buf.get(), orig_image.data, outputData.size);
+    std::memcpy(outputData.buf.get(), rgb_image.data, outputData.size);
     return 0;
 }
 

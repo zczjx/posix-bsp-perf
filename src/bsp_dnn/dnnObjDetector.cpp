@@ -52,12 +52,13 @@ dnnObjDetector::~dnnObjDetector()
             throw std::runtime_error(dlerror());
         }
 
-        destroy(m_dnnPluginHandle.get());
+        m_dnnPluginHandle.reset();
     }
 
     if (m_pluginLibraryHandle != nullptr)
     {
         dlclose(m_pluginLibraryHandle.get());
+        m_pluginLibraryHandle.reset();
     }
 }
 
@@ -108,6 +109,12 @@ int dnnObjDetector::runObjDetect(const ObjDetectParams& params)
     m_dnnEngine->runInference();
     std::vector<IDnnEngine::dnnOutput> dnn_output_vector{};
     m_dnnEngine->popOutputData(dnn_output_vector);
+    m_logger->printStdoutLog(BspLogger::LogLevel::Info, "dnn_output_vector.size(): {}", dnn_output_vector.size());
+    for (const auto& dnn_output : dnn_output_vector)
+    {
+        m_logger->printStdoutLog(BspLogger::LogLevel::Info, "dnn_output.index: {}, dnn_output.size: {}", dnn_output.index, dnn_output.size);
+        m_logger->printStdoutLog(BspLogger::LogLevel::Info, "dnn_output.dataType: {}", dnn_output.dataType);
+    }
     return m_dnnPluginHandle->postProcess(m_labelTextPath, params,
                 dnn_output_vector, m_dataOutputVector);
 }
