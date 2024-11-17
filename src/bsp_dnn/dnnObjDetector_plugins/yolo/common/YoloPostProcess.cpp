@@ -114,7 +114,7 @@ int YoloPostProcess::runPostProcess(const ObjDetectParams& params, std::vector<I
 
     for (int i = 0; i < inputData.size(); i++)
     {
-        int stride = BASIC_STRIDE * (i + 1);
+        int stride = BASIC_STRIDE * (1 << i);
         std::cout << "runPostProcess i: " << i << std::endl;
         std::cout << "validBoxNum: " << validBoxNum << std::endl;
         validBoxNum += doProcess(i, params, stride, inputData[i], filterBoxes, objScores, classId);
@@ -180,6 +180,7 @@ int YoloPostProcess::doProcess(const int idx, const ObjDetectParams& params, int
     int grid_h = params.model_input_height / stride;
     int grid_w = params.model_input_width / stride;
     int grid_len = grid_h * grid_w;
+
     int8_t thres_i8 = qauntFP32ToAffine(params.conf_threshold, params.quantize_zero_points[idx],
                         params.quantize_scales[idx]);
 
