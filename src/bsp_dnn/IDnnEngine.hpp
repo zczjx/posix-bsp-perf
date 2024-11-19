@@ -38,6 +38,8 @@ public:
         std::shared_ptr<uint8_t> buf{nullptr};
         size_t size{0};
         dnnInputShape shape{};
+        // dataType can be "UINT8", "float32"
+        std::string dataType{"UINT8"};
     };
 
     struct dnnOutput
@@ -45,8 +47,8 @@ public:
         size_t index{0};
         void* buf{nullptr};
         size_t size{0};
-        // dataType can be "int8", "float32"
-        std::string dataType{"int8"};
+        // dataType can be "UINT8", "INT8", "float32"
+        std::string dataType{"INT8"};
     };
 
     virtual ~IDnnEngine() = default;
