@@ -88,7 +88,7 @@ int dnnObjDetector::defaultPostProcess(const std::string& labelTextPath, const O
     return 0;
 }
 
-int dnnObjDetector::runObjDetect(const ObjDetectParams& params)
+int dnnObjDetector::runObjDetect(ObjDetectParams& params)
 {
     if ((m_pluginLibraryHandle == nullptr) || (m_dnnPluginHandle == nullptr))
     {

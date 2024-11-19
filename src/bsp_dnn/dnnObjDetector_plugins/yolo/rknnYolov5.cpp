@@ -7,7 +7,7 @@
 namespace bsp_dnn
 {
 
-int rknnYolov5::preProcess(const ObjDetectParams& params, ObjDetectInput& inputData, IDnnEngine::dnnInput& outputData)
+int rknnYolov5::preProcess(ObjDetectParams& params, ObjDetectInput& inputData, IDnnEngine::dnnInput& outputData)
 {
     if (inputData.handleType.compare("opencv4") != 0)
     {
@@ -25,8 +25,6 @@ int rknnYolov5::preProcess(const ObjDetectParams& params, ObjDetectInput& inputD
     auto img_width  = rgb_image.cols;
     auto img_height = rgb_image.rows;
 
-    struct bboxRect<int> pads;
-    memset(&pads, 0, sizeof(struct bboxRect<int>));
     cv::Size target_size(params.model_input_width, params.model_input_height);
     cv::Mat padded_image(target_size.height, target_size.width, CV_8UC3);
     float min_scale = std::min(params.scale_width, params.scale_height);
@@ -38,13 +36,13 @@ int rknnYolov5::preProcess(const ObjDetectParams& params, ObjDetectInput& inputD
     // 计算填充大小
     int pad_width = target_size.width - resized_image.cols;
     int pad_height = target_size.height - resized_image.rows;
-    pads.left = pad_width / 2;
-    pads.right = pad_width - pads.left;
-    pads.top = pad_height / 2;
-    pads.bottom = pad_height - pads.top;
+    params.pads.left = pad_width / 2;
+    params.pads.right = pad_width - params.pads.left;
+    params.pads.top = pad_height / 2;
+    params.pads.bottom = pad_height - params.pads.top;
 
     // 在图像周围添加填充
-    cv::copyMakeBorder(resized_image, padded_image, pads.top, pads.bottom, pads.left, pads.right, cv::BORDER_CONSTANT, cv::Scalar(128, 128, 128));
+    cv::copyMakeBorder(resized_image, padded_image, params.pads.top, params.pads.bottom, params.pads.left, params.pads.right, cv::BORDER_CONSTANT, cv::Scalar(128, 128, 128));
 
     outputData.index = 0;
     outputData.shape.width = params.model_input_width;

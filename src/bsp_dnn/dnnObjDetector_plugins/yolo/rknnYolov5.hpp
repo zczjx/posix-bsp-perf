@@ -11,7 +11,7 @@ class rknnYolov5 : public IDnnObjDetectorPlugin
 public:
     static constexpr int RKNN_YOLOV5_OUTPUT_BATCH = 3;
     rknnYolov5() = default;
-    int preProcess(const ObjDetectParams& params, ObjDetectInput& inputData, IDnnEngine::dnnInput& outputData) override;
+    int preProcess(ObjDetectParams& params, ObjDetectInput& inputData, IDnnEngine::dnnInput& outputData) override;
     int postProcess(const std::string& labelTextPath, const ObjDetectParams& params,
             std::vector<IDnnEngine::dnnOutput>& inputData, std::vector<ObjDetectOutputBox>& outputData)  override;
     ~rknnYolov5() = default;

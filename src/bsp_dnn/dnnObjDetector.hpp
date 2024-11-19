@@ -52,7 +52,7 @@ public:
     std::vector<ObjDetectOutputBox>& popOutputData();
 
     // Pure virtual function for running inference
-    int runObjDetect(const ObjDetectParams& params);
+    int runObjDetect(ObjDetectParams& params);
 
 private:
 

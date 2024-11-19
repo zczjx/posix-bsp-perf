@@ -51,7 +51,7 @@ void YoloPostProcess::inverseSortWithIndices(std::vector<float> &input, std::vec
 
     // Sort the pairs based on the value in descending order
     std::sort(value_index_pairs.begin(), value_index_pairs.end(), [](const std::pair<float, int> &a, const std::pair<float, int> &b) {
-        return a.first > b.first;
+        return a.first >= b.first;
     });
 
     // Update the input and indices vectors based on the sorted pairs
@@ -115,8 +115,6 @@ int YoloPostProcess::runPostProcess(const ObjDetectParams& params, std::vector<I
     for (int i = 0; i < inputData.size(); i++)
     {
         int stride = BASIC_STRIDE * (1 << i);
-        std::cout << "runPostProcess i: " << i << std::endl;
-        std::cout << "validBoxNum: " << validBoxNum << std::endl;
         validBoxNum += doProcess(i, params, stride, inputData[i], filterBoxes, objScores, classId);
     }
 
@@ -235,7 +233,6 @@ int YoloPostProcess::doProcess(const int idx, const ObjDetectParams& params, int
             }
         }
     }
-
     return validCount;
 }
 
