@@ -1,9 +1,9 @@
 #include "YoloPostProcess.hpp"
 #include <iostream>
-#include <fstream>
 #include <numeric>
 #include <algorithm>
 #include <set>
+#include <fstream>
 
 namespace bsp_dnn
 {
@@ -104,7 +104,6 @@ int YoloPostProcess::nms(int validCount, std::vector<float> &filterBoxes, std::v
 
 }
 
-
 int YoloPostProcess::runPostProcess(const ObjDetectParams& params, std::vector<IDnnEngine::dnnOutput>& inputData, std::vector<ObjDetectOutputBox>& outputData)
 {
     std::vector<float> filterBoxes;
@@ -201,8 +200,8 @@ int YoloPostProcess::doProcess(const int idx, const ObjDetectParams& params, int
                     float box_h = (deqauntAffineToFP32(in_ptr[3 * grid_len], params.quantize_zero_points[idx], params.quantize_scales[idx])) * 2.0;
                     box_x = (box_x + j) * (float) stride;
                     box_y = (box_y + i) * (float) stride;
-                    box_w = box_w * box_w * (float) anchorVec[idx][a * 2];
-                    box_h = box_h * box_h * (float) anchorVec[idx][a * 2 + 1];
+                    box_w = box_w * box_w * (float) m_anchorVec[idx][a * 2];
+                    box_h = box_h * box_h * (float) m_anchorVec[idx][a * 2 + 1];
                     box_x -= (box_w / 2.0);
                     box_y -= (box_h / 2.0);
 

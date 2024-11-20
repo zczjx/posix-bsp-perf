@@ -70,7 +70,7 @@ private:
 private:
     std::vector<std::string> m_labelMap;
     bool m_labelMapInited{false};
-    std::vector<std::array<const int, 6>> anchorVec = {
+    std::vector<std::array<const int, 6>> m_anchorVec = {
         {10, 13, 16, 30, 33, 23},
         {30, 61, 62, 45, 59, 119},
         {116, 90, 156, 198, 373, 326}

@@ -175,7 +175,7 @@ int rknn::pushInputData(dnnInput& inputData)
     }
 
     m_params.m_inputs[0].index = inputData.index;
-    m_params.m_inputs[0].type         = RKNN_TENSOR_UINT8;
+    m_params.m_inputs[0].type         = m_params.dataTypeMap.at(inputData.dataType);
     m_params.m_inputs[0].size         = m_params.m_input_attrs[0].dims[1] * m_params.m_input_attrs[0].dims[2] * m_params.m_input_attrs[0].dims[3];
     m_params.m_inputs[0].fmt          = m_params.m_input_attrs[0].fmt;
     m_params.m_inputs[0].pass_through = 0;

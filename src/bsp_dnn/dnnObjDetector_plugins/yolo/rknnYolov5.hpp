@@ -9,7 +9,7 @@ namespace bsp_dnn
 class rknnYolov5 : public IDnnObjDetectorPlugin
 {
 public:
-    static constexpr int RKNN_YOLOV5_OUTPUT_BATCH = 3;
+    constexpr static int RKNN_YOLOV5_OUTPUT_BATCH = 3;
     rknnYolov5() = default;
     int preProcess(ObjDetectParams& params, ObjDetectInput& inputData, IDnnEngine::dnnInput& outputData) override;
     int postProcess(const std::string& labelTextPath, const ObjDetectParams& params,

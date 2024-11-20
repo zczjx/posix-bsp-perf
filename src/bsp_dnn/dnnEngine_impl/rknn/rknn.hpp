@@ -25,6 +25,19 @@ struct RknnParams
     std::vector<rknn_tensor_attr> m_output_attrs{};
     rknn_input m_inputs[1];
     std::vector<rknn_output> m_outputs{};
+    const std::unordered_map<std::string, rknn_tensor_type> dataTypeMap{
+        {"FP32", rknn_tensor_type::RKNN_TENSOR_FLOAT32},
+        {"FP16", rknn_tensor_type::RKNN_TENSOR_FLOAT16},
+        {"INT8", rknn_tensor_type::RKNN_TENSOR_INT8},
+        {"UINT8", rknn_tensor_type::RKNN_TENSOR_UINT8},
+        {"INT16", rknn_tensor_type::RKNN_TENSOR_INT16},
+        {"UINT16", rknn_tensor_type::RKNN_TENSOR_UINT16},
+        {"INT32", rknn_tensor_type::RKNN_TENSOR_INT32},
+        {"UINT32", rknn_tensor_type::RKNN_TENSOR_UINT32},
+        {"INT64", rknn_tensor_type::RKNN_TENSOR_INT64},
+        {"BOOL", rknn_tensor_type::RKNN_TENSOR_BOOL},
+        {"INT4", rknn_tensor_type::RKNN_TENSOR_INT4}
+    };
 };
 
 class rknn : public IDnnEngine
