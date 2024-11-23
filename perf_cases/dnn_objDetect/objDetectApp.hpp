@@ -69,14 +69,37 @@ private:
         setObjDetectParams(m_objDetectParams);
         m_dnnObjDetector->runObjDetect(m_objDetectParams);
         auto& objDetectOutput = m_dnnObjDetector->popOutputData();
+        std::vector<cv::Scalar> colors = {
+                cv::Scalar(255, 0, 0),    // Blue
+                cv::Scalar(0, 255, 0),    // Green
+                cv::Scalar(0, 0, 255),    // Red
+                cv::Scalar(255, 255, 0),  // Cyan
+                cv::Scalar(255, 0, 255),  // Magenta
+                cv::Scalar(0, 255, 255),  // Yellow
+                cv::Scalar(128, 0, 0),    // Maroon
+                cv::Scalar(0, 128, 0),    // Olive
+                cv::Scalar(0, 0, 128),    // Navy
+                cv::Scalar(128, 128, 0),  // Teal
+                cv::Scalar(128, 0, 128),  // Purple
+                cv::Scalar(0, 128, 128)   // Aqua
+        };
+        std::map<std::string, cv::Scalar> labelColorMap;
+        for (size_t i = 0; i < objDetectOutput.size(); ++i)
+        {
+            const auto& obj = objDetectOutput[i];
+            if (labelColorMap.find(obj.label) == labelColorMap.end())
+            {
+                labelColorMap[obj.label] = colors[i % colors.size()];
+            }
+        }
 
         for (const auto& obj : objDetectOutput)
         {
             m_logger->printStdoutLog(bsp_perf::shared::BspLogger::LogLevel::Info, "{} ObjDetectApp::onProcess() objDetectOutput: bbox: [{}, {}, {}, {}], score: {}, label: {}",
                 LOG_TAG, obj.bbox.left, obj.bbox.top, obj.bbox.right, obj.bbox.bottom, obj.score, obj.label);
             cv::rectangle(*m_orig_image_ptr, cv::Point(obj.bbox.left, obj.bbox.top), cv::Point(obj.bbox.right, obj.bbox.bottom),
-                    cv::Scalar(256, 0, 0, 256), 3);
-            cv::putText(*m_orig_image_ptr, obj.label, cv::Point(obj.bbox.left, obj.bbox.top + 12), cv::FONT_HERSHEY_SIMPLEX, 0.4, cv::Scalar(256, 255, 255));
+                    labelColorMap[obj.label], 2);
+            cv::putText(*m_orig_image_ptr, obj.label, cv::Point(obj.bbox.left, obj.bbox.top + 12), cv::FONT_HERSHEY_COMPLEX, 0.4, cv::Scalar(256, 255, 255));
         }
     }
 
