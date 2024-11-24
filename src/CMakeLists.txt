@@ -5,7 +5,7 @@ option(BUILD_SRC_SHARED "Build src/shared" ON)
 option(BUILD_SRC_CORE "Build src/core" OFF)
 option(BUILD_SRC_PROFILER "Build profiler" ON)
 option(BUILD_SRC_BSP_SOCKETS "Build bsp_sockets" ON)
-option(BUILD_SRC_BSP_DNN "Build bsp_dnn" ON)
+
 
 # 根据选项包含子项目的CMakeLists.txt
 if(BUILD_SRC_FRAMEWORK)
@@ -28,6 +28,3 @@ if(BUILD_SRC_BSP_SOCKETS)
     add_subdirectory(bsp_sockets)
 endif()
 
-if(BUILD_SRC_BSP_DNN)
-    add_subdirectory(bsp_dnn)
-endif()

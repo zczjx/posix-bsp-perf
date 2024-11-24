@@ -13,6 +13,7 @@ set(SOURCES
   impl/IEventLoop.cpp
   impl/EventLoopEpoll.cpp
   impl/EventLoopPoll.cpp
+  impl/EventLoopLibevent.cpp
   impl/IOBuffer.cpp
   impl/TcpClient.cpp
   impl/TcpConnection.cpp
@@ -26,6 +27,16 @@ set(SOURCES
 
 # Add the library target
 add_library(${PROJECT_NAME} SHARED ${SOURCES})
+
+# Find the libevent package
+find_package(PkgConfig REQUIRED)
+pkg_check_modules(LIBEVENT REQUIRED libevent)
+
+# Include directories for libevent
+include_directories(${LIBEVENT_INCLUDE_DIRS})
+
+# Link the libevent library
+target_link_libraries(${PROJECT_NAME} PRIVATE ${LIBEVENT_LIBRARIES})
 
 # target_link_libraries(${PROJECT_NAME} PRIVATE bsp_shared)
 
