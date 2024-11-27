@@ -20,6 +20,37 @@ namespace bsp_sockets
 {
 using namespace bsp_perf::shared;
 
+
+
+static void timerQueueCallback(evutil_socket_t fd, short what, void *arg)
+{
+    auto* loop = static_cast<EventLoopLibevent*>(arg);
+    std::vector<timerEvent> fired_evs;
+    auto tq = loop->m_params.m_timer_queue;
+    tq->getFiredTimerEvents(fired_evs);
+    for (auto& event : fired_evs)
+    {
+        event.cb(loop->shared_from_this(), event.cb_data);
+    }
+}
+
+static void lib_callback(evutil_socket_t fd, short what, void *arg)
+{
+    auto* loop = static_cast<EventLoopLibevent*>(arg);
+
+    if (what == EV_READ)
+    {
+        std::any rcbarg = loop->m_params.m_io_events[fd].rcb_args;
+        loop->m_params.m_io_events[fd].read_callback(loop->shared_from_this(), fd, rcbarg);
+    }
+    else if (what == EV_WRITE)
+    {
+        std::any wcbarg = loop->m_params.m_io_events[fd].wcb_args;
+        loop->m_params.m_io_events[fd].read_callback(loop->shared_from_this(), fd, wcbarg);
+    }
+}
+
+
 EventLoopLibevent::EventLoopLibevent():
     m_params{
     .m_event_base = event_base_new(),
@@ -37,44 +68,9 @@ EventLoopLibevent::EventLoopLibevent():
     {
         throw BspSocketException("new TimerQueue");
     }
-    std::cout << "40行 in  EventLoopLibevent.cpp" <<std::endl;
-    /*
-    auto timerQueueCallback = [](std::shared_ptr<IEventLoop> loop, int fd, std::any args)
-    {
-        std::vector<timerEvent> fired_evs;
-        auto& tq = loop->getTimerQueue();
-        tq->getFiredTimerEvents(fired_evs);
-        for (std::vector<timerEvent>::iterator it = fired_evs.begin();
-            it != fired_evs.end(); ++it)
-        {
-            it->cb(loop, it->cb_data);
-        }
-    };
 
-    addIoEvent(m_params.m_timer_queue->getNotifier(), timerQueueCallback, EPOLLIN, m_params.m_timer_queue);
-    */
-
-    auto timerQueueCallback = [](evutil_socket_t fd, short what, void *arg)
-    {
-        auto loop_ptr = static_cast<std::shared_ptr<IEventLoop>*>(arg);
-        std::shared_ptr<IEventLoop> loop = *loop_ptr;
-        std::vector<timerEvent> fired_evs;
-        auto& tq = loop->getTimerQueue();
-        tq->getFiredTimerEvents(fired_evs);
-        for (auto& event : fired_evs)
-        {
-            event.cb(loop, event.cb_data);
-        }
-    };
-
-    auto * params = new std::shared_ptr<IEventLoop>(shared_from_this());
-    std::cout << "71行 in  EventLoopLibevent.cpp" <<std::endl;
-    struct event *timer_event = event_new(m_params.m_event_base, m_params.m_timer_queue->getNotifier(), EV_READ | EV_PERSIST, timerQueueCallback, params);
-    m_params.m_io_events[m_params.m_timer_queue->getNotifier()].libread_callback = timerQueueCallback;
-    m_params.m_io_events[m_params.m_timer_queue->getNotifier()].mask = EPOLLIN;
-    m_params.m_io_events[m_params.m_timer_queue->getNotifier()].event_for_read = timer_event;
-    m_params.m_io_events[m_params.m_timer_queue->getNotifier()].rcb_args = params;
-    
+    std::cout << "72行 in  EventLoopLibevent.cpp" <<std::endl;
+    struct event *timer_event = event_new(m_params.m_event_base, m_params.m_timer_queue->getNotifier(), EV_READ | EV_PERSIST, timerQueueCallback, this);    
 
     if (nullptr == timer_event)
     {
@@ -108,74 +104,36 @@ void EventLoopLibevent::processEvents()
 
 void EventLoopLibevent::addIoEvent(int fd, ioCallback proc, int mask, std::any args)
 {
-    /*
     int f_mask = 0;
-    int op;
     EventLoopParams::ioevIterator it = m_params.m_io_events.find(fd);
     if (it == m_params.m_io_events.end())
     {
         f_mask = mask;
-        op = EPOLL_CTL_ADD;
     }
     else
     {
         f_mask = it->second.mask | mask;
-        op = EPOLL_CTL_MOD;
     }
-    if (mask & EPOLLIN)
+
+    m_params.m_io_events[fd].mask = f_mask;
+
+    short events;
+    if(mask & EPOLLIN)
     {
+        events = EV_READ;
         m_params.m_io_events[fd].read_callback = proc;
         m_params.m_io_events[fd].rcb_args = args;
     }
     else if (mask & EPOLLOUT)
     {
+        events = EV_WRITE;
         m_params.m_io_events[fd].write_callback = proc;
         m_params.m_io_events[fd].wcb_args = args;
     }
 
-    m_params.m_io_events[fd].mask = f_mask;
-    struct epoll_event event;
-    event.events = f_mask;
-    event.data.fd = fd;
-    int ret = ::epoll_ctl(m_params.m_epoll_fd, op, fd, &event);
-    if (ret == -1)
-    {
-        int errnum = errno;
-        m_params.m_logger->printStdoutLog(BspLogger::LogLevel::Error, "EventLoop::addIoEvent epoll_ctl ret:{}, m_epoll_fd:{}, fd:{}, Error num: {}",
-                    ret, m_params.m_epoll_fd, fd, strerror(errnum));
-        throw BspSocketException("epoll_ctl");
-    }
-    m_params.m_listening.insert(fd); //加入到监听集合中
-    */
-
-    int f_mask = 0;
-    int op;
-    EventLoopParams::ioevIterator it = m_params.m_io_events.find(fd);
-    if (it == m_params.m_io_events.end())
-    {
-        f_mask = mask;
-    }
-    else
-    {
-        f_mask = it->second.mask | mask;
-    }
-    
-    m_params.m_io_events[fd].mask = f_mask;
-
-    short events;
-
-    auto lib_Callback = [](evutil_socket_t fd, short what, void *arg)
-    {
-        std::cout << "167行 in  EventLoopLibevent.cpp" <<std::endl;
-        auto *params = static_cast<std::tuple<std::function<void(std::shared_ptr<IEventLoop>, int, std::any)>, std::shared_ptr<IEventLoop>, std::any>*>(arg);
-        auto &cb = std::get<0>(*params);
-        auto &loop = std::get<1>(*params);
-        auto &args = std::get<2>(*params);
-        cb(loop, fd, args);
-    };
-
-    auto *params = new std::tuple<std::function<void(std::shared_ptr<IEventLoop>, int, std::any)>, std::shared_ptr<IEventLoop>, std::any>(proc, shared_from_this(), args);
-    struct event *io_event = event_new(m_params.m_event_base, fd, events | EV_PERSIST,lib_Callback, params);
+    //auto *params = new std::tuple<std::function<void(std::shared_ptr<IEventLoop>, int, std::any)>, std::shared_ptr<IEventLoop>, std::any>(proc, shared_from_this(), args);
+    struct event *io_event = event_new(m_params.m_event_base, fd, events | EV_PERSIST,lib_callback, this);
+    std::cout << "136行 in  EventLoopLibevent.cpp" <<std::endl;
 
     if (nullptr == io_event)
     {
@@ -189,14 +147,10 @@ void EventLoopLibevent::addIoEvent(int fd, ioCallback proc, int mask, std::any a
 
     if (mask & EPOLLIN)
     {
-        m_params.m_io_events[fd].libread_callback = lib_Callback;
-        m_params.m_io_events[fd].rcb_args = params;
         m_params.m_io_events[fd].event_for_read = io_event;
     }
     else if (mask & EPOLLOUT)
     {
-        m_params.m_io_events[fd].libwrite_callback = lib_Callback;
-        m_params.m_io_events[fd].wcb_args = params;
         m_params.m_io_events[fd].event_for_write = io_event;
     }
 
@@ -204,44 +158,6 @@ void EventLoopLibevent::addIoEvent(int fd, ioCallback proc, int mask, std::any a
 
 void EventLoopLibevent::delIoEvent(int fd, int mask)
 {
-    /*
-    EventLoopParams::ioevIterator it = m_params.m_io_events.find(fd);
-    if (it == m_params.m_io_events.end())
-    {
-        return ;
-    }
-    int& o_mask = it->second.mask;
-    int ret;
-    o_mask = o_mask & (~mask);
-    if (o_mask == 0)
-    {
-        m_params.m_io_events.erase(it);
-        ret = ::epoll_ctl(m_params.m_epoll_fd, EPOLL_CTL_DEL, fd, NULL);
-        if (ret == -1)
-        {
-        int errnum = errno;
-        m_params.m_logger->printStdoutLog(BspLogger::LogLevel::Error, "EventLoop::delIoEvent EPOLL_CTL_DEL ret:{}, m_epoll_fd:{}, fd:{}, Error num: {}",
-                    ret, m_params.m_epoll_fd, fd, strerror(errnum));
-            throw BspSocketException("epoll_ctl EPOLL_CTL_DEL");
-        }
-        m_params.m_listening.erase(fd);//从监听集合中删除
-    }
-    else
-    {
-        struct epoll_event event;
-        event.events = o_mask;
-        event.data.fd = fd;
-        ret = ::epoll_ctl(m_params.m_epoll_fd, EPOLL_CTL_MOD, fd, &event);
-        if (ret == -1)
-        {
-            int errnum = errno;
-            m_params.m_logger->printStdoutLog(BspLogger::LogLevel::Error, "EventLoop::delIoEvent EPOLL_CTL_MOD ret:{}, m_epoll_fd:{}, fd:{}, Error num: {}",
-                        ret, m_params.m_epoll_fd, fd, strerror(errnum));
-            throw BspSocketException("epoll_ctl EPOLL_CTL_MOD");
-        }
-    }
-    */
-
     EventLoopParams::ioevIterator it = m_params.m_io_events.find(fd);
     if (it == m_params.m_io_events.end())
     {
@@ -249,9 +165,7 @@ void EventLoopLibevent::delIoEvent(int fd, int mask)
     }
     
     short events = 0;
-    libCallback cb;
     std::any cb_args;
-
 
     int& o_mask = it->second.mask;
     o_mask = o_mask & (~mask);
@@ -270,18 +184,12 @@ void EventLoopLibevent::delIoEvent(int fd, int mask)
         // Modify the event
         if (o_mask & EPOLLIN)
         {
-            events = EV_READ;
-            cb = it->second.libread_callback;
-            cb_args = it->second.rcb_args;
             event_del(it->second.event_for_write);
             event_free(it->second.event_for_write);
 
         }
         if (o_mask & EPOLLOUT)
         {
-            events = EV_WRITE;
-            cb = it->second.libwrite_callback;
-            cb_args = it->second.wcb_args;
             event_del(it->second.event_for_read);
             event_free(it->second.event_for_read);
         }
@@ -290,24 +198,6 @@ void EventLoopLibevent::delIoEvent(int fd, int mask)
 
 void EventLoopLibevent::delIoEvent(int fd)
 {
-    /*
-    EventLoopParams::ioevIterator it = m_params.m_io_events.find(fd);
-    if (it == m_params.m_io_events.end())
-    {
-        return;
-    }
-    m_params.m_io_events.erase(it);
-    m_params.m_listening.erase(fd);
-    int ret = ::epoll_ctl(m_params.m_epoll_fd, EPOLL_CTL_DEL, fd, NULL);
-    if (ret == -1)
-    {
-        int errnum = errno;
-        m_params.m_logger->printStdoutLog(BspLogger::LogLevel::Error, "EventLoop::delIoEvent EPOLL_CTL_DEL ret:{}, m_epoll_fd:{}, fd:{}, Error num: {}",
-                    ret, m_params.m_epoll_fd, fd, strerror(errnum));
-        throw BspSocketException("epoll_ctl EPOLL_CTL_DEL");
-    }
-    */
-
     EventLoopParams::ioevIterator it = m_params.m_io_events.find(fd);
     if (it == m_params.m_io_events.end())
     {

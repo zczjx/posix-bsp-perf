@@ -25,15 +25,13 @@ using ioCallback = std::function<void(std::shared_ptr<IEventLoop> loop, int fd, 
 //让当前loop在一次poll循环后执行指定任务
 using pendingFunc = std::function<void(std::shared_ptr<IEventLoop>, std::any)>;
 
-using libCallback = std::function<void(evutil_socket_t fd, short what, void *arg)>;
+//using libCallback = std::function<void(evutil_socket_t fd, short what, void *arg)>;
 
 struct IOEvent//注册的IO事件
 {
     int mask{0x00};             //EPOLLIN EPOLLOUT
     struct event *event_for_read{nullptr};  //libevent
-    struct event *event_for_write{nullptr}; //libevent
-    libCallback libread_callback{nullptr};  //callback when libevent triggered  
-    libCallback libwrite_callback{nullptr};         
+    struct event *event_for_write{nullptr}; //libevent      
     ioCallback read_callback{nullptr};  //callback when EPOLLIN comming
     ioCallback write_callback{nullptr}; //callback when EPOLLOUT comming
     std::any rcb_args{nullptr};   //extra arguments for read_cb

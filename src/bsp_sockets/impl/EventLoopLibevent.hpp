@@ -33,13 +33,21 @@ public:
     int runEvery(timerCallback cb, std::any args, int sec, int millis = 0) override;
     void delTimer(int timer_id) override;
 
+
+    //static void timerQueueCallback(evutil_socket_t fd, short what, void *arg);
+    //static void lib_callback(evutil_socket_t fd, short what, void *arg);
+
     std::shared_ptr<TimerQueue>& getTimerQueue() override;
 
 
-private:
+
+public:
     EventLoopParams m_params{};
 
-    friend void timerQueueCallback(IEventLoop& loop, int fd, std::any args);
+    //friend void timerQueueCallback(IEventLoop& loop, int fd, std::any args);
+
+    
+    
 
 
 };

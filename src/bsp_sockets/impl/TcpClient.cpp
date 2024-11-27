@@ -169,6 +169,7 @@ void TcpClient::doConnect()
         if (errno == EINPROGRESS)
         {
             //add connection event
+            std::cout << "172行@TcpCLient.cpp"<<std::endl;
             m_loop->addIoEvent(m_sockfd, connectEventCallback, EPOLLOUT, shared_from_this());
         }
         else
@@ -216,6 +217,7 @@ int TcpClient::sendData(size_t cmd_id, std::vector<uint8_t>& data) //call by use
 
 }
 
+
 int TcpClient::handleRead()
 {
     //一次性读出来所有数据
@@ -258,6 +260,7 @@ int TcpClient::handleRead()
         m_msg_dispatcher.callbackFunc(head.cmd_id, data_buffer, shared_from_this());
 
     }
+
     else if (ret == 0)
     {
         //peer close connection
