@@ -38,12 +38,15 @@ static void reConnectCallback(std::shared_ptr<IEventLoop> loop, std::any usr_dat
 
 static void connectEventCallback(std::shared_ptr<IEventLoop> loop, int fd, std::any args)
 {
+    //std::cout<<"41行 in  TcpCLient.cpp" << std::endl;
     std::shared_ptr<TcpClient> client = std::any_cast<std::shared_ptr<TcpClient>>(args);
+    //std::cout<<"42行 in  TcpCLient.cpp" << std::endl;
     loop->delIoEvent(fd);
+    //std::cout<<"43行 in  TcpCLient.cpp" << std::endl;
     int result;
     socklen_t result_len = sizeof(result);
     getsockopt(fd, SOL_SOCKET, SO_ERROR, &result, &result_len);
-
+    //std::cout<<"49行 in  TcpCLient.cpp" << std::endl;
     if (result == 0)
     {
         //connect build success!

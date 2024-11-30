@@ -34,21 +34,64 @@ static void timerQueueCallback(evutil_socket_t fd, short what, void *arg)
     }
 }
 
-static void lib_callback(evutil_socket_t fd, short what, void *arg)
+static void lib_callback(evutil_socket_t fd_t, short what, void *arg)
 {
-    auto* loop = static_cast<EventLoopLibevent*>(arg);
+    //std::cout << "39行 in  EventLoopLibevent.cpp" << std::endl;
+    int fd = static_cast<int>(fd_t);
+    EventLoopLibevent* loop = static_cast<EventLoopLibevent*>(arg);
+    if (!loop) {
+        std::cerr << "Error: loop is null" << std::endl;
+        return;
+    }
+    //std::cout << loop << std::endl;
+    //std::cout << "47行 in  EventLoopLibevent.cpp" << std::endl;
+    //std::cout<<what<<" "<<EV_READ<<" "<<EV_WRITE<<" "<<EV_SIGNAL<<std::endl;
 
     if (what == EV_READ)
     {
+        //std::cout << "52行 in  EventLoopLibevent.cpp" << std::endl;
         std::any rcbarg = loop->m_params.m_io_events[fd].rcb_args;
-        loop->m_params.m_io_events[fd].read_callback(loop->shared_from_this(), fd, rcbarg);
+        //std::cout << "54行 in  EventLoopLibevent.cpp" << std::endl;
+        if (loop->m_params.m_io_events[fd].read_callback) {
+            loop->m_params.m_io_events[fd].read_callback(loop->shared_from_this(), fd, rcbarg);
+        } else {
+            std::cerr << "Error: read_callback is not set for fd: " << fd << std::endl;
+        }
+        //std::cout << "60行 in  EventLoopLibevent.cpp" << std::endl;
     }
     else if (what == EV_WRITE)
     {
+        //std::cout<<"64行 in  EventLoopLibevent.cpp" << std::endl;
         std::any wcbarg = loop->m_params.m_io_events[fd].wcb_args;
-        loop->m_params.m_io_events[fd].read_callback(loop->shared_from_this(), fd, wcbarg);
+        if (loop->m_params.m_io_events[fd].write_callback) {
+            //std::cout<<"67行 in  EventLoopLibevent.cpp" << std::endl;
+            //std::cout<<loop->m_params.m_io_events[fd].write_callback << std::endl;
+            //std::cout<< loop->shared_from_this()<<std::endl;
+            //std::cout<<"70行 in  EventLoopLibevent.cpp" << std::endl;
+            loop->m_params.m_io_events[fd].write_callback(loop->shared_from_this(), fd, wcbarg);
+        } else {
+            std::cerr << "Error: write_callback is not set for fd: " << fd << std::endl;
+        }
     }
+    else if (what == EV_SIGNAL)
+    {
+        if (loop->m_params.m_io_events[fd].read_callback)
+        {
+            //std::cout << "75行 in  EventLoopLibevent.cpp" << std::endl;
+            std::any rcbarg = loop->m_params.m_io_events[fd].rcb_args;
+            //std::cout << "77行 in  EventLoopLibevent.cpp" << std::endl;
+            loop->m_params.m_io_events[fd].read_callback(loop->shared_from_this(), fd, rcbarg);
+        }
+        else if (loop->m_params.m_io_events[fd].write_callback)
+        {
+            std::any wcbarg = loop->m_params.m_io_events[fd].wcb_args;
+            loop->m_params.m_io_events[fd].write_callback(loop->shared_from_this(), fd, wcbarg);
+        }
+        //std::cout << "85行 in  EventLoopLibevent.cpp" << std::endl;
+    }
+    //std::cout << "87行 in  EventLoopLibevent.cpp" << std::endl;
 }
+
 
 
 EventLoopLibevent::EventLoopLibevent():
@@ -69,7 +112,7 @@ EventLoopLibevent::EventLoopLibevent():
         throw BspSocketException("new TimerQueue");
     }
 
-    std::cout << "72行 in  EventLoopLibevent.cpp" <<std::endl;
+    std::cout << "110行 in  EventLoopLibevent.cpp" <<std::endl;
     struct event *timer_event = event_new(m_params.m_event_base, m_params.m_timer_queue->getNotifier(), EV_READ | EV_PERSIST, timerQueueCallback, this);    
 
     if (nullptr == timer_event)
@@ -117,23 +160,23 @@ void EventLoopLibevent::addIoEvent(int fd, ioCallback proc, int mask, std::any a
 
     m_params.m_io_events[fd].mask = f_mask;
 
-    short events;
+    short events = 0;
     if(mask & EPOLLIN)
     {
-        events = EV_READ;
+        events |= EV_READ;
         m_params.m_io_events[fd].read_callback = proc;
         m_params.m_io_events[fd].rcb_args = args;
     }
     else if (mask & EPOLLOUT)
     {
-        events = EV_WRITE;
+        events |= EV_WRITE;
         m_params.m_io_events[fd].write_callback = proc;
         m_params.m_io_events[fd].wcb_args = args;
     }
 
     //auto *params = new std::tuple<std::function<void(std::shared_ptr<IEventLoop>, int, std::any)>, std::shared_ptr<IEventLoop>, std::any>(proc, shared_from_this(), args);
     struct event *io_event = event_new(m_params.m_event_base, fd, events | EV_PERSIST,lib_callback, this);
-    std::cout << "136行 in  EventLoopLibevent.cpp" <<std::endl;
+    //std::cout << "174行 in  EventLoopLibevent.cpp" <<std::endl;
 
     if (nullptr == io_event)
     {
@@ -198,14 +241,27 @@ void EventLoopLibevent::delIoEvent(int fd, int mask)
 
 void EventLoopLibevent::delIoEvent(int fd)
 {
+    //std::cout << "244行 in  EventLoopLibevent.cpp" <<std::endl;
     EventLoopParams::ioevIterator it = m_params.m_io_events.find(fd);
     if (it == m_params.m_io_events.end())
     {
+        //std::cout << "248行 in  EventLoopLibevent.cpp" <<std::endl;
         return;
     }
-
+    //std::cout << "251行 in  EventLoopLibevent.cpp" <<std::endl;
     // Delete the event
-    if (event_del(it->second.event_for_read) == -1)
+    if (it->second.event_for_read)
+    {
+        event_del(it->second.event_for_read);
+        event_free(it->second.event_for_read);
+    }
+    else if (it->second.event_for_write)
+    {
+        event_del(it->second.event_for_write);
+        event_free(it->second.event_for_write);
+    }
+    /*
+     if (event_del(it->second.event_for_read) == -1)
     {
         int errnum = errno;
         m_params.m_logger->printStdoutLog(BspLogger::LogLevel::Error, "EventLoop::delIoEvent event_del failed for fd: {}, Error num: {}", fd, strerror(errnum));
@@ -217,9 +273,8 @@ void EventLoopLibevent::delIoEvent(int fd)
         m_params.m_logger->printStdoutLog(BspLogger::LogLevel::Error, "EventLoop::delIoEvent event_del failed for fd: {}, Error num: {}", fd, strerror(errnum));
         throw BspSocketException("event_del");
     }
-
-    event_free(it->second.event_for_read);
-    event_free(it->second.event_for_write);
+    */
+    //std::cout << "277行 in  EventLoopLibevent.cpp" <<std::endl;
     m_params.m_io_events.erase(it);
     m_params.m_listening.erase(fd);
 
