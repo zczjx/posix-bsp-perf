@@ -77,8 +77,10 @@ public:
     virtual void delTimer(int timer_id)  = 0;
 
     static std::shared_ptr<IEventLoop> create(const std::string flag);
+    virtual ~IEventLoop() = default;
 
-
+protected:
+    IEventLoop() = default;
 };
 
 }

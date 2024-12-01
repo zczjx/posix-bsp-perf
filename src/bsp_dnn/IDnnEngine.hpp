@@ -51,8 +51,6 @@ public:
         std::string dataType{"INT8"};
     };
 
-    virtual ~IDnnEngine() = default;
-
     // Pure virtual function for loading a model
     virtual void loadModel(const std::string& modelPath) = 0;
 
@@ -67,7 +65,10 @@ public:
     // Pure virtual function for running inference
     virtual int runInference() = 0;
 
+    virtual ~IDnnEngine() = default;
 
+protected:
+    IDnnEngine() = default;
 };
 
 } // namespace bsp_dnn

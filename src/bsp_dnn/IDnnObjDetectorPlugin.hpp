@@ -56,6 +56,8 @@ public:
     virtual int preProcess(ObjDetectParams& params, ObjDetectInput& inputData, IDnnEngine::dnnInput& outputData) = 0; // 纯虚函数
     virtual int postProcess(const std::string& labelTextPath, const ObjDetectParams& params,
                     std::vector<IDnnEngine::dnnOutput>& inputData, std::vector<ObjDetectOutputBox>& outputData) = 0; // 纯虚函数
+
+    IDnnObjDetectorPlugin() = default;
     virtual ~IDnnObjDetectorPlugin() = default;
 };
 

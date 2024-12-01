@@ -36,7 +36,9 @@ struct RknnParams
         {"UINT32", rknn_tensor_type::RKNN_TENSOR_UINT32},
         {"INT64", rknn_tensor_type::RKNN_TENSOR_INT64},
         {"BOOL", rknn_tensor_type::RKNN_TENSOR_BOOL},
-        {"INT4", rknn_tensor_type::RKNN_TENSOR_INT4}
+        {"INT4", rknn_tensor_type::RKNN_TENSOR_INT4},
+        {"BFLOAT16", rknn_tensor_type::RKNN_TENSOR_BFLOAT16}
+
     };
 };
 
