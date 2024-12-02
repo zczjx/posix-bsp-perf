@@ -19,6 +19,8 @@ public:
      * instance based on the specified graphics platform.
      *
      * @param g2dPlatform A string representing the graphics platform to be used.
+     * The possible values are:
+     * - "rkrga"
      * @return std::unique_ptr<IGraphics2D> A unique pointer to the created IGraphics2D instance.
      */
     static std::unique_ptr<IGraphics2D> create(const std::string& g2dPlatform);
