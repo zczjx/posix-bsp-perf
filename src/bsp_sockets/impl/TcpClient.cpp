@@ -38,12 +38,15 @@ static void reConnectCallback(std::shared_ptr<IEventLoop> loop, std::any usr_dat
 
 static void connectEventCallback(std::shared_ptr<IEventLoop> loop, int fd, std::any args)
 {
+    //std::cout<<"41行 in  TcpCLient.cpp" << std::endl;
     std::shared_ptr<TcpClient> client = std::any_cast<std::shared_ptr<TcpClient>>(args);
+    //std::cout<<"42行 in  TcpCLient.cpp" << std::endl;
     loop->delIoEvent(fd);
+    //std::cout<<"43行 in  TcpCLient.cpp" << std::endl;
     int result;
     socklen_t result_len = sizeof(result);
     getsockopt(fd, SOL_SOCKET, SO_ERROR, &result, &result_len);
-
+    //std::cout<<"49行 in  TcpCLient.cpp" << std::endl;
     if (result == 0)
     {
         //connect build success!
@@ -169,6 +172,7 @@ void TcpClient::doConnect()
         if (errno == EINPROGRESS)
         {
             //add connection event
+            std::cout << "172行@TcpCLient.cpp"<<std::endl;
             m_loop->addIoEvent(m_sockfd, connectEventCallback, EPOLLOUT, shared_from_this());
         }
         else
@@ -216,6 +220,7 @@ int TcpClient::sendData(size_t cmd_id, std::vector<uint8_t>& data) //call by use
 
 }
 
+
 int TcpClient::handleRead()
 {
     //一次性读出来所有数据
@@ -258,6 +263,7 @@ int TcpClient::handleRead()
         m_msg_dispatcher.callbackFunc(head.cmd_id, data_buffer, shared_from_this());
 
     }
+
     else if (ret == 0)
     {
         //peer close connection
