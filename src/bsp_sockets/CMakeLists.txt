@@ -13,6 +13,7 @@ set(SOURCES
   impl/IEventLoop.cpp
   impl/EventLoopEpoll.cpp
   impl/EventLoopPoll.cpp
+  impl/EventLoopLibevent.cpp
   impl/IOBuffer.cpp
   impl/TcpClient.cpp
   impl/TcpConnection.cpp
@@ -27,9 +28,28 @@ set(SOURCES
 # Add the library target
 add_library(${PROJECT_NAME} SHARED ${SOURCES})
 
+# Set the path to the cross-compiled libevent
+set(CMAKE_PREFIX_PATH "/home/builder/temp/aarch64")
+set(CMAKE_LIBRARY_PATH "/home/builder/temp/aarch64/lib")
+
+# Find the libevent package
+find_package(PkgConfig REQUIRED)
+pkg_check_modules(LIBEVENT REQUIRED libevent)
+
+# Print the include and library directories for debugging
+message(STATUS "LIBEVENT_INCLUDE_DIRS: ${LIBEVENT_INCLUDE_DIRS}")
+message(STATUS "LIBEVENT_LIBRARY_DIRS: ${LIBEVENT_LIBRARY_DIRS}")
+message(STATUS "LIBEVENT_LIBRARIES: ${LIBEVENT_LIBRARIES}")
+
+# Include directories for libevent
+include_directories(${LIBEVENT_INCLUDE_DIRS})
+
+# Link the libevent library
+target_link_libraries(${PROJECT_NAME} PUBLIC ${LIBEVENT_LIBRARIES})
+
 # target_link_libraries(${PROJECT_NAME} PRIVATE bsp_shared)
 
-target_include_directories(${PROJECT_NAME} PRIVATE
+target_include_directories(${PROJECT_NAME} PUBLIC
     $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/..>
     $<INSTALL_INTERFACE:include>
 )

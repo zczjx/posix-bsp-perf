@@ -1,6 +1,7 @@
 #include <bsp_sockets/IEventLoop.hpp>
 #include "EventLoopEpoll.hpp"
 #include "EventLoopPoll.hpp"
+#include "EventLoopLibevent.hpp"
 #include "BspSocketException.hpp"
 
 
@@ -14,6 +15,10 @@ std::shared_ptr<IEventLoop> IEventLoop::create(const std::string flag) {
     else if (flag.compare("poll") == 0)
     {
         return std::make_shared<EventLoopPoll>();
+    }
+    else if (flag.compare("libevent")==0)
+    {
+        return std::make_shared<EventLoopLibevent>();
     }
     else
     {
