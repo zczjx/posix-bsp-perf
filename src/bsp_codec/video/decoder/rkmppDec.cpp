@@ -15,7 +15,7 @@ static inline unsigned long GetCurrentTimeMS()
 rkmppDec::~rkmppDec()
 {
     if (m_ctx.packet != nullptr)
-     {
+    {
         mpp_packet_deinit(&m_ctx.packet);
         m_ctx.packet = nullptr;
     }
