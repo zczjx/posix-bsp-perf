@@ -14,6 +14,26 @@ static inline unsigned long GetCurrentTimeMS()
 
 rkmppDec::~rkmppDec()
 {
+    if (m_ctx.packet != nullptr)
+     {
+        mpp_packet_deinit(&m_ctx.packet);
+        m_ctx.packet = nullptr;
+    }
+    if (m_ctx.frame != nullptr)
+    {
+        mpp_frame_deinit(&m_ctx.frame);
+        m_ctx.frame = nullptr;
+    }
+    if (m_ctx.mpp_ctx != nullptr)
+    {
+        mpp_destroy(m_ctx.mpp_ctx);
+        m_ctx.mpp_ctx = nullptr;
+    }
+    if (m_ctx.frm_grp != nullptr)
+    {
+        mpp_buffer_group_put(m_ctx.frm_grp);
+        m_ctx.frm_grp = nullptr;
+    }
 }
 
 int rkmppDec::setup(DecodeConfig& cfg)
