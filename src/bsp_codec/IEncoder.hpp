@@ -12,9 +12,13 @@ using encodeReadyCallback = std::function<void(std::any userdata, const char* da
 struct EncodeConfig
 {
     // encoding can be "h264", "h265"
-    std::string encoding{"h264"};
+    std::string encodingType{"h264"};
+    std::string frameFormat{"YUV420SP"};
     int fps{0};
-    std::any data{nullptr};
+    uint32_t width;
+    uint32_t height;
+    uint32_t hor_stride;
+    uint32_t ver_stride;
 };
 
 struct EncodeFrame
@@ -45,7 +49,7 @@ public:
     virtual int setup(EncodeConfig& cfg) = 0;
     virtual void setEncodeReadyCallback(encodeReadyCallback callback, std::any userdata) = 0;
     virtual int encode(EncodeFrame& frame_data) = 0;
-    virtual int getEncoderHeader(char* enc_buf, int max_size) = 0;
+    virtual int getEncoderHeader(std::string& headBuf) = 0;
     virtual int reset() = 0;
 
     virtual size_t getFrameSize() = 0;

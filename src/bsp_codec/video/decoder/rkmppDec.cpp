@@ -108,11 +108,7 @@ int rkmppDec::decode(DecodePacket& pkt_data)
     RK_U32 pkt_done = 0;
     RK_U32 err_info = 0;
     MPP_RET ret = MPP_OK;
-    MppCtx ctx  = data->ctx;
-    MppApi *mpi = data->mpi;
-
     size_t read_size = 0;
-    size_t packet_size = data->packet_size;
 
     std::cout << "rkmppDec::decode() receive packet size= " << pkt_data.pkt_size << std::endl;
 
