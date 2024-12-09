@@ -95,6 +95,24 @@ int rkmppEnc::setup(EncodeConfig& cfg)
     return setupMppEncCfg();
 }
 
+std::shared_ptr<EncodeInputBuffer> rkmppEnc::getInputBuffer()
+{
+    if (m_ctx.frm_buf == nullptr)
+    {
+        int ret = mpp_buffer_get(m_ctx.buf_grp, &m_ctx.frm_buf, m_ctx.frame_size);
+        if (ret != MPP_SUCCESS)
+        {
+            std::cerr << "Failed to get buffer for input frame ret: " << ret << std::endl;
+            return nullptr;
+        }
+    }
+
+    std::shared_ptr<EncodeInputBuffer> inputBuffer = std::make_shared<EncodeInputBuffer>();
+    inputBuffer->internal_buf = m_ctx.frm_buf;
+    inputBuffer->input_buf_fd = mpp_buffer_get_fd(m_ctx.frm_buf);
+    inputBuffer->input_buf_addr = mpp_buffer_get_ptr(m_ctx.frm_buf);
+    return inputBuffer;
+}
 
 int rkmppEnc::encode(EncodeFrame& frame_data)
 {

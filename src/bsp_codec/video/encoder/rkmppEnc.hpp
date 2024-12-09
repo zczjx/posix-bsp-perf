@@ -104,6 +104,8 @@ public:
 
     int reset() override;
 
+    std::shared_ptr<EncodeInputBuffer> getInputBuffer() override;
+
     size_t getFrameSize() override
     {
         return m_ctx.frame_size;

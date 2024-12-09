@@ -27,6 +27,14 @@ struct EncodeFrame
     size_t frame_size{0};
     int frame_eos;
 };
+
+struct EncodeInputBuffer
+{
+    std::any internal_buf{nullptr};
+    int input_buf_fd{-1};
+    void* input_buf_addr{nullptr};
+};
+
 class IEncoder
 {
 public:
@@ -51,6 +59,7 @@ public:
     virtual int encode(EncodeFrame& frame_data) = 0;
     virtual int getEncoderHeader(std::string& headBuf) = 0;
     virtual int reset() = 0;
+    virtual std::shared_ptr<EncodeInputBuffer> getInputBuffer() = 0;
 
     virtual size_t getFrameSize() = 0;
     virtual ~IEncoder() = default;
