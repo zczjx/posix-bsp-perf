@@ -21,11 +21,12 @@ struct EncodeConfig
     uint32_t ver_stride;
 };
 
-struct EncodeFrame
+struct EncodePacket
 {
     uint8_t* data{nullptr};
-    size_t frame_size{0};
-    int frame_eos;
+    size_t pkt_len{0};
+    size_t max_size{0};
+    int pkt_eos;
 };
 
 struct EncodeInputBuffer
@@ -56,7 +57,7 @@ public:
 
     virtual int setup(EncodeConfig& cfg) = 0;
     virtual void setEncodeReadyCallback(encodeReadyCallback callback, std::any userdata) = 0;
-    virtual int encode(EncodeFrame& frame_data) = 0;
+    virtual int encode(EncodeInputBuffer& input_buf, EncodePacket& out_pkt) = 0;
     virtual int getEncoderHeader(std::string& headBuf) = 0;
     virtual int reset() = 0;
     virtual std::shared_ptr<EncodeInputBuffer> getInputBuffer() = 0;

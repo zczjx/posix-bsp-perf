@@ -1,5 +1,6 @@
 #include "rkmppEnc.hpp"
 #include <iostream>
+#include <cstring>
 #include <sys/time.h>
 #include <unistd.h>
 
@@ -114,68 +115,65 @@ std::shared_ptr<EncodeInputBuffer> rkmppEnc::getInputBuffer()
     return inputBuffer;
 }
 
-int rkmppEnc::encode(EncodeFrame& frame_data)
+int rkmppEnc::encode(EncodeInputBuffer& input_buf, EncodePacket& out_pkt)
 {
     MPP_RET ret;
-    void* out_ptr = enc_buf;
-    size_t out_len = 0;
-
-    MppMeta meta = NULL;
-    MppFrame frame = NULL;
-    MppPacket packet = NULL;
-    // void *buf = mpp_buffer_get_ptr(this->frm_buf);
-    // RK_S32 cam_frm_idx = -1;
-    // MppBuffer cam_buf = NULL;
-    RK_U32 eoi = 1;
     RK_U32 frm_eos = 0;
 
+    MppFrame frame{nullptr};
     ret = mpp_frame_init(&frame);
-    if (ret)
+    if (ret != MPP_OK)
     {
-        LOGD("mpp_frame_init failed\n");
+        std::cerr << "mpp_frame_init failed" << std::endl;
         return -1;
     }
 
-    mpp_frame_set_width(frame, enc_params.width);
-    mpp_frame_set_height(frame, enc_params.height);
-    mpp_frame_set_hor_stride(frame, enc_params.hor_stride);
-    mpp_frame_set_ver_stride(frame, enc_params.ver_stride);
-    mpp_frame_set_fmt(frame, enc_params.fmt);
+    mpp_frame_set_width(frame, m_params.width);
+    mpp_frame_set_height(frame, m_params.height);
+    mpp_frame_set_hor_stride(frame, m_params.hor_stride);
+    mpp_frame_set_ver_stride(frame, m_params.ver_stride);
+    mpp_frame_set_fmt(frame, m_params.fmt);
     mpp_frame_set_eos(frame, frm_eos);
+    MppBuffer mpp_buf = std::any_cast<MppBuffer>(input_buf.internal_buf);
     mpp_frame_set_buffer(frame, mpp_buf);
-
-    meta = mpp_frame_get_meta(frame);
-    mpp_packet_init_with_buffer(&packet, pkt_buf);
+    MppMeta meta = mpp_frame_get_meta(frame);
+    MppPacket packet{nullptr};
+    mpp_packet_init_with_buffer(&packet, m_ctx.pkt_buf);
     /* NOTE: It is important to clear output packet length!! */
     mpp_packet_set_length(packet, 0);
     mpp_meta_set_packet(meta, KEY_OUTPUT_PACKET, packet);
-    mpp_meta_set_buffer(meta, KEY_MOTION_INFO, this->md_info);
+    mpp_meta_set_buffer(meta, KEY_MOTION_INFO, m_ctx.md_info);
 
     /*
-        * NOTE: in non-block mode the frame can be resent.
-        * The default input timeout mode is block.
-        *
-        * User should release the input frame to meet the requirements of
-        * resource creator must be the resource destroyer.
-        */
-    ret = mpp_mpi->encode_put_frame(mpp_ctx, frame);
+    * NOTE: in non-block mode the frame can be resent.
+    * The default input timeout mode is block.
+    *
+    * User should release the input frame to meet the requirements of
+    * resource creator must be the resource destroyer.
+    */
+    ret = m_ctx.mpi->encode_put_frame(m_ctx.mpp_ctx, frame);
     mpp_frame_deinit(&frame);
 
-    if (ret) {
-        LOGD("chn %d encode put frame failed\n", chn);
+    if (ret != MPP_OK)
+    {
+        std::cerr << "encode put frame failed ret: " << ret << std::endl;
         return -1;
     }
 
-    do {
-        ret = mpp_mpi->encode_get_packet(mpp_ctx, &packet);
-        if (ret) {
-            LOGD("chn %d encode get packet failed\n", chn);
+    size_t out_len = 0;
+    RK_U32 eoi = 1;
+    void* out_ptr = out_pkt.data;
+    do
+    {
+        ret = m_ctx.mpi->encode_get_packet(m_ctx.mpp_ctx, &packet);
+
+        if (ret != MPP_OK)
+        {
+            std::cerr << "encode get packet failed ret: " << ret << std::endl;
             return -1;
         }
-
-        // mpp_assert(packet);
-
-        if (packet) {
+        if (packet != nullptr)
+        {
             // write packet to file here
             void *ptr   = mpp_packet_get_pos(packet);
             size_t len  = mpp_packet_get_length(packet);
@@ -189,16 +187,22 @@ int rkmppEnc::encode(EncodeFrame& frame_data)
             RK_U32 pkt_eos = mpp_packet_get_eos(packet);
 
             /* set encode result */
-            if (this->callback != nullptr) {
-                this->callback(this->userdata, (const char*)ptr, len);
+            if (m_callback != nullptr)
+            {
+                m_callback(m_userdata, (const char*)ptr, len);
             }
-            if (enc_buf != nullptr && max_size > 0) {
-                if (out_len + log_len < max_size) {
-                    memcpy(out_ptr, ptr, len);
+
+            if (out_ptr != nullptr && out_pkt.max_size > 0)
+            {
+                if (out_len + log_len < out_pkt.max_size)
+                {
+                    std::memcpy(out_ptr, ptr, len);
                     out_len += len;
                     out_ptr = (char*)out_ptr + len;
-                } else {
-                    LOGE("error enc_buf no enought");
+                }
+                else
+                {
+                    std::cerr << "error enc_buf no enough" << std::endl;
                 }
             }
 
@@ -213,29 +217,29 @@ int rkmppEnc::encode(EncodeFrame& frame_data)
             log_len += snprintf(log_buf + log_len, log_size - log_len,
                                 " size %-7zu", len);
 
-            if (mpp_packet_has_meta(packet)) {
+            if (mpp_packet_has_meta(packet))
+            {
                 meta = mpp_packet_get_meta(packet);
                 RK_S32 temporal_id = 0;
                 RK_S32 lt_idx = -1;
                 RK_S32 avg_qp = -1;
 
                 if (MPP_OK == mpp_meta_get_s32(meta, KEY_TEMPORAL_ID, &temporal_id))
-                    log_len += snprintf(log_buf + log_len, log_size - log_len,
-                                        " tid %d", temporal_id);
+                {
+                    log_len += snprintf(log_buf + log_len, log_size - log_len, " tid %d", temporal_id);
+                }
 
                 if (MPP_OK == mpp_meta_get_s32(meta, KEY_LONG_REF_IDX, &lt_idx))
-                    log_len += snprintf(log_buf + log_len, log_size - log_len,
-                                        " lt %d", lt_idx);
+                {
+                    log_len += snprintf(log_buf + log_len, log_size - log_len, " lt %d", lt_idx);
+                }
 
                 if (MPP_OK == mpp_meta_get_s32(meta, KEY_ENC_AVERAGE_QP, &avg_qp))
-                    log_len += snprintf(log_buf + log_len, log_size - log_len,
-                                        " qp %d", avg_qp);
+                {
+                    log_len += snprintf(log_buf + log_len, log_size - log_len, " qp %d", avg_qp);
+                }
             }
-
-            LOGD("chn %d %s\n", chn, log_buf);
-
             mpp_packet_deinit(&packet);
-
         }
     }
     while (!eoi);

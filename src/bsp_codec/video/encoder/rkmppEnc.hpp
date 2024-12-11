@@ -98,7 +98,7 @@ public:
         m_userdata = userdata;
     }
 
-    int encode(EncodeFrame& frame_data) override;
+    int encode(EncodeInputBuffer& input_buf, EncodePacket& out_pkt) override;
 
     int getEncoderHeader(std::string& headBuf) override;
 
@@ -131,7 +131,7 @@ protected:
 
 private:
     encodeReadyCallback m_callback{nullptr};
-    std::any m_userdata;
+    std::any m_userdata{nullptr};
     mpiContext m_ctx{};
     rkmppEncParams m_params{};
 };
