@@ -1,2 +1,0 @@
-/opt/cross_env/rk3588s/gcc-linaro-11.3.1-2022.06-x86_64_aarch64-linux-gnu/bin/aarch64-linux-gnu-ar qc lib/libevent_extra.a CMakeFiles/event_extra_static.dir/event_tagging.c.o CMakeFiles/event_extra_static.dir/http.c.o CMakeFiles/event_extra_static.dir/evdns.c.o CMakeFiles/event_extra_static.dir/evrpc.c.o
-/opt/cross_env/rk3588s/gcc-linaro-11.3.1-2022.06-x86_64_aarch64-linux-gnu/bin/aarch64-linux-gnu-ranlib lib/libevent_extra.a
