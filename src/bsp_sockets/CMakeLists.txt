@@ -29,13 +29,13 @@ set(SOURCES
 add_library(${PROJECT_NAME} SHARED ${SOURCES})
 
 # Set the path to the cross-compiled libevent
-set(CMAKE_PREFIX_PATH "/home/builder/temp/aarch64")
+#set(CMAKE_PREFIX_PATH "/home/builder/temp/aarch64")
 
 
 # Manually set LIBEVENT_LIBRARIES and LIBEVENT_LIBRARY_DIRS
-set(LIBEVENT_LIBRARIES "/home/builder/temp/aarch64/lib/libevent.so")
-set(LIBEVENT_LIBRARY_DIRS "/home/builder/temp/aarch64/lib")
-set(LIBEVENT_INCLUDE_DIRS "/home/builder/temp/aarch64/include")
+#set(LIBEVENT_LIBRARIES "/home/builder/temp/aarch64/lib/libevent.so")
+#set(LIBEVENT_LIBRARY_DIRS "/home/builder/temp/aarch64/lib")
+#set(LIBEVENT_INCLUDE_DIRS "/home/builder/temp/aarch64/include")
 
 # Find the libevent package
 find_package(PkgConfig REQUIRED)
@@ -51,17 +51,17 @@ include_directories(${LIBEVENT_INCLUDE_DIRS})
 
 # Add library directories for libevent
 #link_directories(${LIBEVENT_LIBRARY_DIRS})
-link_directories(/home/builder/temp/aarch64/lib)
+#link_directories(/home/builder/temp/aarch64/lib)
 
 # Add library directories for libevent
 #target_link_directories(${PROJECT_NAME} PUBLIC ${LIBEVENT_LIBRARY_DIRS})
 
 # Link the libevent library
-target_link_libraries(${PROJECT_NAME} PUBLIC libevent.so)
-target_link_libraries(${PROJECT_NAME} PUBLIC ${LIBEVENT_LIBRARIES})
+#target_link_libraries(${PROJECT_NAME} PUBLIC libevent.so)
+#target_link_libraries(${PROJECT_NAME} PUBLIC ${LIBEVENT_LIBRARIES})
 
 if(PC_LIBEVENT_LIBRARIES)
-  target_link_options(${PROJECT_NAME} PRIVATE ${PC_LIBEVENT_LDFLAGS} "-Wl,-rpath,${PC_LIBEVENT_LIBRARY_DIRS}")
+  target_link_options(${PROJECT_NAME} PUBLIC ${PC_LIBEVENT_LDFLAGS} "-Wl,-rpath,${PC_LIBEVENT_LIBRARY_DIRS}")
   # target_link_libraries(${PROJECT_NAME} PUBLIC ${PC_SPDLOG_LIBRARIES})
   target_include_directories(${PROJECT_NAME} PUBLIC ${PC_LIBEVENT_INCLUDE_DIRS})
 endif()
