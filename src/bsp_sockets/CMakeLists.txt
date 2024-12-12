@@ -37,17 +37,25 @@ add_library(${PROJECT_NAME} SHARED ${SOURCES})
 #set(LIBEVENT_LIBRARY_DIRS "/home/builder/temp/aarch64/lib")
 #set(LIBEVENT_INCLUDE_DIRS "/home/builder/temp/aarch64/include")
 
+# 检查是否已设置 MY_PKG_CONFIG_PATH 变量
+#if(DEFINED BSP_PKG_CONFIG_PATH)
+#    # 设置环境变量 PKG_CONFIG_PATH
+#    set(ENV{PKG_CONFIG_PATH} ${BSP_PKG_CONFIG_PATH})
+#    message(STATUS "ENV{PKG_CONFIG_PATH}: $ENV{PKG_CONFIG_PATH}")
+#endif()
+
 # Find the libevent package
 find_package(PkgConfig REQUIRED)
 pkg_check_modules(PC_LIBEVENT REQUIRED libevent)
 
 # Print the include and library directories for debugging
-message(STATUS "LIBEVENT_INCLUDE_DIRS: ${LIBEVENT_INCLUDE_DIRS}")
-message(STATUS "LIBEVENT_LIBRARY_DIRS: ${LIBEVENT_LIBRARY_DIRS}")
-message(STATUS "LIBEVENT_LIBRARIES: ${LIBEVENT_LIBRARIES}")
+#message(STATUS "LIBEVENT_INCLUDE_DIRS: ${LIBEVENT_INCLUDE_DIRS}")
+#message(STATUS "LIBEVENT_LIBRARY_DIRS: ${LIBEVENT_LIBRARY_DIRS}")
+#message(STATUS "LIBEVENT_LIBRARIES: ${LIBEVENT_LIBRARIES}")
+
 
 # Include directories for libevent
-include_directories(${LIBEVENT_INCLUDE_DIRS})
+#include_directories(${LIBEVENT_INCLUDE_DIRS})
 
 # Add library directories for libevent
 #link_directories(${LIBEVENT_LIBRARY_DIRS})
@@ -62,7 +70,7 @@ include_directories(${LIBEVENT_INCLUDE_DIRS})
 
 if(PC_LIBEVENT_LIBRARIES)
   target_link_options(${PROJECT_NAME} PUBLIC ${PC_LIBEVENT_LDFLAGS} "-Wl,-rpath,${PC_LIBEVENT_LIBRARY_DIRS}")
-  # target_link_libraries(${PROJECT_NAME} PUBLIC ${PC_SPDLOG_LIBRARIES})
+  # target_link_libraries(${PROJECT_NAME} PUBLIC ${PC_LIBEVENT_LIBRARIES})
   target_include_directories(${PROJECT_NAME} PUBLIC ${PC_LIBEVENT_INCLUDE_DIRS})
 endif()
 
