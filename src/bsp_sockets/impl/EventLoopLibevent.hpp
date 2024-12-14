@@ -2,11 +2,19 @@
 #define __EVENT_LOOP_LIBEVENT_H__
 
 #include <bsp_sockets/IEventLoop.hpp>
+#include <event2/event.h>
+#include <event2/event_struct.h>
 
 
 
 namespace bsp_sockets
 {
+
+struct LibeventIOEvent//注册的IO事件
+{
+    struct event *event_for_read{nullptr};  //libevent
+    struct event *event_for_write{nullptr}; //libevent 
+};
 
 class EventLoopLibevent: public IEventLoop, public std::enable_shared_from_this<EventLoopLibevent>
 {
@@ -43,6 +51,8 @@ public:
 
 public:
     EventLoopParams m_params{};
+    struct event_base *m_event_base{nullptr};
+    std::unordered_map<int, LibeventIOEvent> m_libevent_io_events{};
 
     //friend void timerQueueCallback(IEventLoop& loop, int fd, std::any args);
 

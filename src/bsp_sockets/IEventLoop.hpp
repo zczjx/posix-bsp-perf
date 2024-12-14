@@ -11,8 +11,7 @@
 #include <iostream>
 #include <memory>
 #include <poll.h>
-#include <event2/event.h>
-#include <event2/event_struct.h>
+
 
 
 
@@ -30,8 +29,6 @@ using pendingFunc = std::function<void(std::shared_ptr<IEventLoop>, std::any)>;
 struct IOEvent//注册的IO事件
 {
     int mask{0x00};             //EPOLLIN EPOLLOUT
-    struct event *event_for_read{nullptr};  //libevent
-    struct event *event_for_write{nullptr}; //libevent      
     ioCallback read_callback{nullptr};  //callback when EPOLLIN comming
     ioCallback write_callback{nullptr}; //callback when EPOLLOUT comming
     std::any rcb_args{nullptr};   //extra arguments for read_cb
@@ -46,7 +43,6 @@ struct EventLoopParams
     struct pollfd m_fds[1024];
     int m_nfds{0};
 
-    struct event_base *m_event_base{nullptr};
 
     //map: fd->IOEvent
     std::unordered_map<int, IOEvent> m_io_events{};

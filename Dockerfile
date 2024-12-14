@@ -1,4 +1,4 @@
-FROM zczjx/bsp-perf-build-env-x86-base:updated
+FROM zczjx/bsp-perf-build-env-x86-base:latest
 
 RUN apt-get update
 # 定义构建参数
