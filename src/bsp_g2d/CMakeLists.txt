@@ -40,10 +40,6 @@ configure_file(${CMAKE_SOURCE_DIR}/cmake/subProject.pc.in ${${PROJECT_NAME}_PC} 
 # 安装pkgconfig文件
 install(FILES ${${PROJECT_NAME}_PC} DESTINATION lib/pkgconfig)
 
-string(COMPARE EQUAL ${PROJECT_NAME} ${CMAKE_PROJECT_NAME} is_top_level)
-if(is_top_level)
-  message(FATAL_ERROR "This subproject must be built as part of the top-level project.")
-endif()
 
 set_target_properties(${PROJECT_NAME} PROPERTIES INSTALL_RPATH "$ORIGIN/../lib")
 target_link_libraries(${PROJECT_NAME} PRIVATE bsp_shared)

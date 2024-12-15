@@ -28,15 +28,6 @@ set(SOURCES
 # Add the library target
 add_library(${PROJECT_NAME} SHARED ${SOURCES})
 
-# Set the path to the cross-compiled libevent
-#set(CMAKE_PREFIX_PATH "/home/builder/temp/aarch64")
-
-
-# Manually set LIBEVENT_LIBRARIES and LIBEVENT_LIBRARY_DIRS
-#set(LIBEVENT_LIBRARIES "/home/builder/temp/aarch64/lib/libevent.so")
-#set(LIBEVENT_LIBRARY_DIRS "/home/builder/temp/aarch64/lib")
-#set(LIBEVENT_INCLUDE_DIRS "/home/builder/temp/aarch64/include")
-
 # 检查是否已设置 MY_PKG_CONFIG_PATH 变量
 if(DEFINED BSP_PKG_CONFIG_PATH)
     # 设置环境变量 PKG_CONFIG_PATH
@@ -50,12 +41,10 @@ pkg_check_modules(PC_LIBEVENT REQUIRED libevent)
 
 
 if(PC_LIBEVENT_LIBRARIES)
-  target_link_options(${PROJECT_NAME} PUBLIC ${PC_LIBEVENT_LDFLAGS} "-Wl,-rpath,${PC_LIBEVENT_LIBRARY_DIRS}")
+  target_link_options(${PROJECT_NAME} PUBLIC "-Wl,-rpath,${PC_LIBEVENT_LIBRARY_DIRS}" ${PC_LIBEVENT_LDFLAGS})
   # target_link_libraries(${PROJECT_NAME} PUBLIC ${PC_LIBEVENT_LIBRARIES})
   target_include_directories(${PROJECT_NAME} PUBLIC ${PC_LIBEVENT_INCLUDE_DIRS})
 endif()
-
-# target_link_libraries(${PROJECT_NAME} PRIVATE bsp_shared)
 
 target_include_directories(${PROJECT_NAME} PUBLIC
     $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/..>

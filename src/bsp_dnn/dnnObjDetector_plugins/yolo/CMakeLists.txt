@@ -36,7 +36,7 @@ target_include_directories(${PLUGIN_NAME} PRIVATE
 )
 
 if(OpenCV_LIBRARIES)
-  target_link_options(${PLUGIN_NAME} PRIVATE ${OpenCV_INCLUDE_LDFLAGS} "-Wl,-rpath,${OpenCV_LIBRARY_DIRS}")
+  target_link_options(${PLUGIN_NAME} PUBLIC "-Wl,-rpath,${OpenCV_LIBRARY_DIRS}" ${OpenCV_INCLUDE_LDFLAGS} )
   target_include_directories(${PLUGIN_NAME} PUBLIC ${OpenCV_INCLUDE_DIRS})
 endif()
 set_target_properties(${PLUGIN_NAME} PROPERTIES INSTALL_RPATH "$ORIGIN/../lib")
