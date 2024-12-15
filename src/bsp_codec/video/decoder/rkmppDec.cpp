@@ -105,7 +105,6 @@ int rkmppDec::setup(DecodeConfig& cfg)
 
 int rkmppDec::decode(DecodePacket& pkt_data)
 {
-    RK_U32 pkt_done = 0;
     RK_U32 err_info = 0;
     MPP_RET ret = MPP_OK;
     size_t read_size = 0;
@@ -190,7 +189,7 @@ int rkmppDec::decode(DecodePacket& pkt_data)
                     if (nullptr == m_ctx.frm_grp)
                     {
                         /* If buffer group is not set create one and limit it */
-                        ret = mpp_buffer_group_get_internal(m_ctx.frm_grp, MPP_BUFFER_TYPE_DRM);
+                        ret = mpp_buffer_group_get_internal(&m_ctx.frm_grp, MPP_BUFFER_TYPE_DRM);
 
                         if (ret)
                         {
@@ -237,7 +236,6 @@ int rkmppDec::decode(DecodePacket& pkt_data)
                     if (ret)
                     {
                         std::cerr << "info change ready failed ret " << ret << std::endl;
-                        LOGD("%p info change ready failed ret %d ", ctx, ret);
                         break;
                     }
 
@@ -265,7 +263,7 @@ int rkmppDec::decode(DecodePacket& pkt_data)
                         m_callback(m_userdata, hor_stride, ver_stride, hor_width, ver_height, format, fd, data_vir);
                     }
                     unsigned long cur_time_ms = GetCurrentTimeMS();
-                    long time_gap = 1000/this->fps - (cur_time_ms - m_params.last_frame_time_ms);
+                    long time_gap = (1000 / m_params.fps) - (cur_time_ms - m_params.last_frame_time_ms);
                     std::cout << "time_gap=" << time_gap << std::endl;
 
                     if (time_gap > 0)

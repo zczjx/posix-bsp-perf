@@ -52,14 +52,17 @@ source /opt/tools_conf/.bashrc.rk3588s
 
 cmake .. -DBSP_PKG_CONFIG_PATH=/opt/cross_env/rk3588s/install/lib/pkgconfig:/opt/cross_env/rk3588s/install/share/pkgconfig \
     -DBSP_LIB_PATH=/opt/cross_env/rk3588s/install/lib \
+    -DENABLE_RK_MPP=ON \
     -DCMAKE_BUILD_TYPE=NoOptimize
 
 cmake .. -DBSP_PKG_CONFIG_PATH=/opt/cross_env/rk3588s/install/lib/pkgconfig:/opt/cross_env/rk3588s/install/share/pkgconfig \
     -DBSP_LIB_PATH=/opt/cross_env/rk3588s/install/lib \
+    -DENABLE_RK_MPP=ON \
     -DCMAKE_BUILD_TYPE=Debug
 
 cmake .. -DBSP_PKG_CONFIG_PATH=/opt/cross_env/rk3588s/install/lib/pkgconfig:/opt/cross_env/rk3588s/install/share/pkgconfig \
     -DBSP_LIB_PATH=/opt/cross_env/rk3588s/install/lib \
+    -DENABLE_RK_MPP=ON \
     -DCMAKE_BUILD_TYPE=Release
 
     ## for rpi

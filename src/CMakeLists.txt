@@ -7,6 +7,7 @@ option(BUILD_SRC_PROFILER "Build profiler" ON)
 option(BUILD_SRC_BSP_SOCKETS "Build bsp_sockets" ON)
 option(BUILD_SRC_BSP_DNN "Build bsp_dnn" ON)
 option(BUILD_SRC_BSP_G2D "Build bsp_g2d" ON)
+option(BUILD_SRC_BSP_CODEC "Build bsp_codec" ON)
 
 # 根据选项包含子项目的CMakeLists.txt
 if(BUILD_SRC_FRAMEWORK)
@@ -35,4 +36,8 @@ endif()
 
 if(BUILD_SRC_BSP_G2D)
     add_subdirectory(bsp_g2d)
+endif()
+
+if(BUILD_SRC_BSP_CODEC)
+    add_subdirectory(bsp_codec)
 endif()
