@@ -13,6 +13,7 @@ set(SOURCES
   impl/IEventLoop.cpp
   impl/EventLoopEpoll.cpp
   impl/EventLoopPoll.cpp
+  impl/EventLoopLibevent.cpp
   impl/IOBuffer.cpp
   impl/TcpClient.cpp
   impl/TcpConnection.cpp
@@ -27,9 +28,36 @@ set(SOURCES
 # Add the library target
 add_library(${PROJECT_NAME} SHARED ${SOURCES})
 
+# Set the path to the cross-compiled libevent
+#set(CMAKE_PREFIX_PATH "/home/builder/temp/aarch64")
+
+
+# Manually set LIBEVENT_LIBRARIES and LIBEVENT_LIBRARY_DIRS
+#set(LIBEVENT_LIBRARIES "/home/builder/temp/aarch64/lib/libevent.so")
+#set(LIBEVENT_LIBRARY_DIRS "/home/builder/temp/aarch64/lib")
+#set(LIBEVENT_INCLUDE_DIRS "/home/builder/temp/aarch64/include")
+
+# 检查是否已设置 MY_PKG_CONFIG_PATH 变量
+if(DEFINED BSP_PKG_CONFIG_PATH)
+    # 设置环境变量 PKG_CONFIG_PATH
+    set(ENV{PKG_CONFIG_PATH} ${BSP_PKG_CONFIG_PATH})
+    message(STATUS "ENV{PKG_CONFIG_PATH}: $ENV{PKG_CONFIG_PATH}")
+endif()
+
+# Find the libevent package
+find_package(PkgConfig REQUIRED)
+pkg_check_modules(PC_LIBEVENT REQUIRED libevent)
+
+
+if(PC_LIBEVENT_LIBRARIES)
+  target_link_options(${PROJECT_NAME} PUBLIC ${PC_LIBEVENT_LDFLAGS} "-Wl,-rpath,${PC_LIBEVENT_LIBRARY_DIRS}")
+  # target_link_libraries(${PROJECT_NAME} PUBLIC ${PC_LIBEVENT_LIBRARIES})
+  target_include_directories(${PROJECT_NAME} PUBLIC ${PC_LIBEVENT_INCLUDE_DIRS})
+endif()
+
 # target_link_libraries(${PROJECT_NAME} PRIVATE bsp_shared)
 
-target_include_directories(${PROJECT_NAME} PRIVATE
+target_include_directories(${PROJECT_NAME} PUBLIC
     $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/..>
     $<INSTALL_INTERFACE:include>
 )
@@ -49,7 +77,7 @@ if(is_top_level)
 endif()
 
 set_target_properties(${PROJECT_NAME} PROPERTIES INSTALL_RPATH "$ORIGIN/../lib")
-target_link_libraries(${PROJECT_NAME} PRIVATE bsp_shared)
+target_link_libraries(${PROJECT_NAME} PUBLIC bsp_shared)
 
 install(TARGETS ${PROJECT_NAME}
   RUNTIME DESTINATION bin

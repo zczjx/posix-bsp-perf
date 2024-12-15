@@ -8,6 +8,7 @@
 #include <any>
 #include <memory>
 
+
 #include <shared/BspLogger.hpp>
 
 namespace bsp_sockets
@@ -16,6 +17,8 @@ namespace bsp_sockets
 class IEventLoop;
 
 using timerCallback = std::function<void(std::shared_ptr<IEventLoop> loop, std::any usr_data)>; //Timer事件回调函数
+//using timerCallback_for_libevent = std::function<void(std::any usr_data)>;
+
 using timerEvent  = struct timerEvent//注册的Timer事件
 {
     timerEvent(timerCallback timer_cb, std::any data, uint64_t arg_ts, uint32_t arg_interval = 0):
@@ -24,6 +27,7 @@ using timerEvent  = struct timerEvent//注册的Timer事件
     }
 
     timerCallback cb;
+    //timerCallback_for_libevent cb_libevent;
     std::any cb_data;
     uint64_t ts;
     uint32_t interval; //interval millis
