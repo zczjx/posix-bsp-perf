@@ -22,14 +22,13 @@ LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 */
-#ifndef BSP_LOGGER_HPP
-#define BSP_LOGGER_HPP
+#ifndef __BSP_LOGGER_HPP__
+#define __BSP_LOGGER_HPP__
 
 // Your code here
 
 #include <string>
 #include <iostream>
-#include <string>
 #include <memory>
 #include <string_view>
 #include <spdlog/spdlog.h>
@@ -122,4 +121,4 @@ private:
 } // namespace shared
 } // namespace bsp_perf
 
-#endif // BSP_LOGGER_HPP
+#endif // __BSP_LOGGER_HPP__
