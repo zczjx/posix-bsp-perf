@@ -28,10 +28,20 @@ public:
     struct G2DBuffer
     {
         /// default is rkrga, will add more types later
-        std::string handleType{"rkrga"};
+        std::string g2dPlatform{"rkrga"};
+        /**
+         * @brief Type of G2D buffer Mapping Type.
+         *
+         * This string indicates the type of G2D buffer being used.
+         * The possible values for g2dBufferType are:
+         * - "fd": File descriptor
+         * - "virtualaddr": Virtual address
+         * - "physicaladdr": Physical address
+         * - "handle": Handle
+         */
+        std::string g2dBufferMapType{"virtualaddr"};
         /// any should be a pointer to buffer type
         std::any g2dBufferHandle;
-
         uint8_t* rawBuffer{nullptr};
         size_t rawBufferSize{0};
     };
@@ -41,6 +51,11 @@ public:
      *
      * This function creates a G2D buffer with the specified virtual address, width, height, and format.
      *
+     * @param g2dBufferMapType The type of G2D buffer mapping. The possible values are:
+     * - "fd": File descriptor
+     * - "virtualaddr": Virtual address
+     * - "physicaladdr": Physical address
+     * - "handle": Handle
      * @param vir_addr A pointer to the virtual address of the buffer.
      * @param width The width of the buffer.
      * @param height The height of the buffer.
@@ -100,13 +115,17 @@ public:
      *
      * @return A shared pointer to the created G2D buffer.
      */
-    virtual std::shared_ptr<G2DBuffer> createG2DBuffer(void* vir_addr, size_t rawBufferSize, size_t width, size_t height, const std::string& format) = 0;
+    virtual std::shared_ptr<G2DBuffer> createG2DBuffer(std::string g2dBufferMapType, void* vir_addr, size_t rawBufferSize,
+                                            size_t width, size_t height, const std::string& format) = 0;
 
-    virtual std::shared_ptr<G2DBuffer> createG2DBuffer(void* vir_addr, size_t rawBufferSize, size_t width, size_t height, const std::string& format,
-                                            int width_stride, int height_stride) = 0;
+    virtual std::shared_ptr<G2DBuffer> createG2DBuffer(std::string g2dBufferMapType, void* vir_addr, size_t rawBufferSize,
+                                            size_t width, size_t height, const std::string& format, int width_stride, int height_stride) = 0;
+
     virtual void releaseG2DBuffer(std::shared_ptr<G2DBuffer> g2dBuffer) = 0;
 
     virtual int imageResize(std::shared_ptr<G2DBuffer> src, std::shared_ptr<G2DBuffer> dst) = 0;
+
+    virtual int imageCopy(std::shared_ptr<G2DBuffer> src, std::shared_ptr<G2DBuffer> dst) = 0;
 
     virtual ~IGraphics2D() = default;
     // Disable default constructor, copy constructor, and assignment operator

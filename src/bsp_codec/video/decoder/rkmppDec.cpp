@@ -260,7 +260,15 @@ int rkmppDec::decode(DecodePacket& pkt_data)
                         char *data_vir =(char *) mpp_buffer_get_ptr(mpp_frame_get_buffer(m_frame));
                         int fd = mpp_buffer_get_fd(mpp_frame_get_buffer(m_frame));
                         std::cout << "data_vir=" << data_vir << " fd=" << fd << std::endl;
-                        m_callback(m_userdata, hor_stride, ver_stride, hor_width, ver_height, format, fd, data_vir);
+                        std::shared_ptr<DecodeOutFrame> frame = std::make_shared<DecodeOutFrame>();
+                        frame->width = hor_width;
+                        frame->height = ver_height;
+                        frame->width_stride = hor_stride;
+                        frame->height_stride = ver_stride;
+                        frame->format = m_params.frame_format_map.at(format);
+                        frame->virt_addr = data_vir;
+                        frame->fd = fd;
+                        m_callback(m_userdata, frame);
                     }
                     unsigned long cur_time_ms = GetCurrentTimeMS();
                     long time_gap = (1000 / m_params.fps) - (cur_time_ms - m_params.last_frame_time_ms);

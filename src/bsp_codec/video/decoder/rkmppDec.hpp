@@ -35,6 +35,40 @@ struct rkmppDecParams
     unsigned long last_frame_time_ms{0};
     MppCodingType encoding_type{MPP_VIDEO_CodingUnused};
     RK_U32 need_split{1};
+
+    const std::unordered_map<MppFrameFormat, std::string> frame_format_map = {
+        {MPP_FMT_YUV420SP, "YUV420SP"},
+        {MPP_FMT_YUV420SP_10BIT, "YUV420SP_10BIT"},
+        {MPP_FMT_YUV422SP, "YUV422SP"},
+        {MPP_FMT_YUV422SP_10BIT, "YUV422SP_10BIT"},
+        {MPP_FMT_YUV420P, "YUV420P"},
+        {MPP_FMT_YUV420SP_VU, "YUV420SP_VU"},
+        {MPP_FMT_YUV422P, "YUV422P"},
+        {MPP_FMT_YUV422SP_VU, "YUV422SP_VU"},
+        {MPP_FMT_YUV422_YUYV, "YUV422_YUYV"},
+        {MPP_FMT_YUV422_YVYU, "YUV422_YVYU"},
+        {MPP_FMT_YUV422_UYVY, "YUV422_UYVY"},
+        {MPP_FMT_YUV422_VYUY, "YUV422_VYUY"},
+        {MPP_FMT_YUV400, "YUV400"},
+        {MPP_FMT_YUV440SP, "YUV440SP"},
+        {MPP_FMT_YUV411SP, "YUV411SP"},
+        {MPP_FMT_YUV444SP, "YUV444SP"},
+        {MPP_FMT_YUV444P, "YUV444P"},
+        {MPP_FMT_RGB565, "RGB565"},
+        {MPP_FMT_BGR565, "BGR565"},
+        {MPP_FMT_RGB555, "RGB555"},
+        {MPP_FMT_BGR555, "BGR555"},
+        {MPP_FMT_RGB444, "RGB444"},
+        {MPP_FMT_BGR444, "BGR444"},
+        {MPP_FMT_RGB888, "RGB888"},
+        {MPP_FMT_BGR888, "BGR888"},
+        {MPP_FMT_RGB101010, "RGB101010"},
+        {MPP_FMT_BGR101010, "BGR101010"},
+        {MPP_FMT_ARGB8888, "ARGB8888"},
+        {MPP_FMT_ABGR8888, "ABGR8888"},
+        {MPP_FMT_BGRA8888, "BGRA8888"},
+        {MPP_FMT_RGBA8888, "RGBA8888"}
+    };
 };
 
 class rkmppDec : public IDecoder

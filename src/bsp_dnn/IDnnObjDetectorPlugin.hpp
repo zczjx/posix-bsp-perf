@@ -12,7 +12,13 @@ namespace bsp_dnn
 
 struct ObjDetectInput
 {
-    /// default is opencv4, will add more types later
+    /**
+     * @brief Handle type for the object detector plugin.
+     * default is opencv4
+     * Possible values:
+     * - "opencv4"
+     * - "DecodeOutFrame"
+     */
     std::string handleType{"opencv4"};
     /// any should be a pointer to image type
     std::any imageHandle;
