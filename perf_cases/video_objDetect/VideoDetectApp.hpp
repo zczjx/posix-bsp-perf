@@ -116,46 +116,7 @@ private:
 
     void onRender() override
     {
-        bsp_dnn::ObjDetectInput objDetectInput = {
-            .handleType = "opencv4",
-            .imageHandle = m_orig_image_ptr,
-        };
-        m_dnnObjDetector->pushInputData(std::make_shared<bsp_dnn::ObjDetectInput>(objDetectInput));
-        setObjDetectParams(m_objDetectParams);
-        m_dnnObjDetector->runObjDetect(m_objDetectParams);
-        auto& objDetectOutput = m_dnnObjDetector->popOutputData();
-        std::vector<cv::Scalar> colors = {
-                cv::Scalar(255, 0, 0),    // Blue
-                cv::Scalar(0, 255, 0),    // Green
-                cv::Scalar(0, 0, 255),    // Red
-                cv::Scalar(255, 255, 0),  // Cyan
-                cv::Scalar(255, 0, 255),  // Magenta
-                cv::Scalar(0, 255, 255),  // Yellow
-                cv::Scalar(128, 0, 0),    // Maroon
-                cv::Scalar(0, 128, 0),    // Olive
-                cv::Scalar(0, 0, 128),    // Navy
-                cv::Scalar(128, 128, 0),  // Teal
-                cv::Scalar(128, 0, 128),  // Purple
-                cv::Scalar(0, 128, 128)   // Aqua
-        };
-        std::map<std::string, cv::Scalar> labelColorMap;
-        for (size_t i = 0; i < objDetectOutput.size(); ++i)
-        {
-            const auto& obj = objDetectOutput[i];
-            if (labelColorMap.find(obj.label) == labelColorMap.end())
-            {
-                labelColorMap[obj.label] = colors[i % colors.size()];
-            }
-        }
-
-        for (const auto& obj : objDetectOutput)
-        {
-            m_logger->printStdoutLog(bsp_perf::shared::BspLogger::LogLevel::Info, "{} VideoDetectApp::onProcess() objDetectOutput: bbox: [{}, {}, {}, {}], score: {}, label: {}",
-                LOG_TAG, obj.bbox.left, obj.bbox.top, obj.bbox.right, obj.bbox.bottom, obj.score, obj.label);
-            cv::rectangle(*m_orig_image_ptr, cv::Point(obj.bbox.left, obj.bbox.top), cv::Point(obj.bbox.right, obj.bbox.bottom),
-                    labelColorMap[obj.label], 2);
-            cv::putText(*m_orig_image_ptr, obj.label, cv::Point(obj.bbox.left, obj.bbox.top + 12), cv::FONT_HERSHEY_COMPLEX, 0.4, cv::Scalar(256, 255, 255));
-        }
+        ;
     }
 
     void onRelease() override
@@ -168,7 +129,6 @@ private:
     }
 
 private:
-
     void loadVideoFile(std::string& videoPath)
     {
         m_decode_format = BspFileUtils::getFileExtension(videoPath);
@@ -203,24 +163,39 @@ private:
                     .encodingType = "h264",
                     .frameFormat = "YUV420SP",
                     .fps = 30,
-                    .width = frame.width,
-                    .height = frame.height,
-                    .hor_stride = frame.width_stride,
-                    .ver_stride = frame.height_stride,
+                    .width = frame->width,
+                    .height = frame->height,
+                    .hor_stride = frame->width_stride,
+                    .ver_stride = frame->height_stride,
                 };
                 m_encoder->setup(enc_cfg);
             }
 
             // auto& objDetectOutput = dnnInference(frame);
+            IGraphics2D::G2DBufferParams dec_out_g2d_params = {
+                .fd = frame->fd,
+                .width = frame->width,
+                .height = frame->height,
+                .width_stride = frame->width_stride,
+                .height_stride = frame->height_stride,
+                .format = frame->format,
+            };
+            std::shared_ptr<IGraphics2D::G2DBuffer> g2d_dec_out_buf = m_g2d->createG2DBuffer("fd", dec_out_g2d_params);
 
             std::shared_ptr<EncodeInputBuffer> enc_in_buf = m_encoder->getInputBuffer();
-            std::shared_ptr<IGraphics2D::G2DBuffer> g2d_dec_out_buf = m_g2d->createG2DBuffer("virtual", frame.virt_addr, frame.width * frame.height * 3 / 2, frame.width, frame.height, frame.format, frame.width_stride, frame.height_stride);
-            std::shared_ptr<IGraphics2D::G2DBuffer> g2d_enc_in_buf = m_g2d->createG2DBuffer("virtual", enc_in_buf->input_buf_addr, frame.width * frame.height * 3 / 2, frame.width, frame.height, "YUV420SP", frame.width_stride, frame.height_stride);
+            IGraphics2D::G2DBufferParams enc_in_g2d_params = {
+                .fd = enc_in_buf->input_buf_fd,
+                .width = frame->width,
+                .height = frame->height,
+                .width_stride = frame->width_stride,
+                .height_stride = frame->height_stride,
+                .format = "YCbCr_420_SP",
+            };
+            std::shared_ptr<IGraphics2D::G2DBuffer> g2d_enc_in_buf = m_g2d->createG2DBuffer("fd", enc_in_g2d_params);
+
             m_g2d->imageCopy(g2d_dec_out_buf, g2d_enc_in_buf);
 
-            int enc_data_size;
             m_frame_index++;
-            int enc_buf_size = m_encoder->getFrameSize();
             // Encode to file
             // Write header on first frame->
             if (m_frame_index == 1)
@@ -233,12 +208,11 @@ private:
             EncodePacket enc_pkt = {
                 .data = nullptr,
                 .pkt_len = 0,
-                .max_size = enc_buf_size,
-                .pkt_eos = frame.pkt_eos,
+                .max_size = m_encoder->getFrameSize(),
+                .pkt_eos = frame->eos_flag,
             };
             m_encoder->encode(*enc_in_buf, enc_pkt);
             fwrite(enc_pkt.data, 1, enc_pkt.pkt_len, m_out_fp.get());
-
         };
 
         m_decoder->setDecodeReadyCallback(decoderCallback, nullptr);

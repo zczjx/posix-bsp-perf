@@ -110,6 +110,7 @@ struct DecodeOutFrame
     std::string format{"YCbCr_420_SP"};
     char *virt_addr{nullptr};
     int fd;
+    int eos_flag;
 };
 
 using decodeReadyCallback = std::function<void(std::any userdata, std::shared_ptr<DecodeOutFrame> frame)>;

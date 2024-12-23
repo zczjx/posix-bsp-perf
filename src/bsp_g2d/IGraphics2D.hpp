@@ -25,38 +25,10 @@ public:
      */
     static std::unique_ptr<IGraphics2D> create(const std::string& g2dPlatform);
 
-    struct G2DBuffer
-    {
-        /// default is rkrga, will add more types later
-        std::string g2dPlatform{"rkrga"};
-        /**
-         * @brief Type of G2D buffer Mapping Type.
-         *
-         * This string indicates the type of G2D buffer being used.
-         * The possible values for g2dBufferType are:
-         * - "fd": File descriptor
-         * - "virtualaddr": Virtual address
-         * - "physicaladdr": Physical address
-         * - "handle": Handle
-         */
-        std::string g2dBufferMapType{"virtualaddr"};
-        /// any should be a pointer to buffer type
-        std::any g2dBufferHandle;
-        uint8_t* rawBuffer{nullptr};
-        size_t rawBufferSize{0};
-    };
-
     /**
-     * @brief Creates a G2D buffer.
-     *
-     * This function creates a G2D buffer with the specified virtual address, width, height, and format.
-     *
-     * @param g2dBufferMapType The type of G2D buffer mapping. The possible values are:
-     * - "fd": File descriptor
-     * - "virtualaddr": Virtual address
-     * - "physicaladdr": Physical address
-     * - "handle": Handle
-     * @param vir_addr A pointer to the virtual address of the buffer.
+     * @param raw_buffer raw buffer pointer
+     * @param rawBufferSize The size of the buffer.
+     * @param fd The file descriptor of the buffer.
      * @param width The width of the buffer.
      * @param height The height of the buffer.
      * @param format The format of the buffer as a string. The possible values are:
@@ -112,14 +84,59 @@ public:
      * - "YCrCb_444_SP"
      * - "Y8"
      * - "UNKNOWN"
-     *
-     * @return A shared pointer to the created G2D buffer.
      */
-    virtual std::shared_ptr<G2DBuffer> createG2DBuffer(std::string g2dBufferMapType, void* vir_addr, size_t rawBufferSize,
-                                            size_t width, size_t height, const std::string& format) = 0;
+    struct G2DBufferParams
+    {
+        void* virtual_addr{nullptr};
+        void* physical_addr{nullptr};
+        int fd{-1};
+        std::any handle;
+        size_t rawBufferSize;
+        size_t width;
+        size_t height;
+        size_t width_stride;
+        size_t height_stride;
+        std::string format;
+    };
 
-    virtual std::shared_ptr<G2DBuffer> createG2DBuffer(std::string g2dBufferMapType, void* vir_addr, size_t rawBufferSize,
-                                            size_t width, size_t height, const std::string& format, int width_stride, int height_stride) = 0;
+    struct G2DBuffer
+    {
+        /// default is rkrga, will add more types later
+        std::string g2dPlatform{"rkrga"};
+        /**
+         * @brief Type of G2D buffer Mapping Type.
+         *
+         * This string indicates the type of G2D buffer being used.
+         * The possible values for g2dBufferType are:
+         * - "fd": File descriptor
+         * - "virtualaddr": Virtual address
+         * - "physicaladdr": Physical address
+         * - "handle": Handle
+         */
+        std::string g2dBufferMapType{"virtualaddr"};
+        /// any should be a pointer to buffer type
+        std::any g2dBufferHandle;
+        uint8_t* rawBuffer{nullptr};
+        size_t rawBufferSize{0};
+    };
+
+    /**
+     * @brief Creates a G2D buffer.
+     *
+     * This function creates a G2D buffer with the specified virtual address, width, height, and format.
+     * The buffer is created based on the specified G2D buffer mapping type.
+     *
+     * @param g2dBufferMapType The type of G2D buffer mapping to be used.
+     * The possible values for g2dBufferMapType are:
+     * - "fd": File descriptor
+     * - "virtualaddr": Virtual address
+     * - "physicaladdr": Physical address
+     * - "handle": Handle
+     * @param params The parameters for the G2D buffer.
+     *
+     * @return std::shared_ptr<G2DBuffer> A shared pointer to the created G2D buffer.
+     */
+    virtual std::shared_ptr<G2DBuffer> createG2DBuffer(const std::string& g2dBufferMapType, G2DBufferParams& params) = 0;
 
     virtual void releaseG2DBuffer(std::shared_ptr<G2DBuffer> g2dBuffer) = 0;
 

@@ -79,10 +79,8 @@ public:
     rkrga& operator=(rkrga&&) = delete;
     ~rkrga();
 
-    std::shared_ptr<IGraphics2D::G2DBuffer> createG2DBuffer(std::string g2dBufferMapType, void* vir_addr, size_t rawBufferSize, size_t width, size_t height, const std::string& format) override;
+    std::shared_ptr<IGraphics2D::G2DBuffer> createG2DBuffer(const std::string& g2dBufferMapType, G2DBufferParams& params) override;
 
-    std::shared_ptr<IGraphics2D::G2DBuffer> createG2DBuffer(std::string g2dBufferMapType, void* vir_addr, size_t rawBufferSize, size_t width, size_t height, const std::string& format,
-                                            int width_stride, int height_stride) override;
 
     void releaseG2DBuffer(std::shared_ptr<G2DBuffer> g2dBuffer) override;
 
