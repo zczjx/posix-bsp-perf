@@ -1,3 +1,4 @@
+#include "rkmppCodecHeader.hpp"
 #include "rkmppDec.hpp"
 #include <iostream>
 #include <sys/time.h>
@@ -41,7 +42,8 @@ int rkmppDec::setup(DecodeConfig& cfg)
     int ret = 0;
     try
     {
-        m_params.encoding_type = m_params.m_encoding_map.at(cfg.encoding);
+        m_params.encoding_type = rkmppCodecHeader::strToMppCodingMap.at(cfg.encoding);
+        std::cout << "rkmpp dec m_params.encoding_type= " << m_params.encoding_type << std::endl;
     }
     catch (const std::out_of_range& e)
     {
@@ -259,13 +261,14 @@ int rkmppDec::decode(DecodePacket& pkt_data)
                         MppFrameFormat format = mpp_frame_get_fmt(m_frame);
                         char *data_vir =(char *) mpp_buffer_get_ptr(mpp_frame_get_buffer(m_frame));
                         int fd = mpp_buffer_get_fd(mpp_frame_get_buffer(m_frame));
-                        std::cout << "data_vir=" << data_vir << " fd=" << fd << std::endl;
+                        // std::cout << "data_vir=" << data_vir << " fd=" << fd << std::endl;
                         std::shared_ptr<DecodeOutFrame> frame = std::make_shared<DecodeOutFrame>();
                         frame->width = hor_width;
                         frame->height = ver_height;
                         frame->width_stride = hor_stride;
                         frame->height_stride = ver_stride;
-                        frame->format = m_params.frame_format_map.at(format);
+                        std::cout << "rkmpp dec format= " << format << std::endl;
+                        frame->format = rkmppCodecHeader::mppFrameFormatToStrMap.at(format);
                         frame->virt_addr = data_vir;
                         frame->fd = fd;
                         m_callback(m_userdata, frame);

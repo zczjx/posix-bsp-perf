@@ -1,3 +1,4 @@
+#include "rkmppCodecHeader.hpp"
 #include "rkmppEnc.hpp"
 #include <iostream>
 #include <cstring>
@@ -6,23 +7,87 @@
 
 namespace bsp_codec
 {
-
-rkmppEnc::rkmppEnc()
-{
-
-}
-
 rkmppEnc::~rkmppEnc()
 {
 
 }
 
+constexpr auto MPP_ALIGN = [](auto x, auto a) { return ((x + a - 1) & ~(a - 1)); };
+
+int rkmppEnc::calculateFrameSize(MppFrameFormat frameFormat)
+{
+    int frame_size = 0;
+
+    switch (frameFormat & MPP_FRAME_FMT_MASK)
+    {
+        case MPP_FMT_YUV420SP:
+        case MPP_FMT_YUV420P:
+            frame_size = MPP_ALIGN(m_params.hor_stride, 64) * MPP_ALIGN(m_params.ver_stride, 64) * 3 / 2;
+            break;
+
+        case MPP_FMT_YUV422_YUYV :
+        case MPP_FMT_YUV422_YVYU :
+        case MPP_FMT_YUV422_UYVY :
+        case MPP_FMT_YUV422_VYUY :
+        case MPP_FMT_YUV422P :
+        case MPP_FMT_YUV422SP :
+            frame_size = MPP_ALIGN(m_params.hor_stride, 64) * MPP_ALIGN(m_params.ver_stride, 64) * 2;
+            break;
+
+        case MPP_FMT_RGB444 :
+        case MPP_FMT_BGR444 :
+        case MPP_FMT_RGB555 :
+        case MPP_FMT_BGR555 :
+        case MPP_FMT_RGB565 :
+        case MPP_FMT_BGR565 :
+        case MPP_FMT_RGB888 :
+        case MPP_FMT_BGR888 :
+        case MPP_FMT_RGB101010 :
+        case MPP_FMT_BGR101010 :
+        case MPP_FMT_ARGB8888 :
+        case MPP_FMT_ABGR8888 :
+        case MPP_FMT_BGRA8888 :
+        case MPP_FMT_RGBA8888 :
+            frame_size = MPP_ALIGN(m_params.hor_stride, 64) * MPP_ALIGN(m_params.ver_stride, 64);
+            break;
+
+        default:
+            frame_size = MPP_ALIGN(m_params.hor_stride, 64) * MPP_ALIGN(m_params.ver_stride, 64) * 4;
+            break;
+    }
+    return frame_size;
+
+}
 
 int rkmppEnc::parseConfig(EncodeConfig& cfg)
 {
-    // Implementation of parseConfig function
-    std::cout << "Parsing encoder configuration." << std::endl;
-    // Add your logic to parse encoder configuration here
+    m_params.width = cfg.width;
+    m_params.height = cfg.height;
+    m_params.hor_stride = cfg.hor_stride;
+    m_params.ver_stride = cfg.ver_stride;
+    m_params.frameFormat = rkmppCodecHeader::strToMppFrameFormatMap.at(cfg.frameFormat);
+
+    // get paramter from cmd
+    if (m_params.hor_stride == 0)
+    {
+        m_params.hor_stride = MPP_ALIGN(m_params.width, 16);
+    }
+    if (m_params.ver_stride == 0)
+    {
+        m_params.ver_stride = (MPP_ALIGN(m_params.height, 16));
+    }
+
+    if (m_params.bps == 0)
+    {
+        m_params.bps = m_params.width * m_params.height / 8 * (m_params.fps_out_num / m_params.fps_out_den);
+    }
+    m_ctx.mdinfo_size = (MPP_VIDEO_CodingHEVC == m_params.type) ?
+                      (MPP_ALIGN(m_params.hor_stride, 32) >> 5) *
+                      (MPP_ALIGN(m_params.ver_stride, 32) >> 5) * 16 :
+                      (MPP_ALIGN(m_params.hor_stride, 64) >> 6) *
+                      (MPP_ALIGN(m_params.ver_stride, 16) >> 4) * 16;
+
+    m_ctx.frame_size = calculateFrameSize(m_params.frameFormat);
     return 0;
 }
 
@@ -132,7 +197,7 @@ int rkmppEnc::encode(EncodeInputBuffer& input_buf, EncodePacket& out_pkt)
     mpp_frame_set_height(frame, m_params.height);
     mpp_frame_set_hor_stride(frame, m_params.hor_stride);
     mpp_frame_set_ver_stride(frame, m_params.ver_stride);
-    mpp_frame_set_fmt(frame, m_params.fmt);
+    mpp_frame_set_fmt(frame, m_params.frameFormat);
     mpp_frame_set_eos(frame, frm_eos);
     MppBuffer mpp_buf = std::any_cast<MppBuffer>(input_buf.internal_buf);
     mpp_frame_set_buffer(frame, mpp_buf);

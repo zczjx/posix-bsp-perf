@@ -27,8 +27,8 @@ set(SOURCES
   ArgParser.hpp
   BspLogger.hpp
   BspLogger.cpp
-  FileUtils.hpp
-  FileUtils.cpp
+  BspFileUtils.hpp
+  BspFileUtils.cpp
     # Add more source files here if needed
 )
 

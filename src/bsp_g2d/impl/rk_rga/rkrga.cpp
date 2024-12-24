@@ -2,24 +2,16 @@
 #include <iostream>
 #include <memory>
 #include <any>
-#include <rga/im2d.h>
-#include <rga/rga.h>
-#include <rga/RgaUtils.h>
-
 
 namespace bsp_g2d
 {
-
-rkrga::rkrga()
-{
-    std::cout << "rkrga constructor" << std::endl;
-}
 
 std::shared_ptr<IGraphics2D::G2DBuffer> rkrga::createG2DBuffer(const std::string& g2dBufferMapType, G2DBufferParams& params)
 {
     std::shared_ptr<G2DBuffer> g2dBuffer = std::make_shared<G2DBuffer>();
     g2dBuffer->g2dPlatform = "rkrga";
     int rga_format = m_rgaParams.m_pix_format_map.at(params.format);
+    std::cout << "rkrga rga_format= " << rga_format << std::endl;
 
     if (g2dBufferMapType.compare("fd") == 0)
     {
@@ -52,7 +44,8 @@ std::shared_ptr<IGraphics2D::G2DBuffer> rkrga::createG2DBuffer(const std::string
     else if (g2dBufferMapType.compare("handle") == 0)
     {
         rga_buffer_handle_t handle = std::any_cast<rga_buffer_handle_t>(params.handle);
-        if (handle == (rga_buffer_handle_t) nullptr)
+
+        if (handle == NULL)
         {
             return nullptr;
         }

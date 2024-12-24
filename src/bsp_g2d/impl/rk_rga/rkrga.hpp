@@ -10,7 +10,6 @@
 
 namespace bsp_g2d
 {
-
 struct RGAParams
 {
     const std::unordered_map<std::string, RgaSURF_FORMAT> m_pix_format_map{
@@ -72,12 +71,12 @@ struct RGAParams
 class rkrga : public IGraphics2D
 {
 public:
-    rkrga();
+    rkrga() = default;
     rkrga(const rkrga&) = delete;
     rkrga& operator=(const rkrga&) = delete;
     rkrga(rkrga&&) = delete;
     rkrga& operator=(rkrga&&) = delete;
-    ~rkrga();
+    ~rkrga() = default;
 
     std::shared_ptr<IGraphics2D::G2DBuffer> createG2DBuffer(const std::string& g2dBufferMapType, G2DBufferParams& params) override;
 
@@ -90,7 +89,6 @@ public:
 
 private:
     RGAParams m_rgaParams{};
-
 };
 
 } // namespace bsp_g2d

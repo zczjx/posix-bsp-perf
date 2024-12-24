@@ -18,7 +18,7 @@ set(ENC_SOURCES
 # 根据选项条件性地添加源文件
 if(ENABLE_RK_MPP)
     list(APPEND ENC_SOURCES
-        video/encoder/rkmppEnc.cpp
+        video/rkmppEnc.cpp
     )
 endif()
 
@@ -55,7 +55,7 @@ set(DEC_SOURCES
 
 if(ENABLE_RK_MPP)
     list(APPEND DEC_SOURCES
-        video/decoder/rkmppDec.cpp
+        video/rkmppDec.cpp
     )
 endif()
 

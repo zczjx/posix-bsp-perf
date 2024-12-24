@@ -168,7 +168,9 @@ private:
                     .hor_stride = frame->width_stride,
                     .ver_stride = frame->height_stride,
                 };
+                m_logger->printStdoutLog(bsp_perf::shared::BspLogger::LogLevel::Debug, "[S] VideoDetectApp::setupEncoder()");
                 m_encoder->setup(enc_cfg);
+                m_logger->printStdoutLog(bsp_perf::shared::BspLogger::LogLevel::Debug, "[E] VideoDetectApp::setupEncoder()");
             }
 
             // auto& objDetectOutput = dnnInference(frame);
@@ -178,22 +180,33 @@ private:
                 .height = frame->height,
                 .width_stride = frame->width_stride,
                 .height_stride = frame->height_stride,
-                .format = frame->format,
+                .format = "YCbCr_420_SP",
             };
+            m_logger->printStdoutLog(bsp_perf::shared::BspLogger::LogLevel::Debug, "[S] VideoDetectApp::createG2DBuffer() dec_out_g2d_params");
             std::shared_ptr<IGraphics2D::G2DBuffer> g2d_dec_out_buf = m_g2d->createG2DBuffer("fd", dec_out_g2d_params);
+            m_logger->printStdoutLog(bsp_perf::shared::BspLogger::LogLevel::Debug, "[E] VideoDetectApp::createG2DBuffer() dec_out_g2d_params");
 
+            m_logger->printStdoutLog(bsp_perf::shared::BspLogger::LogLevel::Debug, "[S] VideoDetectApp::createG2DBuffer() getInputBuffer");
             std::shared_ptr<EncodeInputBuffer> enc_in_buf = m_encoder->getInputBuffer();
+            m_logger->printStdoutLog(bsp_perf::shared::BspLogger::LogLevel::Debug, "[E] VideoDetectApp::createG2DBuffer() getInputBuffer");
+
+            m_logger->printStdoutLog(bsp_perf::shared::BspLogger::LogLevel::Debug, "[S] VideoDetectApp::enc_in_g2d_params set");
             IGraphics2D::G2DBufferParams enc_in_g2d_params = {
                 .fd = enc_in_buf->input_buf_fd,
                 .width = frame->width,
                 .height = frame->height,
                 .width_stride = frame->width_stride,
                 .height_stride = frame->height_stride,
-                .format = "YCbCr_420_SP",
+                .format = frame->format,
             };
+            m_logger->printStdoutLog(bsp_perf::shared::BspLogger::LogLevel::Debug, "[E] VideoDetectApp::enc_in_g2d_params set");
+            m_logger->printStdoutLog(bsp_perf::shared::BspLogger::LogLevel::Debug, "[S] VideoDetectApp::createG2DBuffer() enc_in_g2d_params");
             std::shared_ptr<IGraphics2D::G2DBuffer> g2d_enc_in_buf = m_g2d->createG2DBuffer("fd", enc_in_g2d_params);
+            m_logger->printStdoutLog(bsp_perf::shared::BspLogger::LogLevel::Debug, "[E] VideoDetectApp::createG2DBuffer() enc_in_g2d_params");
 
+            m_logger->printStdoutLog(bsp_perf::shared::BspLogger::LogLevel::Debug, "[S] VideoDetectApp::imageCopy()");
             m_g2d->imageCopy(g2d_dec_out_buf, g2d_enc_in_buf);
+            m_logger->printStdoutLog(bsp_perf::shared::BspLogger::LogLevel::Debug, "[E] VideoDetectApp::imageCopy()");
 
             m_frame_index++;
             // Encode to file

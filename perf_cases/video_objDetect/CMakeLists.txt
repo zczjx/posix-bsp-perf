@@ -18,13 +18,13 @@ set_target_properties(${PROJECT_NAME} PROPERTIES INSTALL_RPATH "$ORIGIN/../lib")
 target_include_directories(${PROJECT_NAME} PUBLIC ${OpenCV_INCLUDE_DIRS})
 
 if(OpenCV_LIBRARIES)
-  target_link_directories(${PROJECT_NAME} PRIVATE ${OpenCV_LIBRARY_DIRS})
-  target_link_libraries(${PROJECT_NAME} PRIVATE ${OpenCV_LIBRARIES})
-  target_include_directories(${PROJECT_NAME} PUBLIC ${OpenCV_INCLUDE_DIRS})
+  # target_link_directories(${PROJECT_NAME} PRIVATE ${OpenCV_LIBRARY_DIRS})
+  # target_link_libraries(${PROJECT_NAME} PRIVATE ${OpenCV_LIBRARIES})
+  # target_include_directories(${PROJECT_NAME} PUBLIC ${OpenCV_INCLUDE_DIRS})
 endif()
 
 target_include_directories(${PROJECT_NAME} PRIVATE ${CMAKE_SOURCE_DIR}/src)
-target_link_libraries(${PROJECT_NAME} PRIVATE dnnObjDetector case_framework bsp_shared bsp_g2d bsp_enc bsp_dec)
+target_link_libraries(${PROJECT_NAME} PRIVATE bsp_g2d bsp_enc bsp_dec dnnObjDetector case_framework bsp_shared)
 
 install(TARGETS ${PROJECT_NAME}
   RUNTIME DESTINATION bin

@@ -1,5 +1,5 @@
 #include "IEncoder.hpp"
-#include "video/encoder/rkmppEnc.hpp"
+#include "video/rkmppEnc.hpp"
 #include <stdexcept>
 #include <memory>
 

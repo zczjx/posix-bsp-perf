@@ -22,7 +22,17 @@ if(ENABLE_RKRGA)
 endif()
 
 # Add the library target
+message(STATUS "zczjx--> Source files: ${SOURCES}")
 add_library(${PROJECT_NAME} SHARED ${SOURCES})
+
+if(ENABLE_RKRGA)
+  if(DEFINED BSP_LIB_PATH)
+    set(RKRGA_LIB ${BSP_LIB_PATH}/librga.so)
+  else()
+    set(RKRGA_LIB /usr/lib/librga.so)
+  endif()
+  target_link_libraries(${PROJECT_NAME} PUBLIC ${RKRGA_LIB})
+endif()
 
 # target_link_libraries(${PROJECT_NAME} PRIVATE bsp_shared)
 
@@ -43,16 +53,6 @@ install(FILES ${${PROJECT_NAME}_PC} DESTINATION lib/pkgconfig)
 
 set_target_properties(${PROJECT_NAME} PROPERTIES INSTALL_RPATH "$ORIGIN/../lib")
 target_link_libraries(${PROJECT_NAME} PRIVATE bsp_shared)
-
-if(ENABLE_RKRGA)
-  if(DEFINED BSP_LIB_PATH)
-    set(RKRGA_LIB ${BSP_LIB_PATH}/librga.so)
-  else()
-    set(RKRGA_LIB /usr/lib/librga.so)
-  endif()
-  target_link_libraries(${PROJECT_NAME} PUBLIC ${RKRGA_LIB})
-endif()
-
 
 install(TARGETS ${PROJECT_NAME}
   RUNTIME DESTINATION bin

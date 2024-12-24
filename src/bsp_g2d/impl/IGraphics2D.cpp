@@ -4,7 +4,7 @@
 
 namespace bsp_g2d
 {
-static std::unique_ptr<IGraphics2D> create(const std::string& g2dPlatform)
+std::unique_ptr<IGraphics2D> IGraphics2D::create(const std::string& g2dPlatform)
 {
     if (g2dPlatform.compare("rkrga") == 0)
     {

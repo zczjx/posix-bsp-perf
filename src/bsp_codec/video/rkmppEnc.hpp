@@ -15,8 +15,8 @@ struct rkmppEncParams
 
     RK_U32 width{1920};
     RK_U32 height{1080};
-    RK_U32 hor_stride{1920};
-    RK_U32 ver_stride{1080};
+    RK_U32 hor_stride{0};
+    RK_U32 ver_stride{0};
     MppFrameFormat frameFormat{MPP_FMT_YUV420P};
     MppCodingType type{MPP_VIDEO_CodingAVC};
 
@@ -36,7 +36,7 @@ struct rkmppEncParams
     RK_S32 fps_out_flex{0};
     RK_S32 fps_out_den{1};
     RK_S32 fps_out_num{30};
-    RK_S32 bps{2000000};
+    RK_S32 bps{0};
     RK_S32 bps_max{4000000};
     RK_S32 bps_min{1000000};
     RK_S32 rc_mode{0};
@@ -107,6 +107,7 @@ public:
 protected:
     int parseConfig(EncodeConfig& cfg);
     int setupMppEncCfg();
+    int calculateFrameSize(MppFrameFormat frameFormat);
 
 private:
     encodeReadyCallback m_callback{nullptr};
