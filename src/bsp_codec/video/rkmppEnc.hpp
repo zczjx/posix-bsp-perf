@@ -10,24 +10,16 @@ namespace bsp_codec
 
 struct rkmppEncParams
 {
-    int fps{30};
     MppCodingType encoding_type{MPP_VIDEO_CodingAVC};
-
-    RK_U32 width{1920};
-    RK_U32 height{1080};
+    RK_U32 width{0};
+    RK_U32 height{0};
     RK_U32 hor_stride{0};
     RK_U32 ver_stride{0};
     MppFrameFormat frameFormat{MPP_FMT_YUV420P};
-    MppCodingType type{MPP_VIDEO_CodingAVC};
 
-    RK_U32 osd_enable{0};
-    RK_U32 osd_mode{0};
     RK_U32 split_mode{0};
     RK_U32 split_arg{0};
     RK_U32 split_out{0};
-
-    RK_U32 user_data_enable{0};
-    RK_U32 roi_enable{0};
 
     // rate control runtime parameter
     RK_S32 fps_in_flex{0};
@@ -37,22 +29,18 @@ struct rkmppEncParams
     RK_S32 fps_out_den{1};
     RK_S32 fps_out_num{30};
     RK_S32 bps{0};
-    RK_S32 bps_max{4000000};
-    RK_S32 bps_min{1000000};
+    RK_S32 bps_max{0};
+    RK_S32 bps_min{0};
     RK_S32 rc_mode{0};
     RK_S32 gop_mode{0};
-    RK_S32 gop_len{60};
-    RK_S32 vi_len{0};
+    RK_S32 gop_len{0};
 
     /* general qp control */
-    RK_S32 qp_init{26};
-    RK_S32 qp_max{51};
-    RK_S32 qp_max_i{51};
-    RK_S32 qp_min{10};
-    RK_S32 qp_min_i{10};
-    RK_S32 qp_max_step{4}; /* delta qp between each two P frame */
-    RK_S32 qp_delta_ip{2}; /* delta qp between I and P */
-    RK_S32 qp_delta_vi{2}; /* delta qp between vi and P */
+    RK_S32 qp_init{0};
+    RK_S32 qp_max{0};
+    RK_S32 qp_max_i{0};
+    RK_S32 qp_min{0};
+    RK_S32 qp_min_i{0};
 
     RK_U32 constraint_set{0};
     RK_U32 rotation{0};
@@ -60,7 +48,6 @@ struct rkmppEncParams
     RK_U32 flip{0};
 
     MppEncHeaderMode header_mode{MPP_ENC_HEADER_MODE_DEFAULT};
-    MppEncSeiMode sei_mode{MPP_ENC_SEI_MODE_ONE_FRAME};
 };
 class rkmppEnc : public IEncoder
 {

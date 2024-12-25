@@ -107,7 +107,7 @@ struct DecodeOutFrame
     int height;
     int width_stride;
     int height_stride;
-    std::string format{"YCbCr_420_SP"};
+    std::string format{"YUV420SP"};
     char *virt_addr{nullptr};
     int fd;
     int eos_flag;

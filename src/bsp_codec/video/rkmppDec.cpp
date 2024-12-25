@@ -42,7 +42,7 @@ int rkmppDec::setup(DecodeConfig& cfg)
     int ret = 0;
     try
     {
-        m_params.encoding_type = rkmppCodecHeader::strToMppCodingMap.at(cfg.encoding);
+        m_params.encoding_type = rkmppCodecHeader::getInstance().strToMppCoding(cfg.encoding);
         std::cout << "rkmpp dec m_params.encoding_type= " << m_params.encoding_type << std::endl;
     }
     catch (const std::out_of_range& e)
@@ -267,8 +267,7 @@ int rkmppDec::decode(DecodePacket& pkt_data)
                         frame->height = ver_height;
                         frame->width_stride = hor_stride;
                         frame->height_stride = ver_stride;
-                        std::cout << "rkmpp dec format= " << format << std::endl;
-                        frame->format = rkmppCodecHeader::mppFrameFormatToStrMap.at(format);
+                        frame->format = rkmppCodecHeader::getInstance().mppFrameFormatToStr(format);
                         frame->virt_addr = data_vir;
                         frame->fd = fd;
                         m_callback(m_userdata, frame);

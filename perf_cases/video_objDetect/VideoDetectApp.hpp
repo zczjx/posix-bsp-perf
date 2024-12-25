@@ -35,7 +35,7 @@ public:
         params.getOptionVal("--dnnType", dnnType);
         params.getOptionVal("--pluginPath", pluginPath);
         params.getOptionVal("--labelTextPath", labelTextPath);
-        m_dnnObjDetector = std::make_unique<bsp_dnn::dnnObjDetector>(dnnType, pluginPath, labelTextPath);
+        // m_dnnObjDetector = std::make_unique<bsp_dnn::dnnObjDetector>(dnnType, pluginPath, labelTextPath);
     }
     VideoDetectApp(const VideoDetectApp&) = delete;
     VideoDetectApp& operator=(const VideoDetectApp&) = delete;
@@ -56,7 +56,7 @@ private:
 
         std::string modelPath;
         params.getOptionVal("--modelPath", modelPath);
-        m_dnnObjDetector->loadModel(modelPath);
+        // m_dnnObjDetector->loadModel(modelPath);
 
         std::string g2dPlatform;
         params.getOptionVal("--graphics2D", g2dPlatform);
@@ -70,13 +70,7 @@ private:
 
         std::string outputVideoPath;
         params.getOptionVal("--outputVideoPath", outputVideoPath);
-        auto fp = fopen(outputVideoPath.c_str(), "wb");
-        if (fp == nullptr)
-        {
-            m_logger->printStdoutLog(bsp_perf::shared::BspLogger::LogLevel::Error, "VideoDetectApp::onInit() Failed to open output video file: {}", outputVideoPath);
-            throw std::runtime_error("Failed to open output video file.");
-        }
-        m_out_fp.reset(fp);
+        m_out_fp = std::shared_ptr<FILE>(fopen(outputVideoPath.c_str(), "wb"), fclose);
     }
 
     void onProcess() override
@@ -124,8 +118,10 @@ private:
         m_logger->printStdoutLog(bsp_perf::shared::BspLogger::LogLevel::Info, "waiting finish");
         std::this_thread::sleep_for(std::chrono::seconds(1));
         fflush(m_out_fp.get());
-        fclose(m_out_fp.get());
-        m_dnnObjDetector.reset();
+        m_logger->printStdoutLog(bsp_perf::shared::BspLogger::LogLevel::Info, "VideoDetectApp::onRelease() Output video file closed");
+        m_out_fp.reset();
+        // m_dnnObjDetector.reset();
+        BspFileUtils::ReleaseFileMmap(m_videoFileContext);
     }
 
 private:
@@ -168,9 +164,8 @@ private:
                     .hor_stride = frame->width_stride,
                     .ver_stride = frame->height_stride,
                 };
-                m_logger->printStdoutLog(bsp_perf::shared::BspLogger::LogLevel::Debug, "[S] VideoDetectApp::setupEncoder()");
-                m_encoder->setup(enc_cfg);
-                m_logger->printStdoutLog(bsp_perf::shared::BspLogger::LogLevel::Debug, "[E] VideoDetectApp::setupEncoder()");
+                int ret = m_encoder->setup(enc_cfg);
+                m_logger->printStdoutLog(bsp_perf::shared::BspLogger::LogLevel::Debug, "VideoDetectApp::createG2DBuffer() encoder setup ret: {}", ret);
             }
 
             // auto& objDetectOutput = dnnInference(frame);
@@ -180,17 +175,11 @@ private:
                 .height = frame->height,
                 .width_stride = frame->width_stride,
                 .height_stride = frame->height_stride,
-                .format = "YCbCr_420_SP",
+                .format = frame->format,
             };
-            m_logger->printStdoutLog(bsp_perf::shared::BspLogger::LogLevel::Debug, "[S] VideoDetectApp::createG2DBuffer() dec_out_g2d_params");
             std::shared_ptr<IGraphics2D::G2DBuffer> g2d_dec_out_buf = m_g2d->createG2DBuffer("fd", dec_out_g2d_params);
-            m_logger->printStdoutLog(bsp_perf::shared::BspLogger::LogLevel::Debug, "[E] VideoDetectApp::createG2DBuffer() dec_out_g2d_params");
-
-            m_logger->printStdoutLog(bsp_perf::shared::BspLogger::LogLevel::Debug, "[S] VideoDetectApp::createG2DBuffer() getInputBuffer");
             std::shared_ptr<EncodeInputBuffer> enc_in_buf = m_encoder->getInputBuffer();
-            m_logger->printStdoutLog(bsp_perf::shared::BspLogger::LogLevel::Debug, "[E] VideoDetectApp::createG2DBuffer() getInputBuffer");
 
-            m_logger->printStdoutLog(bsp_perf::shared::BspLogger::LogLevel::Debug, "[S] VideoDetectApp::enc_in_g2d_params set");
             IGraphics2D::G2DBufferParams enc_in_g2d_params = {
                 .fd = enc_in_buf->input_buf_fd,
                 .width = frame->width,
@@ -199,14 +188,9 @@ private:
                 .height_stride = frame->height_stride,
                 .format = frame->format,
             };
-            m_logger->printStdoutLog(bsp_perf::shared::BspLogger::LogLevel::Debug, "[E] VideoDetectApp::enc_in_g2d_params set");
-            m_logger->printStdoutLog(bsp_perf::shared::BspLogger::LogLevel::Debug, "[S] VideoDetectApp::createG2DBuffer() enc_in_g2d_params");
             std::shared_ptr<IGraphics2D::G2DBuffer> g2d_enc_in_buf = m_g2d->createG2DBuffer("fd", enc_in_g2d_params);
-            m_logger->printStdoutLog(bsp_perf::shared::BspLogger::LogLevel::Debug, "[E] VideoDetectApp::createG2DBuffer() enc_in_g2d_params");
 
-            m_logger->printStdoutLog(bsp_perf::shared::BspLogger::LogLevel::Debug, "[S] VideoDetectApp::imageCopy()");
             m_g2d->imageCopy(g2d_dec_out_buf, g2d_enc_in_buf);
-            m_logger->printStdoutLog(bsp_perf::shared::BspLogger::LogLevel::Debug, "[E] VideoDetectApp::imageCopy()");
 
             m_frame_index++;
             // Encode to file
@@ -215,17 +199,21 @@ private:
             {
                 std::string enc_header;
                 m_encoder->getEncoderHeader(enc_header);
+                m_logger->printStdoutLog(bsp_perf::shared::BspLogger::LogLevel::Info, "VideoDetectApp::onProcess() Write encoder header enc_header.size(): {}", enc_header.size());
                 fwrite(enc_header.c_str(), 1, enc_header.size(), m_out_fp.get());
+                m_logger->printStdoutLog(bsp_perf::shared::BspLogger::LogLevel::Info, "VideoDetectApp::onProcess() Write encoder header");
             }
 
             EncodePacket enc_pkt = {
-                .data = nullptr,
-                .pkt_len = 0,
                 .max_size = m_encoder->getFrameSize(),
                 .pkt_eos = frame->eos_flag,
+                .pkt_len = 0,
             };
-            m_encoder->encode(*enc_in_buf, enc_pkt);
-            fwrite(enc_pkt.data, 1, enc_pkt.pkt_len, m_out_fp.get());
+            enc_pkt.encode_pkt.resize(enc_pkt.max_size);
+            auto encode_len = m_encoder->encode(*enc_in_buf, enc_pkt);
+            m_logger->printStdoutLog(bsp_perf::shared::BspLogger::LogLevel::Info, "VideoDetectApp::onProcess() Write encoded encode_len: {} enc_pkt.pkt_len: {}", encode_len, enc_pkt.pkt_len);
+            fwrite(enc_pkt.encode_pkt.data(), 1, enc_pkt.pkt_len, m_out_fp.get());
+            m_logger->printStdoutLog(bsp_perf::shared::BspLogger::LogLevel::Info, "VideoDetectApp::onProcess() Write encoded pkt: {}", m_frame_index);
         };
 
         m_decoder->setDecodeReadyCallback(decoderCallback, nullptr);

@@ -23,10 +23,10 @@ struct EncodeConfig
 
 struct EncodePacket
 {
-    uint8_t* data{nullptr};
-    size_t pkt_len{0};
     size_t max_size{0};
     int pkt_eos;
+    size_t pkt_len{0};
+    std::vector<uint8_t> encode_pkt{};
 };
 
 struct EncodeInputBuffer

@@ -11,7 +11,6 @@ std::shared_ptr<IGraphics2D::G2DBuffer> rkrga::createG2DBuffer(const std::string
     std::shared_ptr<G2DBuffer> g2dBuffer = std::make_shared<G2DBuffer>();
     g2dBuffer->g2dPlatform = "rkrga";
     int rga_format = m_rgaParams.m_pix_format_map.at(params.format);
-    std::cout << "rkrga rga_format= " << rga_format << std::endl;
 
     if (g2dBufferMapType.compare("fd") == 0)
     {
