@@ -35,7 +35,7 @@ public:
     struct dnnInput
     {
         size_t index{0};
-        std::shared_ptr<uint8_t> buf{nullptr};
+        std::vector<uint8_t> buf{};
         size_t size{0};
         dnnInputShape shape{};
         // dataType can be "UINT8", "float32"

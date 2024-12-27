@@ -45,3 +45,24 @@ install(TARGETS ${PLUGIN_NAME}
   RUNTIME DESTINATION bin
   LIBRARY DESTINATION lib
 )
+
+# Create the shared library
+set(PLUGIN_NAME rga_rknn_yolov5)
+
+add_library(${PLUGIN_NAME} SHARED
+    RGArknnYolov5.cpp
+    common/YoloPostProcess.cpp
+)
+
+target_include_directories(${PLUGIN_NAME} PRIVATE
+    $<BUILD_INTERFACE:${CMAKE_SOURCE_DIR}/src>
+    $<INSTALL_INTERFACE:include>
+)
+
+target_link_libraries(${PLUGIN_NAME} PRIVATE bsp_g2d)
+set_target_properties(${PLUGIN_NAME} PROPERTIES INSTALL_RPATH "$ORIGIN/../lib")
+
+install(TARGETS ${PLUGIN_NAME}
+  RUNTIME DESTINATION bin
+  LIBRARY DESTINATION lib
+)

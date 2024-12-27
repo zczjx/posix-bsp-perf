@@ -1,8 +1,9 @@
 #include "rkrga.hpp"
+#include <rga/im2d_common.h>
 #include <iostream>
 #include <memory>
 #include <any>
-
+#include <string.h>
 namespace bsp_g2d
 {
 
@@ -77,6 +78,14 @@ void rkrga::releaseG2DBuffer(std::shared_ptr<G2DBuffer> g2dBuffer)
 
 int rkrga::imageResize(std::shared_ptr<G2DBuffer> src, std::shared_ptr<G2DBuffer> dst)
 {
+    im_rect src_rect{};
+    im_rect dst_rect{};
+    int ret = imcheck(std::any_cast<rga_buffer_t>(src->g2dBufferHandle), std::any_cast<rga_buffer_t>(dst->g2dBufferHandle), src_rect, dst_rect);
+    if (ret != IM_STATUS_NOERROR)
+    {
+        std::cerr << "imcheck failed" << std::endl;
+        return ret;
+    }
     return imresize(std::any_cast<rga_buffer_t>(src->g2dBufferHandle), std::any_cast<rga_buffer_t>(dst->g2dBufferHandle));
 }
 

@@ -35,7 +35,7 @@ public:
         params.getOptionVal("--dnnType", dnnType);
         params.getOptionVal("--pluginPath", pluginPath);
         params.getOptionVal("--labelTextPath", labelTextPath);
-        // m_dnnObjDetector = std::make_unique<bsp_dnn::dnnObjDetector>(dnnType, pluginPath, labelTextPath);
+        m_dnnObjDetector = std::make_unique<bsp_dnn::dnnObjDetector>(dnnType, pluginPath, labelTextPath);
     }
     VideoDetectApp(const VideoDetectApp&) = delete;
     VideoDetectApp& operator=(const VideoDetectApp&) = delete;
@@ -56,7 +56,7 @@ private:
 
         std::string modelPath;
         params.getOptionVal("--modelPath", modelPath);
-        // m_dnnObjDetector->loadModel(modelPath);
+        m_dnnObjDetector->loadModel(modelPath);
 
         std::string g2dPlatform;
         params.getOptionVal("--graphics2D", g2dPlatform);
@@ -120,7 +120,7 @@ private:
         fflush(m_out_fp.get());
         m_logger->printStdoutLog(bsp_perf::shared::BspLogger::LogLevel::Info, "VideoDetectApp::onRelease() Output video file closed");
         m_out_fp.reset();
-        // m_dnnObjDetector.reset();
+        m_dnnObjDetector.reset();
         BspFileUtils::ReleaseFileMmap(m_videoFileContext);
     }
 
@@ -168,7 +168,13 @@ private:
                 m_logger->printStdoutLog(bsp_perf::shared::BspLogger::LogLevel::Debug, "VideoDetectApp::createG2DBuffer() encoder setup ret: {}", ret);
             }
 
-            // auto& objDetectOutput = dnnInference(frame);
+            auto& objDetectOutput = dnnInference(frame);
+            // for (const auto& item : objDetectOutput)
+            // {
+            //     m_logger->printStdoutLog(bsp_perf::shared::BspLogger::LogLevel::Debug,
+            //         "Detected object: label={}, score={}, x={}, y={}, width={}, height={}",
+            //         item.label, item.score, item.bbox.left, item.bbox.right, item.bbox.top, item.bbox.bottom);
+            // }
             IGraphics2D::G2DBufferParams dec_out_g2d_params = {
                 .fd = frame->fd,
                 .width = frame->width,
@@ -219,21 +225,22 @@ private:
         m_decoder->setDecodeReadyCallback(decoderCallback, nullptr);
     }
 
-    void setObjDetectParams(ObjDetectParams& objDetectParams)
+    void setObjDetectParams(ObjDetectParams& objDetectParams, std::shared_ptr<DecodeOutFrame> frame)
     {
-        // IDnnEngine::dnnInputShape shape;
-        // m_dnnObjDetector->getInputShape(shape);
-        // objDetectParams.model_input_width = shape.width;
-        // objDetectParams.model_input_height = shape.height;
-        // objDetectParams.conf_threshold = 0.25;
-        // objDetectParams.nms_threshold = 0.45;
-        // objDetectParams.scale_width = shape.width / m_orig_image_ptr->cols;
-        // objDetectParams.scale_height = shape.height / m_orig_image_ptr->rows;
-        // objDetectParams.pads.left = 0;
-        // objDetectParams.pads.right = 0;
-        // objDetectParams.pads.top = 0;
-        // objDetectParams.pads.bottom = 0;
-        // m_dnnObjDetector->getOutputQuantParams(objDetectParams.quantize_zero_points, objDetectParams.quantize_scales);
+        IDnnEngine::dnnInputShape shape;
+        m_dnnObjDetector->getInputShape(shape);
+        objDetectParams.model_input_width = shape.width;
+        objDetectParams.model_input_height = shape.height;
+        objDetectParams.model_input_channel = 3;
+        objDetectParams.conf_threshold = 0.25;
+        objDetectParams.nms_threshold = 0.45;
+        objDetectParams.scale_width = shape.width / frame->width;
+        objDetectParams.scale_height = shape.height / frame->height;
+        objDetectParams.pads.left = 0;
+        objDetectParams.pads.right = 0;
+        objDetectParams.pads.top = 0;
+        objDetectParams.pads.bottom = 0;
+        m_dnnObjDetector->getOutputQuantParams(objDetectParams.quantize_zero_points, objDetectParams.quantize_scales);
     }
 
     std::vector<ObjDetectOutputBox>& dnnInference(std::shared_ptr<DecodeOutFrame> frame)
@@ -242,9 +249,8 @@ private:
             .handleType = "DecodeOutFrame",
             .imageHandle = frame,
         };
-
         m_dnnObjDetector->pushInputData(std::make_shared<bsp_dnn::ObjDetectInput>(objDetectInput));
-        setObjDetectParams(m_objDetectParams);
+        setObjDetectParams(m_objDetectParams, frame);
         m_dnnObjDetector->runObjDetect(m_objDetectParams);
         return m_dnnObjDetector->popOutputData();
     }

@@ -168,9 +168,9 @@ int rknn::getOutputQuantParams(std::vector<int32_t>& zeroPoints, std::vector<flo
 
 int rknn::pushInputData(dnnInput& inputData)
 {
-    if ((inputData.buf == nullptr) || (inputData.size == 0))
+    if (inputData.size == 0)
     {
-        m_logger->printStdoutLog(BspLogger::LogLevel::Error, "inputData.buf is nullptr.");
+        m_logger->printStdoutLog(BspLogger::LogLevel::Error, "inputData.buf is empty.");
         return -1;
     }
 
@@ -179,7 +179,7 @@ int rknn::pushInputData(dnnInput& inputData)
     m_params.m_inputs[0].size         = m_params.m_input_attrs[0].dims[1] * m_params.m_input_attrs[0].dims[2] * m_params.m_input_attrs[0].dims[3];
     m_params.m_inputs[0].fmt          = m_params.m_input_attrs[0].fmt;
     m_params.m_inputs[0].pass_through = 0;
-    m_params.m_inputs[0].buf          = static_cast<void*>(inputData.buf.get());
+    m_params.m_inputs[0].buf          = static_cast<void*>(inputData.buf.data());
     return rknn_inputs_set(m_params.m_rknnCtx, m_params.m_io_num.n_input, m_params.m_inputs);
 }
 

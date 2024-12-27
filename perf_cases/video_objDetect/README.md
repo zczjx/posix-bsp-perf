@@ -6,4 +6,4 @@
 
 - example cmd
 
-` ./video_objDetect --dnn rknn --decoder rkmpp --encoder rkmpp --g2d rkrga --plugin install/lib/librknn_yolov5.so --label ./coco_80_labels_list.txt --model model/RK3588/yolov5s-640-640.rknn --video /path/to/video.h264 --output /path/to/out.h264`
+` ./video_objDetect --dnn rknn --decoder rkmpp --encoder rkmpp --g2d rkrga --plugin install/lib/librga_rknn_yolov5.so --label ./coco_80_labels_list.txt --model model/RK3588/yolov5s-640-640.rknn --video /path/to/video.h264 --output /path/to/out.h264`

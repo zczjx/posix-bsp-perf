@@ -120,6 +120,7 @@ private:
         m_dnnObjDetector->getInputShape(shape);
         objDetectParams.model_input_width = shape.width;
         objDetectParams.model_input_height = shape.height;
+        objDetectParams.model_input_channel = 3;
         objDetectParams.conf_threshold = 0.25;
         objDetectParams.nms_threshold = 0.45;
         objDetectParams.scale_width = shape.width / m_orig_image_ptr->cols;

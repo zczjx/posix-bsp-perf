@@ -44,6 +44,7 @@ struct ObjDetectParams
 {
     size_t model_input_width;
     size_t model_input_height;
+    size_t model_input_channel;
     float conf_threshold;
     float nms_threshold;
     float scale_width;

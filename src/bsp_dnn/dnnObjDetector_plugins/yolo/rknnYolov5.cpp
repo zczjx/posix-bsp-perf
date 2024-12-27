@@ -47,11 +47,14 @@ int rknnYolov5::preProcess(ObjDetectParams& params, ObjDetectInput& inputData, I
     outputData.index = 0;
     outputData.shape.width = params.model_input_width;
     outputData.shape.height = params.model_input_height;
-    outputData.shape.channel = 3;
+    outputData.shape.channel = params.model_input_channel;
     outputData.size = padded_image.total() * padded_image.elemSize();
-    outputData.buf.reset(new uint8_t[outputData.size]);
+    if (outputData.buf.size() != outputData.size)
+    {
+        outputData.buf.resize(outputData.size);
+    }
     outputData.dataType = "UINT8";
-    std::memcpy(outputData.buf.get(), padded_image.data, outputData.size);
+    std::memcpy(outputData.buf.data(), padded_image.data, outputData.size);
     return 0;
 }
 

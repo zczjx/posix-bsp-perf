@@ -22,7 +22,6 @@ if(ENABLE_RKRGA)
 endif()
 
 # Add the library target
-message(STATUS "zczjx--> Source files: ${SOURCES}")
 add_library(${PROJECT_NAME} SHARED ${SOURCES})
 
 if(ENABLE_RKRGA)
