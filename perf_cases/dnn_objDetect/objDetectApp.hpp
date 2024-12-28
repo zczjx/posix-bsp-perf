@@ -69,6 +69,13 @@ private:
         setObjDetectParams(m_objDetectParams);
         m_dnnObjDetector->runObjDetect(m_objDetectParams);
         auto& objDetectOutput = m_dnnObjDetector->popOutputData();
+
+        for (const auto& item : objDetectOutput)
+            {
+                m_logger->printStdoutLog(bsp_perf::shared::BspLogger::LogLevel::Debug,
+                    "Detected object: label={}, score={}, x={}, y={}, width={}, height={}",
+                    item.label, item.score, item.bbox.left, item.bbox.right, item.bbox.top, item.bbox.bottom);
+            }
         std::vector<cv::Scalar> colors = {
                 cv::Scalar(255, 0, 0),    // Blue
                 cv::Scalar(0, 255, 0),    // Green
@@ -120,11 +127,11 @@ private:
         m_dnnObjDetector->getInputShape(shape);
         objDetectParams.model_input_width = shape.width;
         objDetectParams.model_input_height = shape.height;
-        objDetectParams.model_input_channel = 3;
+        objDetectParams.model_input_channel = shape.channel;
         objDetectParams.conf_threshold = 0.25;
         objDetectParams.nms_threshold = 0.45;
-        objDetectParams.scale_width = shape.width / m_orig_image_ptr->cols;
-        objDetectParams.scale_height = shape.height / m_orig_image_ptr->rows;
+        objDetectParams.scale_width = static_cast<float>(shape.width) / static_cast<float>(m_orig_image_ptr->cols);
+        objDetectParams.scale_height = static_cast<float>(shape.height) / static_cast<float>(m_orig_image_ptr->rows);
         objDetectParams.pads.left = 0;
         objDetectParams.pads.right = 0;
         objDetectParams.pads.top = 0;
