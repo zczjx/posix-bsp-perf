@@ -177,23 +177,18 @@ private:
             };
             std::shared_ptr<IGraphics2D::G2DBuffer> g2d_dec_out_buf = m_g2d->createG2DBuffer("virtualaddr", dec_out_g2d_params);
 
-            // if (m_rgb888_buf.size() != (frame->width * frame->height * 3))
-            // {
-            //     m_rgb888_buf.resize(frame->width * frame->height * 3);
-            // }
-            if (m_rgb888_buf == nullptr)
+            if (m_rgb888_buf.size() != (frame->width * frame->height * 3))
             {
-                m_rgb888_buf = new uint8_t[frame->width * frame->height * 3];
+                m_rgb888_buf.resize(frame->width * frame->height * 3);
             }
 
-            if (m_yuv420_buf == nullptr)
+            if (m_yuv420_buf.size() != (frame->width * frame->height * 3 / 2))
             {
-                m_yuv420_buf = new uint8_t[frame->width * frame->height * 3 / 2];
+                m_yuv420_buf.resize(frame->width * frame->height * 3 / 2);
             }
 
             IGraphics2D::G2DBufferParams rgb888_g2d_buf_params = {
-                // .virtual_addr = m_rgb888_buf.data(),
-                .virtual_addr = m_rgb888_buf,
+                .virtual_addr = m_rgb888_buf.data(),
                 .rawBufferSize = frame->width * frame->height * 3,
                 .width = frame->width,
                 .height = frame->height,
@@ -203,27 +198,24 @@ private:
             };
 
             std::shared_ptr<IGraphics2D::G2DBuffer> rgb888_g2d_buf = m_g2d->createG2DBuffer("virtualaddr", rgb888_g2d_buf_params);
-
             int ret = m_g2d->imageCvtColor(g2d_dec_out_buf, rgb888_g2d_buf, frame->format, "RGB888");
-            m_logger->printStdoutLog(bsp_perf::shared::BspLogger::LogLevel::Debug, "VideoDetectApp::onProcess() imageCvtColor ret: {}", ret);
+            cv::Mat cvRGB888Image(frame->height, frame->width, CV_8UC3, m_rgb888_buf.data());
+            int i = 1 + (std::rand() % m_colors_list.size());
 
-            cv::Mat cvRGB888Image(frame->height, frame->width, CV_8UC3, m_rgb888_buf);
-            int i = 0;
             for (const auto& item : objDetectOutput)
             {
                 if (m_labelColorMap.find(item.label) == m_labelColorMap.end())
                 {
                     m_labelColorMap[item.label] = m_colors_list[i % m_colors_list.size()];
+                    i++;
                 }
                 cv::rectangle(cvRGB888Image, cv::Point(item.bbox.left, item.bbox.top), cv::Point(item.bbox.right, item.bbox.bottom),
                     m_labelColorMap[item.label], 2);
-                cv::putText(cvRGB888Image, item.label, cv::Point(item.bbox.left, item.bbox.top + 12), cv::FONT_HERSHEY_COMPLEX, 0.4, cv::Scalar(256, 255, 255));
-                i++;
+                cv::putText(cvRGB888Image, item.label, cv::Point(item.bbox.left, item.bbox.top + 12), cv::FONT_HERSHEY_COMPLEX, 0.4, cv::Scalar(255, 255, 255));
             }
 
             IGraphics2D::G2DBufferParams yuv420_g2d_buf_params = {
-                // .virtual_addr = m_rgb888_buf.data(),
-                .virtual_addr = m_yuv420_buf,
+                .virtual_addr = m_yuv420_buf.data(),
                 .rawBufferSize = frame->width * frame->height * 3 / 2,
                 .width = frame->width,
                 .height = frame->height,
@@ -233,10 +225,7 @@ private:
             };
 
             std::shared_ptr<IGraphics2D::G2DBuffer> yuv420_g2d_buf = m_g2d->createG2DBuffer("virtualaddr", yuv420_g2d_buf_params);
-
             ret = m_g2d->imageCvtColor(rgb888_g2d_buf, yuv420_g2d_buf, "RGB888", frame->format);
-            m_logger->printStdoutLog(bsp_perf::shared::BspLogger::LogLevel::Debug, "VideoDetectApp::onProcess() RGB888 to yuv420 imageCvtColor ret: {}", ret);
-
             std::shared_ptr<EncodeInputBuffer> enc_in_buf = m_encoder->getInputBuffer();
 
             IGraphics2D::G2DBufferParams enc_in_g2d_params = {
@@ -248,10 +237,7 @@ private:
                 .format = frame->format,
             };
             std::shared_ptr<IGraphics2D::G2DBuffer> g2d_enc_in_buf = m_g2d->createG2DBuffer("virtualaddr", enc_in_g2d_params);
-
             ret = m_g2d->imageCopy(yuv420_g2d_buf, g2d_enc_in_buf);
-            m_logger->printStdoutLog(bsp_perf::shared::BspLogger::LogLevel::Debug, "VideoDetectApp::onProcess() imageCopy ret: {}", ret);
-
             m_frame_index++;
             // Encode to file
             // Write header on first frame->
@@ -285,7 +271,7 @@ private:
         objDetectParams.model_input_width = shape.width;
         objDetectParams.model_input_height = shape.height;
         objDetectParams.model_input_channel = shape.channel;
-        objDetectParams.conf_threshold = 0.25;
+        objDetectParams.conf_threshold = 0.35;
         objDetectParams.nms_threshold = 0.45;
         objDetectParams.scale_width = static_cast<float>(shape.width) / static_cast<float>(frame->width);
         objDetectParams.scale_height = static_cast<float>(shape.height) / static_cast<float>(frame->height);
@@ -314,8 +300,8 @@ private:
     std::unique_ptr<bsp_dnn::dnnObjDetector> m_dnnObjDetector{nullptr};
     bsp_dnn::ObjDetectParams m_objDetectParams{};
     std::shared_ptr<BspFileUtils::FileContext> m_videoFileContext{nullptr};
-    uint8_t* m_rgb888_buf{nullptr};
-    uint8_t* m_yuv420_buf{nullptr};
+    std::vector<uint8_t> m_rgb888_buf{};
+    std::vector<uint8_t> m_yuv420_buf{};
 
     std::string m_encoderType{""};
     std::unique_ptr<IDecoder> m_decoder{nullptr};
@@ -326,12 +312,6 @@ private:
     size_t m_frame_index{0};
     std::map<std::string, cv::Scalar> m_labelColorMap;
     std::vector<cv::Scalar> m_colors_list = {
-        cv::Scalar(255, 0, 255),  // Magenta
-        cv::Scalar(128, 0, 128),  // Purple
-        cv::Scalar(0, 255, 255),  // Yellow
-        cv::Scalar(128, 0, 0),    // Maroon
-        cv::Scalar(0, 128, 0),    // Olive
-        cv::Scalar(0, 0, 128),    // Navy
         cv::Scalar(128, 128, 0),  // Teal
         cv::Scalar(0, 128, 128),   // Aqua
         cv::Scalar(255, 0, 0),    // Blue
@@ -344,6 +324,12 @@ private:
         cv::Scalar(255, 20, 147),  // DeepPink
         cv::Scalar(75, 0, 130),    // Indigo
         cv::Scalar(240, 230, 140), // Khaki
+        cv::Scalar(255, 0, 255),  // Magenta
+        cv::Scalar(128, 0, 128),  // Purple
+        cv::Scalar(0, 255, 255),  // Yellow
+        cv::Scalar(128, 0, 0),    // Maroon
+        cv::Scalar(0, 128, 0),    // Olive
+        cv::Scalar(0, 0, 128),    // Navy
         cv::Scalar(173, 216, 230), // LightBlue
         cv::Scalar(255, 182, 193), // LightPink
         cv::Scalar(144, 238, 144), // LightGreen
