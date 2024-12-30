@@ -7,12 +7,34 @@
 #include <string>
 #include <vector>
 #include <unordered_map>
+#include <mutex>
 
 namespace bsp_g2d
 {
-struct RGAParams
+class rgaPixelFormat
 {
-    const std::unordered_map<std::string, RgaSURF_FORMAT> m_pix_format_map{
+public:
+    static rgaPixelFormat& getInstance()
+    {
+        static rgaPixelFormat instance;
+        return instance;
+    }
+
+    RgaSURF_FORMAT strToRgaPixFormat(const std::string& str)
+    {
+        std::lock_guard<std::mutex> lock(m_mutex);
+        return strToRgaPixFormatMap.at(str);
+    }
+
+private:
+    rgaPixelFormat() = default;
+    ~rgaPixelFormat() = default;
+    rgaPixelFormat(const rgaPixelFormat&) = delete;
+    rgaPixelFormat& operator=(const rgaPixelFormat&) = delete;
+
+private:
+    std::mutex m_mutex;
+    const std::unordered_map<std::string, RgaSURF_FORMAT> strToRgaPixFormatMap {
         {"RGBA8888", RK_FORMAT_RGBA_8888},
         {"RGBX8888", RK_FORMAT_RGBX_8888},
         {"RGB888", RK_FORMAT_RGB_888},
@@ -37,7 +59,7 @@ struct RGAParams
         {"BPP8", RK_FORMAT_BPP8},
         {"Y4", RK_FORMAT_Y4},
         {"YCbCr_400", RK_FORMAT_YCbCr_400},
-        {"BGRX_8888", RK_FORMAT_BGRX_8888},
+        {"BGRX8888", RK_FORMAT_BGRX_8888},
         {"YVYU_422", RK_FORMAT_YVYU_422},
         {"YVYU_420", RK_FORMAT_YVYU_420},
         {"VYUY_422", RK_FORMAT_VYUY_422},
@@ -68,6 +90,8 @@ struct RGAParams
         {"Y8", RK_FORMAT_Y8},
         {"UNKNOWN", RK_FORMAT_UNKNOWN}
     };
+
+
 };
 
 class rkrga : public IGraphics2D
@@ -89,8 +113,11 @@ public:
 
     int imageResize(std::shared_ptr<G2DBuffer> src, std::shared_ptr<G2DBuffer> dst) override;
 
-private:
-    RGAParams m_rgaParams{};
+    int imageDrawRectangle(std::shared_ptr<G2DBuffer> dst, ImageRect& rect, uint32_t color, int thickness) override;
+
+    int imageCvtColor(std::shared_ptr<G2DBuffer> src, std::shared_ptr<G2DBuffer> dst,
+                    const std::string& src_format, const std::string& dst_format) override;
+
 };
 
 } // namespace bsp_g2d

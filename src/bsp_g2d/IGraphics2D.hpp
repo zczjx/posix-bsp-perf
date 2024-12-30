@@ -32,14 +32,14 @@ public:
      * @param width The width of the buffer.
      * @param height The height of the buffer.
      * @param format The format of the buffer as a string. The possible values are:
-     * - "RGBA_8888"
-     * - "RGBX_8888"
-     * - "RGB_888"
-     * - "BGRA_8888"
-     * - "RGB_565"
-     * - "RGBA_5551"
-     * - "RGBA_4444"
-     * - "BGR_888"
+     * - "RGBA8888"
+     * - "RGBX8888"
+     * - "RGB888"
+     * - "BGRA8888"
+     * - "RGB565"
+     * - "RGBA5551"
+     * - "RGBA4444"
+     * - "BGR888"
      * - "YCbCr_422_SP"
      * - "YCbCr_422_P"
      * - "YCbCr_420_SP"
@@ -55,8 +55,8 @@ public:
      * - "BPP4"
      * - "BPP8"
      * - "Y4"
-     * - "YCbCr_400"
-     * - "BGRX_8888"
+     * - "YCbCr400"
+     * - "BGRX8888"
      * - "YVYU_422"
      * - "YVYU_420"
      * - "VYUY_422"
@@ -69,17 +69,17 @@ public:
      * - "YCrCb_420_SP_10B"
      * - "YCbCr_422_SP_10B"
      * - "YCrCb_422_SP_10B"
-     * - "BGR_565"
-     * - "BGRA_5551"
-     * - "BGRA_4444"
-     * - "ARGB_8888"
-     * - "XRGB_8888"
-     * - "ARGB_5551"
-     * - "ARGB_4444"
-     * - "ABGR_8888"
-     * - "XBGR_8888"
-     * - "ABGR_5551"
-     * - "ABGR_4444"
+     * - "BGR565"
+     * - "BGRA5551"
+     * - "BGRA4444"
+     * - "ARGB8888"
+     * - "XRGB8888"
+     * - "ARGB5551"
+     * - "ARGB4444"
+     * - "ABGR8888"
+     * - "XBGR8888"
+     * - "ABGR5551"
+     * - "ABGR4444"
      * - "RGBA2BPP"
      * - "A8"
      * - "YCbCr_444_SP"
@@ -122,6 +122,14 @@ public:
         size_t rawBufferSize{0};
     };
 
+    struct ImageRect
+    {
+        int x;        /* upper-left x */
+        int y;        /* upper-left y */
+        int width;    /* width */
+        int height;   /* height */
+    };
+
     /**
      * @brief Creates a G2D buffer.
      *
@@ -145,6 +153,11 @@ public:
     virtual int imageResize(std::shared_ptr<G2DBuffer> src, std::shared_ptr<G2DBuffer> dst) = 0;
 
     virtual int imageCopy(std::shared_ptr<G2DBuffer> src, std::shared_ptr<G2DBuffer> dst) = 0;
+
+    virtual int imageDrawRectangle(std::shared_ptr<G2DBuffer> dst, ImageRect& rect, uint32_t color, int thickness) = 0;
+
+    virtual int imageCvtColor(std::shared_ptr<G2DBuffer> src, std::shared_ptr<G2DBuffer> dst,
+                    const std::string& src_format, const std::string& dst_format) = 0;
 
     virtual ~IGraphics2D() = default;
     // Disable default constructor, copy constructor, and assignment operator

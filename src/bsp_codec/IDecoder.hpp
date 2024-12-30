@@ -8,6 +8,18 @@
 
 namespace bsp_codec
 {
+/**
+ * @brief DecodeConfig for the decoder.
+ *
+ * @var DecodeConfig::encoding
+ * Encoding type of the input stream. Supported values:
+ * - "h264"
+ * - "h265"
+ * - "vp8"
+ * - "vp9"
+ * - "mpeg2"
+ * - "mpeg4"
+ */
 struct DecodeConfig
 {
     // encoding can be "h264", "h265"
@@ -42,58 +54,7 @@ struct DecodePacket
  * @var DecodeOutFrame::format
  * Format of the output frame. Supported values:
  * - "YUV420SP"
- * - "RGBA_8888"
- * - "RGBX_8888"
- * - "RGB_888"
- * - "BGRA_8888"
- * - "RGB_565"
- * - "RGBA_5551"
- * - "RGBA_4444"
- * - "BGR_888"
- * - "YCbCr_422_SP"
- * - "YCbCr_422_P"
- * - "YCbCr_420_SP"
- * - "YCbCr_420_P"
- * - "YCrCb_422_SP"
- * - "YCrCb_422_P"
- * - "YCrCb_420_SP"
- * - "YCrCb_420_P"
- * - "BPP1"
- * - "BPP2"
- * - "BPP4"
- * - "BPP8"
- * - "Y4"
- * - "YCbCr_400"
- * - "BGRX_8888"
- * - "YVYU_422"
- * - "YVYU_420"
- * - "VYUY_422"
- * - "VYUY_420"
- * - "YUYV_422"
- * - "YUYV_420"
- * - "UYVY_422"
- * - "UYVY_420"
- * - "YCbCr_420_SP_10B"
- * - "YCrCb_420_SP_10B"
- * - "YCbCr_422_SP_10B"
- * - "YCrCb_422_SP_10B"
- * - "BGR_565"
- * - "BGRA_5551"
- * - "BGRA_4444"
- * - "ARGB_8888"
- * - "XRGB_8888"
- * - "ARGB_5551"
- * - "ARGB_4444"
- * - "ABGR_8888"
- * - "XBGR_8888"
- * - "ABGR_5551"
- * - "ABGR_4444"
- * - "RGBA2BPP"
- * - "A8"
- * - "YCbCr_444_SP"
- * - "YCrCb_444_SP"
- * - "Y8"
- * - "UNKNOWN"
+ *
  *
  * @var DecodeOutFrame::virt_addr
  * Virtual address of the output frame.

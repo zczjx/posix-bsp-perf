@@ -261,7 +261,6 @@ int rkmppDec::decode(DecodePacket& pkt_data)
                         MppFrameFormat format = mpp_frame_get_fmt(m_frame);
                         char *data_vir =(char *) mpp_buffer_get_ptr(mpp_frame_get_buffer(m_frame));
                         int fd = mpp_buffer_get_fd(mpp_frame_get_buffer(m_frame));
-                        // std::cout << "data_vir=" << data_vir << " fd=" << fd << std::endl;
                         std::shared_ptr<DecodeOutFrame> frame = std::make_shared<DecodeOutFrame>();
                         frame->width = hor_width;
                         frame->height = ver_height;

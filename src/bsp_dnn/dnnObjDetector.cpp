@@ -115,6 +115,7 @@ int dnnObjDetector::runObjDetect(ObjDetectParams& params)
         m_logger->printStdoutLog(BspLogger::LogLevel::Info, "dnn_output.index: {}, dnn_output.size: {}", dnn_output.index, dnn_output.size);
         m_logger->printStdoutLog(BspLogger::LogLevel::Info, "dnn_output.dataType: {}", dnn_output.dataType);
     }
+    m_dataOutputVector.clear();
     return m_dnnPluginHandle->postProcess(m_labelTextPath, params,
                 dnn_output_vector, m_dataOutputVector);
 }
