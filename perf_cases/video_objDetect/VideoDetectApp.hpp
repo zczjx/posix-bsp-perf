@@ -191,11 +191,6 @@ private:
                 m_yuv420_buf = new uint8_t[frame->width * frame->height * 3 / 2];
             }
 
-            if (m_rgb888_buf != nullptr)
-            {
-                memset(m_rgb888_buf, 0, frame->width * frame->height * 3);
-            }
-
             IGraphics2D::G2DBufferParams rgb888_g2d_buf_params = {
                 // .virtual_addr = m_rgb888_buf.data(),
                 .virtual_addr = m_rgb888_buf,
@@ -213,11 +208,17 @@ private:
             m_logger->printStdoutLog(bsp_perf::shared::BspLogger::LogLevel::Debug, "VideoDetectApp::onProcess() imageCvtColor ret: {}", ret);
 
             cv::Mat cvRGB888Image(frame->height, frame->width, CV_8UC3, m_rgb888_buf);
+            int i = 0;
             for (const auto& item : objDetectOutput)
             {
+                if (m_labelColorMap.find(item.label) == m_labelColorMap.end())
+                {
+                    m_labelColorMap[item.label] = m_colors_list[i % m_colors_list.size()];
+                }
                 cv::rectangle(cvRGB888Image, cv::Point(item.bbox.left, item.bbox.top), cv::Point(item.bbox.right, item.bbox.bottom),
-                    cv::Scalar(0, 255, 0), 2);
+                    m_labelColorMap[item.label], 2);
                 cv::putText(cvRGB888Image, item.label, cv::Point(item.bbox.left, item.bbox.top + 12), cv::FONT_HERSHEY_COMPLEX, 0.4, cv::Scalar(256, 255, 255));
+                i++;
             }
 
             IGraphics2D::G2DBufferParams yuv420_g2d_buf_params = {
@@ -323,6 +324,31 @@ private:
     std::string m_decode_format{""};
     std::shared_ptr<FILE> m_out_fp{nullptr};
     size_t m_frame_index{0};
+    std::map<std::string, cv::Scalar> m_labelColorMap;
+    std::vector<cv::Scalar> m_colors_list = {
+        cv::Scalar(255, 0, 255),  // Magenta
+        cv::Scalar(128, 0, 128),  // Purple
+        cv::Scalar(0, 255, 255),  // Yellow
+        cv::Scalar(128, 0, 0),    // Maroon
+        cv::Scalar(0, 128, 0),    // Olive
+        cv::Scalar(0, 0, 128),    // Navy
+        cv::Scalar(128, 128, 0),  // Teal
+        cv::Scalar(0, 128, 128),   // Aqua
+        cv::Scalar(255, 0, 0),    // Blue
+        cv::Scalar(0, 0, 255),    // Red
+        cv::Scalar(0, 255, 0),    // Green
+        cv::Scalar(255, 255, 0),  // Cyan
+        cv::Scalar(128, 128, 128), // Gray
+        cv::Scalar(192, 192, 192), // Silver
+        cv::Scalar(255, 165, 0),   // Orange
+        cv::Scalar(255, 20, 147),  // DeepPink
+        cv::Scalar(75, 0, 130),    // Indigo
+        cv::Scalar(240, 230, 140), // Khaki
+        cv::Scalar(173, 216, 230), // LightBlue
+        cv::Scalar(255, 182, 193), // LightPink
+        cv::Scalar(144, 238, 144), // LightGreen
+        cv::Scalar(255, 255, 224)  // LightYellow
+    };
 };
 
 
