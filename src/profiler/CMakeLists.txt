@@ -12,14 +12,13 @@ set(CMAKE_CXX_STANDARD 17)
 set(SOURCES
   PerfProfiler.cpp
   BspTrace.cpp
-  perfetto.cc
     # Add more source files here if needed
 )
 
 # Add the library target
 add_library(${PROJECT_NAME} SHARED ${SOURCES})
-
-target_link_libraries(${PROJECT_NAME} PRIVATE bsp_shared)
+target_compile_options(${PROJECT_NAME} PRIVATE -fPIC)
+target_link_libraries(${PROJECT_NAME} PRIVATE bsp_shared perfetto)
 
 target_include_directories(${PROJECT_NAME} PRIVATE
     $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/..>

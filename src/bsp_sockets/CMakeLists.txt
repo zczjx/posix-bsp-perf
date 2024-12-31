@@ -8,6 +8,16 @@ project(bsp_sockets VERSION 0.0.2 LANGUAGES CXX)
 set(CMAKE_C_STANDARD 11)
 set(CMAKE_CXX_STANDARD 17)
 
+# 检查是否已设置 MY_PKG_CONFIG_PATH 变量
+if(DEFINED BSP_PKG_CONFIG_PATH)
+    # 设置环境变量 PKG_CONFIG_PATH
+    set(ENV{PKG_CONFIG_PATH} ${BSP_PKG_CONFIG_PATH})
+    message(STATUS "ENV{PKG_CONFIG_PATH}: $ENV{PKG_CONFIG_PATH}")
+endif()
+
+# Find the libevent package
+find_package(PkgConfig REQUIRED)
+pkg_check_modules(PC_LIBEVENT REQUIRED libevent libevent_core)
 # Add the source files
 set(SOURCES
   impl/IEventLoop.cpp
@@ -27,24 +37,6 @@ set(SOURCES
 
 # Add the library target
 add_library(${PROJECT_NAME} SHARED ${SOURCES})
-
-# 检查是否已设置 MY_PKG_CONFIG_PATH 变量
-if(DEFINED BSP_PKG_CONFIG_PATH)
-    # 设置环境变量 PKG_CONFIG_PATH
-    set(ENV{PKG_CONFIG_PATH} ${BSP_PKG_CONFIG_PATH})
-    message(STATUS "ENV{PKG_CONFIG_PATH}: $ENV{PKG_CONFIG_PATH}")
-endif()
-
-# Find the libevent package
-find_package(PkgConfig REQUIRED)
-pkg_check_modules(PC_LIBEVENT REQUIRED libevent)
-
-
-if(PC_LIBEVENT_LIBRARIES)
-  target_link_options(${PROJECT_NAME} PUBLIC "-Wl,-rpath,${PC_LIBEVENT_LIBRARY_DIRS}" ${PC_LIBEVENT_LDFLAGS})
-  # target_link_libraries(${PROJECT_NAME} PUBLIC ${PC_LIBEVENT_LIBRARIES})
-  target_include_directories(${PROJECT_NAME} PUBLIC ${PC_LIBEVENT_INCLUDE_DIRS})
-endif()
 
 target_include_directories(${PROJECT_NAME} PUBLIC
     $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/..>
@@ -68,11 +60,15 @@ endif()
 set_target_properties(${PROJECT_NAME} PROPERTIES INSTALL_RPATH "$ORIGIN/../lib")
 target_link_libraries(${PROJECT_NAME} PUBLIC bsp_shared)
 
+if(PC_LIBEVENT_LIBRARIES)
+  target_link_libraries(${PROJECT_NAME} PUBLIC ${PC_LIBEVENT_LIBRARIES})
+  target_include_directories(${PROJECT_NAME} PUBLIC ${PC_LIBEVENT_INCLUDE_DIRS})
+endif()
+
 install(TARGETS ${PROJECT_NAME}
   RUNTIME DESTINATION bin
   LIBRARY DESTINATION lib
 )
-
 
 install(DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/
   DESTINATION include/${CMAKE_PROJECT_NAME}

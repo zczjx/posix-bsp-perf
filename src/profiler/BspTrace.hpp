@@ -1,7 +1,7 @@
 #ifndef __BSP_TRACE_HPP__
 #define __BSP_TRACE_HPP__
 
-#include "perfetto.h"
+#include <perfetto.h>
 #include <string>
 #include <memory>
 
