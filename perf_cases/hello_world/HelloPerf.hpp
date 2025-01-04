@@ -71,7 +71,7 @@ private:
         m_logger->printAsyncFileLog(bsp_perf::shared::BspLogger::LogLevel::Info, "{} HelloPerf::onInit() name: {}", LOG_TAG, m_name);
 
         std::vector<std::string> list;
-        params.getOptionStrList("--list", list);
+        params.getOptionSplitStrList("--list", list);
 
         for(auto& item : list)
         {
