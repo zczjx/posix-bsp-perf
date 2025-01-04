@@ -13,6 +13,7 @@ int main(int argc, char* argv[])
     parser.addOption("--label, --labelTextPath", std::string(""), "Path to the label text file");
     parser.addOption("--model, --modelPath", std::string(""), "Path to the model file");
     parser.addOption("--image, --imagePath", std::string(""), "Path to the input image file");
+    parser.setConfig("--cfg", "config.ini", "set an configuration ini file for all options");
     parser.parseArgs(argc, argv);
 
 

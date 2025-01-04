@@ -168,7 +168,6 @@ void TcpClient::doConnect()
         if (errno == EINPROGRESS)
         {
             //add connection event
-            std::cout << "172行@TcpCLient.cpp"<<std::endl;
             m_loop->addIoEvent(m_sockfd, connectEventCallback, EPOLLOUT, shared_from_this());
         }
         else

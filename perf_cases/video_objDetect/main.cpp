@@ -17,6 +17,7 @@ int main(int argc, char* argv[])
     parser.addOption("--encoder, --encoderType", std::string("rkmpp"), "decoder type: rkmpp");
     parser.addOption("--g2d, --graphics2D", std::string("rkrga"), "graphics 2d platform type: rkrga");
     parser.addOption("--output, --outputVideoPath", std::string("out.h264"), "Path to the output video file");
+    parser.setConfig("--cfg", "config.ini", "set an configuration ini file for all options");
     parser.parseArgs(argc, argv);
 
 

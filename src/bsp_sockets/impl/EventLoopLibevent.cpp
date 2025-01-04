@@ -52,7 +52,6 @@ static void lib_callback(evutil_socket_t fd_t, short what, void *arg)
         } else {
             std::cerr << "Error: read_callback is not set for fd: " << fd << std::endl;
         }
-        
     }
     else if (what == EV_WRITE)
     {
@@ -87,7 +86,6 @@ EventLoopLibevent::EventLoopLibevent():
     m_event_base{event_base_new()}
 
 {
-    std::cout << "libevent 666666666666666666666666666666666666666" << std::endl;
     if (nullptr == m_event_base)
     {
         throw BspSocketException("event_base_new");
@@ -98,8 +96,7 @@ EventLoopLibevent::EventLoopLibevent():
         throw BspSocketException("new TimerQueue");
     }
 
-    std::cout << "110行 in  EventLoopLibevent.cpp" <<std::endl;
-    struct event *timer_event = event_new(m_event_base, m_params.m_timer_queue->getNotifier(), EV_READ | EV_PERSIST, timerQueueCallback, this);    
+    struct event *timer_event = event_new(m_event_base, m_params.m_timer_queue->getNotifier(), EV_READ | EV_PERSIST, timerQueueCallback, this);
 
     if (nullptr == timer_event)
     {

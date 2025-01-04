@@ -41,6 +41,11 @@ public:
     ArgParser(ArgParser&&) = default;
     ArgParser& operator=(ArgParser&&) = default;
 
+    void setConfig(const std::string& config_name, const std::string& default_filename = "", const std::string& help_message = "Read an ini file", const bool config_required = false)
+    {
+        m_parser->set_config(config_name, default_filename, help_message, config_required);
+    }
+
     template <typename T>
     void addOption(const std::string& name, const T defaultVal, const std::string& description = "")
     {

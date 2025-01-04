@@ -51,11 +51,9 @@ static void onMessage(size_t cmd_id, std::vector<uint8_t>& data, std::shared_ptr
 void onConnection(std::shared_ptr<TcpClient> client, std::any args)
 {
     std::string cmd_name = std::any_cast<std::string>(args);
-    std::cout << "[S] zczjx--> aio_tcpclient:onConnection" << std::endl;
     std::string reqStr = "zczjx--> aio client onConnection";
     std::vector<uint8_t> data_buffer(reqStr.begin(), reqStr.end());
     client->sendData(cmd_name, data_buffer); //主动发送消息
-    std::cout << "[E] zczjx--> aio_tcpclient:onConnection" << std::endl;
 }
 
 void domain(int argc, char* argv[])
@@ -66,6 +64,7 @@ void domain(int argc, char* argv[])
     parser.addOption("--name", std::string("aio_tcpclient"), "name of the tcp client");
     parser.addOption("--thread_num", int32_t(30), "thread number for the tcp server");
     parser.addOption("--poll", std::string("libevent"), "choose Poll or Epoll or Libevent for Eventloop");
+    parser.setConfig("--cfg", "config.ini", "set an configuration ini file for all options");
     parser.parseArgs(argc, argv);
 
     std::string Poll_flag{};
@@ -94,6 +93,7 @@ int main(int argc, char* argv[])
 {
     ArgParser parser("Asyncio Sockets Perf Case: Tcp Server");
     parser.addOption("--thread_num", int32_t(10), "thread number for the tcp server");
+    parser.setConfig("--cfg", "config.ini", "set an configuration ini file for all options");
 
     parser.parseArgs(argc, argv);
 

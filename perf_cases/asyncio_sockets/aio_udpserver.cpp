@@ -23,6 +23,7 @@ int main(int argc, char* argv[])
     parser.addOption("--ip", std::string("127.0.0.1"), "tcp server ip address");
     parser.addOption("--port", int32_t(12347), "port number for the udp server");
     parser.addOption("--poll", std::string("epoll"), "choose Poll or Epoll for Eventloop");
+    parser.setConfig("--cfg", "config.ini", "set an configuration ini file for all options");
     parser.parseArgs(argc, argv);
 
     std::string Poll_flag{};

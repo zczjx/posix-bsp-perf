@@ -25,6 +25,7 @@ int main(int argc, char* argv[])
     parser.addOption("--thread_num", int32_t(10), "thread number for the tcp server");
     parser.addOption("--max_connections", int32_t(1024), "thread number for the tcp server");
     parser.addOption("--poll", std::string("epoll"), "choose Poll or Epoll for Eventloop");
+    parser.setConfig("--cfg", "config.ini", "set an configuration ini file for all options");
     parser.parseArgs(argc, argv);
 
     std::string Poll_flag{};
