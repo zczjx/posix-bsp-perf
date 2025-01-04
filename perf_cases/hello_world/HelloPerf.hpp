@@ -70,6 +70,15 @@ private:
         m_logger->printFileLog(bsp_perf::shared::BspLogger::LogLevel::Info, "{} HelloPerf::onInit() name: {}", LOG_TAG, m_name);
         m_logger->printAsyncFileLog(bsp_perf::shared::BspLogger::LogLevel::Info, "{} HelloPerf::onInit() name: {}", LOG_TAG, m_name);
 
+        std::vector<std::string> list;
+        params.getOptionStrList("--list", list);
+
+        for(auto& item : list)
+        {
+            m_logger->printStdoutLog(bsp_perf::shared::BspLogger::LogLevel::Info, "{} HelloPerf::onInit() list item: {}", LOG_TAG, item);
+            m_logger->printFileLog(bsp_perf::shared::BspLogger::LogLevel::Info, "{} HelloPerf::onInit() list item: {}", LOG_TAG, item);
+            m_logger->printAsyncFileLog(bsp_perf::shared::BspLogger::LogLevel::Info, "{} HelloPerf::onInit() list item: {}", LOG_TAG, item);
+        }
     }
 
     void onProcess() override {

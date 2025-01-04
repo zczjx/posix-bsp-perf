@@ -12,6 +12,7 @@ int main(int argc, char* argv[])
     parser.addFlag("-e,--enable", false, "enable flag to print Hello World");
     parser.addOption("--cycles", int32_t(5), "Running cycles for the perf case");
     parser.setConfig("--cfg", "config.ini", "set an configuration ini file for all options");
+    parser.addOption("-l,--list", std::string("aaa;bbb;ccc"), "using ';' to split the string list");
     parser.parseArgs(argc, argv);
 
     int32_t cycles;

@@ -22,12 +22,13 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 */
 
-#ifndef ARG_PARSER_HPP
-#define ARG_PARSER_HPP
+#ifndef __ARG_PARSER_HPP__
+#define __ARG_PARSER_HPP__
 
 #include <CLI/CLI.hpp>
 #include <memory>
 #include <string>
+#include <vector>
 
 namespace bsp_perf {
 namespace shared {
@@ -63,6 +64,18 @@ public:
         if (opt)
         {
             ret = opt->as<T>();
+        }
+    }
+
+    void getOptionStrList(const std::string& option_name, std::vector<std::string>& ret)
+    {
+        std::string ids_input;
+        getOptionVal(option_name, ids_input);
+        std::stringstream ss(ids_input);
+        std::string item;
+        while (std::getline(ss, item, ';'))
+        {
+            ret.push_back(item);
         }
     }
 
@@ -102,5 +115,5 @@ private:
 } // namespace shared
 } // namespace bsp_perf
 
-#endif // ARG_PARSER_HPP
+#endif // __ARG_PARSER_HPP__
 
