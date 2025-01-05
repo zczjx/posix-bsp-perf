@@ -157,6 +157,26 @@ public:
         }
     }
 
+    void getOptionSplitStrList(const std::string& option_name, std::vector<std::string>& ret)
+    {
+        std::string ids_input;
+        getOptionVal(option_name, ids_input);
+        std::stringstream ss(ids_input);
+        std::string item;
+        ret.clear();
+
+        auto trim = [](std::string_view str) {
+            while (!str.empty() && std::isspace(str.front())) str.remove_prefix(1);
+            while (!str.empty() && std::isspace(str.back())) str.remove_suffix(1);
+            return str;
+        };
+
+        while (std::getline(ss, item, ';'))
+        {
+            ret.push_back(std::string(trim(item)));
+        }
+    }
+
     void addSubFlag(const std::string& subcmd, const std::string& flag_name, const bool defaultVal, const std::string& description = "")
     {
         auto it = m_subcmdMap.find(subcmd);
