@@ -29,6 +29,7 @@ SOFTWARE.
 #include <memory>
 #include <string>
 #include <string_view>
+#include <unordered_map>
 #include <vector>
 
 namespace bsp_perf {
@@ -68,26 +69,6 @@ public:
         }
     }
 
-    void getOptionSplitStrList(const std::string& option_name, std::vector<std::string>& ret)
-    {
-        std::string ids_input;
-        getOptionVal(option_name, ids_input);
-        std::stringstream ss(ids_input);
-        std::string item;
-        ret.clear();
-
-        auto trim = [](std::string_view str) {
-            while (!str.empty() && std::isspace(str.front())) str.remove_prefix(1);
-            while (!str.empty() && std::isspace(str.back())) str.remove_suffix(1);
-            return str;
-        };
-
-        while (std::getline(ss, item, ';'))
-        {
-            ret.push_back(std::string(trim(item)));
-        }
-    }
-
     void addFlag(const std::string& flag_name, const bool defaultVal, const std::string& description = "")
     {
         CLI::Option *flag = m_parser->add_flag(flag_name, description);
@@ -115,9 +96,99 @@ public:
         return 0;
     }
 
+    void addSubCmd(const std::string& name, const std::string& description = "")
+    {
+        m_subcmdMap[name] = m_parser->add_subcommand(name, description);
+    }
+
+    template <typename T>
+    void addSubOption(const std::string& subcmd, const std::string& name, const T defaultVal, const std::string& description = "")
+    {
+
+        auto it = m_subcmdMap.find(subcmd);
+
+        if(it == m_subcmdMap.end())
+        {
+            addSubCmd(subcmd);
+        }
+        auto subcmd_ptr = m_subcmdMap[subcmd];
+        CLI::Option *opt = subcmd_ptr->add_option(name, description);
+        if (opt)
+        {
+            opt->default_val(defaultVal);
+        }
+    }
+
+    template <typename T>
+    void getSubOptionVal(const std::string& subcmd, const std::string& option_name, T& ret)
+    {
+        auto it = m_subcmdMap.find(subcmd);
+        if(it == m_subcmdMap.end())
+        {
+            return;
+        }
+
+        auto subcmd_ptr = m_subcmdMap[subcmd];
+        CLI::Option *opt = subcmd_ptr->get_option(option_name);
+
+        if (opt)
+        {
+            ret = opt->as<T>();
+        }
+    }
+
+    void getOptionSplitStrList(const std::string& subcmd, const std::string& option_name, std::vector<std::string>& ret)
+    {
+        std::string ids_input;
+        getSubOptionVal(subcmd, option_name, ids_input);
+        std::stringstream ss(ids_input);
+        std::string item;
+        ret.clear();
+
+        auto trim = [](std::string_view str) {
+            while (!str.empty() && std::isspace(str.front())) str.remove_prefix(1);
+            while (!str.empty() && std::isspace(str.back())) str.remove_suffix(1);
+            return str;
+        };
+
+        while (std::getline(ss, item, ';'))
+        {
+            ret.push_back(std::string(trim(item)));
+        }
+    }
+
+    void addSubFlag(const std::string& subcmd, const std::string& flag_name, const bool defaultVal, const std::string& description = "")
+    {
+        auto it = m_subcmdMap.find(subcmd);
+
+        if(it == m_subcmdMap.end())
+        {
+            addSubCmd(subcmd);
+        }
+        auto subcmd_ptr = m_subcmdMap[subcmd];
+        CLI::Option *flag = subcmd_ptr->add_flag(flag_name, description);
+
+        if (flag)
+        {
+            flag->default_val(defaultVal);
+        }
+    }
+
+    bool getSubFlagVal(const std::string& subcmd, const std::string& flag_name)
+    {
+        auto it = m_subcmdMap.find(subcmd);
+        if(it == m_subcmdMap.end())
+        {
+            return false;
+        }
+        auto subcmd_ptr = m_subcmdMap[subcmd];
+        return subcmd_ptr->get_option(flag_name)->as<bool>();
+    }
+
 
 private:
     std::unique_ptr<CLI::App> m_parser; // Change unique_ptr to shared_ptr for CLI::App
+    std::unordered_map<std::string, CLI::App*> m_subcmdMap;
 };
 
 

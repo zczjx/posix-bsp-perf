@@ -29,8 +29,8 @@ elseif(CMAKE_BUILD_TYPE MATCHES "NoOptimize")
 endif()
 
 # 添加子目录
-add_subdirectory(src)
-add_subdirectory(perf_cases)
+add_subdirectory(bsp)
+add_subdirectory(bsp_cases)
 
 
 # Clean target

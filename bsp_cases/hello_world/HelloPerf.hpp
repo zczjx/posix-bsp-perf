@@ -65,13 +65,41 @@ private:
     void onInit() override {
         auto& params = getArgs();
         std::string ret;
-        params.getOptionVal("--append", ret);
+        params.getSubOptionVal("subcmd1","--append", ret);
+        m_logger->printStdoutLog(bsp_perf::shared::BspLogger::LogLevel::Info, "{} HelloPerf::onInit() append: {}", LOG_TAG, ret);
+        m_logger->printFileLog(bsp_perf::shared::BspLogger::LogLevel::Info, "{} HelloPerf::onInit() name: {}", LOG_TAG, m_name);
+        m_logger->printAsyncFileLog(bsp_perf::shared::BspLogger::LogLevel::Info, "{} HelloPerf::onInit() name: {}", LOG_TAG, m_name);
+
+        params.getSubOptionVal("subcmd2","--append", ret);
+        m_logger->printStdoutLog(bsp_perf::shared::BspLogger::LogLevel::Info, "{} HelloPerf::onInit() append: {}", LOG_TAG, ret);
+        m_logger->printFileLog(bsp_perf::shared::BspLogger::LogLevel::Info, "{} HelloPerf::onInit() name: {}", LOG_TAG, m_name);
+        m_logger->printAsyncFileLog(bsp_perf::shared::BspLogger::LogLevel::Info, "{} HelloPerf::onInit() name: {}", LOG_TAG, m_name);
+
+        params.getSubOptionVal("subcmd3","--append", ret);
         m_logger->printStdoutLog(bsp_perf::shared::BspLogger::LogLevel::Info, "{} HelloPerf::onInit() append: {}", LOG_TAG, ret);
         m_logger->printFileLog(bsp_perf::shared::BspLogger::LogLevel::Info, "{} HelloPerf::onInit() name: {}", LOG_TAG, m_name);
         m_logger->printAsyncFileLog(bsp_perf::shared::BspLogger::LogLevel::Info, "{} HelloPerf::onInit() name: {}", LOG_TAG, m_name);
 
         std::vector<std::string> list;
-        params.getOptionSplitStrList("--list", list);
+        params.getOptionSplitStrList("subcmd1", "--list", list);
+
+        for(auto& item : list)
+        {
+            m_logger->printStdoutLog(bsp_perf::shared::BspLogger::LogLevel::Info, "{} HelloPerf::onInit() list item: {}", LOG_TAG, item);
+            m_logger->printFileLog(bsp_perf::shared::BspLogger::LogLevel::Info, "{} HelloPerf::onInit() list item: {}", LOG_TAG, item);
+            m_logger->printAsyncFileLog(bsp_perf::shared::BspLogger::LogLevel::Info, "{} HelloPerf::onInit() list item: {}", LOG_TAG, item);
+        }
+
+        params.getOptionSplitStrList("subcmd2", "--list", list);
+
+        for(auto& item : list)
+        {
+            m_logger->printStdoutLog(bsp_perf::shared::BspLogger::LogLevel::Info, "{} HelloPerf::onInit() list item: {}", LOG_TAG, item);
+            m_logger->printFileLog(bsp_perf::shared::BspLogger::LogLevel::Info, "{} HelloPerf::onInit() list item: {}", LOG_TAG, item);
+            m_logger->printAsyncFileLog(bsp_perf::shared::BspLogger::LogLevel::Info, "{} HelloPerf::onInit() list item: {}", LOG_TAG, item);
+        }
+
+        params.getOptionSplitStrList("subcmd3", "--list", list);
 
         for(auto& item : list)
         {
@@ -84,10 +112,15 @@ private:
     void onProcess() override {
         bool ret;
         auto& params = getArgs();
-        ret = params.getFlagVal("--enable");
+        ret = params.getSubFlagVal("subcmd1", "--enable");
         m_logger->printStdoutLog(bsp_perf::shared::BspLogger::LogLevel::Warn, "{} HelloPerf::onProcess() ret: {}", LOG_TAG, ret);
-        m_logger->printFileLog(bsp_perf::shared::BspLogger::LogLevel::Warn, "{} HelloPerf::onProcess()", LOG_TAG);
-        m_logger->printAsyncFileLog(bsp_perf::shared::BspLogger::LogLevel::Warn, "{} HelloPerf::onProcess()", LOG_TAG);
+
+        ret = params.getSubFlagVal("subcmd2", "--enable");
+        m_logger->printStdoutLog(bsp_perf::shared::BspLogger::LogLevel::Warn, "{} HelloPerf::onProcess() ret: {}", LOG_TAG, ret);
+
+        ret = params.getSubFlagVal("subcmd3", "--enable");
+        m_logger->printStdoutLog(bsp_perf::shared::BspLogger::LogLevel::Warn, "{} HelloPerf::onProcess() ret: {}", LOG_TAG, ret);
+
     }
 
     void onRender() override {
