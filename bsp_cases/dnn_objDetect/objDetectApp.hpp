@@ -125,17 +125,18 @@ private:
     {
         IDnnEngine::dnnInputShape shape;
         m_dnnObjDetector->getInputShape(shape);
+        auto& params = getArgs();
         objDetectParams.model_input_width = shape.width;
         objDetectParams.model_input_height = shape.height;
         objDetectParams.model_input_channel = shape.channel;
-        objDetectParams.conf_threshold = 0.25;
-        objDetectParams.nms_threshold = 0.45;
+        params.getSubOptionVal("objDetectParams", "--conf_threshold", objDetectParams.conf_threshold);
+        params.getSubOptionVal("objDetectParams", "--nms_threshold", objDetectParams.nms_threshold);
         objDetectParams.scale_width = static_cast<float>(shape.width) / static_cast<float>(m_orig_image_ptr->cols);
         objDetectParams.scale_height = static_cast<float>(shape.height) / static_cast<float>(m_orig_image_ptr->rows);
-        objDetectParams.pads.left = 0;
-        objDetectParams.pads.right = 0;
-        objDetectParams.pads.top = 0;
-        objDetectParams.pads.bottom = 0;
+        params.getSubOptionVal("objDetectParams", "--pads_left", objDetectParams.pads.left);
+        params.getSubOptionVal("objDetectParams", "--pads_right", objDetectParams.pads.right);
+        params.getSubOptionVal("objDetectParams", "--pads_top", objDetectParams.pads.top);
+        params.getSubOptionVal("objDetectParams", "--pads_bottom", objDetectParams.pads.bottom);
         m_dnnObjDetector->getOutputQuantParams(objDetectParams.quantize_zero_points, objDetectParams.quantize_scales);
     }
 

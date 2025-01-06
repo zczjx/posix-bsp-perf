@@ -22,14 +22,9 @@ int rknnYolov5::preProcess(ObjDetectParams& params, ObjDetectInput& inputData, I
     cv::Mat orig_image = *orig_image_ptr;
     cv::Mat rgb_image;
     cv::cvtColor(orig_image, rgb_image, cv::COLOR_BGR2RGB);
-    auto img_width  = rgb_image.cols;
-    auto img_height = rgb_image.rows;
-
     cv::Size target_size(params.model_input_width, params.model_input_height);
     cv::Mat padded_image(target_size.height, target_size.width, CV_8UC3);
     float min_scale = std::min(params.scale_width, params.scale_height);
-    float scale_w = min_scale;
-    float scale_h = min_scale;
     cv::Mat resized_image;
     cv::resize(rgb_image, resized_image, cv::Size(), min_scale, min_scale);
 
