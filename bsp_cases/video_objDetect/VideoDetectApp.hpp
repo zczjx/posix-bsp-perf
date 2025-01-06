@@ -256,6 +256,8 @@ private:
                 .pkt_len = 0,
             };
             enc_pkt.encode_pkt.resize(enc_pkt.max_size);
+            auto encode_len = m_encoder->encode(*enc_in_buf, enc_pkt);
+            m_logger->printStdoutLog(bsp_perf::shared::BspLogger::LogLevel::Info, "VideoDetectApp::onProcess() encode_len: {}", encode_len);
             fwrite(enc_pkt.encode_pkt.data(), 1, enc_pkt.pkt_len, m_out_fp.get());
             m_logger->printStdoutLog(bsp_perf::shared::BspLogger::LogLevel::Info, "VideoDetectApp::onProcess() Write encoded pkt: {}", m_frame_index);
         };
