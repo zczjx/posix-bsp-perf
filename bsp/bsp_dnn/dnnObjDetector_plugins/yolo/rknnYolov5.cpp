@@ -25,6 +25,8 @@ int rknnYolov5::preProcess(ObjDetectParams& params, ObjDetectInput& inputData, I
     cv::Size target_size(params.model_input_width, params.model_input_height);
     cv::Mat padded_image(target_size.height, target_size.width, CV_8UC3);
     float min_scale = std::min(params.scale_width, params.scale_height);
+    params.scale_width = min_scale;
+    params.scale_height = min_scale;
     cv::Mat resized_image;
     cv::resize(rgb_image, resized_image, cv::Size(), min_scale, min_scale);
 
