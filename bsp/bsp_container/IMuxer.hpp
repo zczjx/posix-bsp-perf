@@ -1,15 +1,26 @@
-#ifndef IMUXER_HPP
-#define IMUXER_HPP
+#ifndef __IMUXER_HPP__
+#define __IMUXER_HPP__
 
-class IMuxer {
+#include <memory>
+#include <string>
+#include <any>
+#include <functional>
+
+namespace bsp_container
+{
+class IMuxer
+{
 public:
+
+    static std::unique_ptr<IMuxer> create(const std::string& codecPlatform);
     virtual ~IMuxer() = default;
 
-    // Pure virtual function to be implemented by derived classes
-    virtual void mux() = 0;
+protected:
+    IMuxer() = default;
+    IMuxer(const IMuxer&) = delete;
+    IMuxer& operator=(const IMuxer&) = delete;
 };
 
-// Factory function to create instances of IMuxer
-IMuxer* createMuxer();
+} // namespace bsp_container
 
-#endif // IMUXER_HPP
+#endif // __IMUXER_HPP__
