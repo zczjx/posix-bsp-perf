@@ -12,17 +12,20 @@ public:
     FFmpegDemuxer() = default;
     ~FFmpegDemuxer() override;
 
-    int openContainerParser(const std::string& path) override;
+    int openContainerDemux(const std::string& path) override;
 
-    void closeContainerParser() override;
+    void closeContainerDemux() override;
 
     int getContainerInfo(ContainerInfo& containerInfo) override;
 
     int readStreamPacket(StreamPacket& streamPacket) override;
 
+    int seekStreamFrame(int stream_index, int64_t timestamp) override;
 
 private:
+    void getStreamDisposition(const AVStream* stream, std::vector<std::string>& disposition_list);
 
+private:
     std::shared_ptr<AVFormatContext> m_format_Ctx{nullptr};
     std::shared_ptr<AVPacket> m_packet{nullptr};
 };
