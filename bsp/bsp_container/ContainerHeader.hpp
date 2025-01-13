@@ -9,14 +9,37 @@ namespace bsp_container
 {
 struct StreamCodecParams
 {
+    /**
+     * @brief The type of codec used.
+     *
+     * This can be:
+     * - "video"
+     * - "audio"
+     * - "subtitle"
+     * - "radar"
+     * - "lidar"
+     * - "imu"
+     * - "gps"
+     */
     std::string codec_type{};
+
+    /**
+     * @brief The name of codec used.
+     * - "h264"
+     * - "hevc"
+     * - "aac"
+     * - "mp3"
+     * - "vp9"
+     */
+    std::string codec_name{};
     int64_t bit_rate;
     /// video specific params
     float sample_aspect_ratio;
-    float frame_rate;
+    int frame_rate;
     int width;
     int height;
     /// audio specific params
+    int sample_rate;
 };
 
 struct StreamInfo
