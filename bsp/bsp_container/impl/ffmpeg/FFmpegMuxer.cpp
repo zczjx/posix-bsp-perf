@@ -22,12 +22,12 @@ int FFmpegMuxer::openContainerMux(const std::string& path)
     }
 
     m_format_Ctx = std::shared_ptr<AVFormatContext>(format_Ctx, [](AVFormatContext* p) { avformat_free_context(p); });
+    m_path = path;
 
 }
 
 void FFmpegMuxer::closeContainerMux()
 {
-    m_packet.reset();
     m_format_Ctx.reset();
 }
 
@@ -97,6 +97,21 @@ int FFmpegMuxer::writeStreamPacket(StreamPacket& streamPacket)
 {
     if (m_header_written == false)
     {
+        if (m_format_Ctx == nullptr)
+        {
+            std::cerr << "Output format context is null." << std::endl;
+            return -1;
+        }
+
+        if(!(m_format_Ctx->oformat->flags & AVFMT_NOFILE))
+        {
+            if (avio_open(&m_format_Ctx->pb, m_path.c_str(), AVIO_FLAG_WRITE) < 0)
+            {
+                std::cerr << "Could not open output file." << std::endl;
+                return -1;
+            }
+        }
+
         if (avformat_write_header(m_format_Ctx.get(), nullptr) < 0)
         {
             std::cerr << "Could not write header." << std::endl;
@@ -105,7 +120,38 @@ int FFmpegMuxer::writeStreamPacket(StreamPacket& streamPacket)
         m_header_written = true;
     }
 
+    AVPacket pkt;
+
+    pkt.stream_index = streamPacket.stream_index;
+    pkt.pts = streamPacket.pts;
+    pkt.dts = streamPacket.dts;
+    pkt.data = streamPacket.pkt_data.data();
+    pkt.size = streamPacket.pkt_data.size();
+    pkt.pos = streamPacket.pos;
+
+    if (av_interleaved_write_frame(m_format_Ctx.get(), &pkt) < 0)
+    {
+        std::cerr << "Could not write frame." << std::endl;
+        return -1;
+    }
+
+    return 0;
 }
 
+int FFmpegMuxer::endStreamMux()
+{
+    if (m_format_Ctx == nullptr)
+    {
+        std::cerr << "Output format context is null." << std::endl;
+        return -1;
+    }
+
+    av_write_trailer(m_format_Ctx.get());
+
+    if (!(m_format_Ctx->oformat->flags & AVFMT_NOFILE))
+    {
+        avio_closep(&m_format_Ctx->pb);
+    }
+}
 
 } // namespace bsp_container

@@ -22,6 +22,8 @@ public:
 
     virtual int writeStreamPacket(StreamPacket& streamPacket) = 0;
 
+    virtual int endStreamMux() = 0;
+
 
 
 protected:
