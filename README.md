@@ -1,22 +1,22 @@
 # posix-bsp-perf
 bsp perf test for posix OS(such as Linux/QNX/Rtthread)
 
-## Docker Build Env Setup
+## Build in Docker
 
-please reference the cmd in [get_build_env_docker.sh](./get_build_env_docker.sh)
+- Dockerfile.base is base image for building
+- Dockerfile is the actual building env for posix bsp(use this one)
 
-- Dockerfile.base is for the base docker image generating
-- Dockerfile will pull the full docker image of Dockerfile.base and config the local env
+1. Refer to the command in [get_build_env_docker.sh](./get_build_env_docker.sh) to build the docker image. When completed, you will get a docker image named `bsp-perf-build-env-x86:v0.0.1` from pulled image `zczjx/bsp-perf-build-env-x86-base:latest`。
+
+2. Run the docker start command in [get_build_env_docker.sh](./get_build_env_docker.sh), you can ignore gpus if you don't have one. Remember to map the posix source directory to the container using -v option.
+
+3. After the container started, you can refer to the command in [reference_build_cmd.sh](./reference_build_cmd.sh). The spdlog and CLI env has already been setup in the container. Checking building options in rk3588s or other platform, and now start building.
 
 
-## Local native build Env Setup
+## Build locally(Not recommended)
 
 please reference the cmd in [local_env_pkgs_intall.sh](./local_env_pkgs_intall.sh) to install the packages to setup
 the local native build env if required(or you don't like to use docker)
-
-## Reference Build cmd
-
-please reference the cmd in [reference_build_cmd.sh ](./reference_build_cmd.sh ) to get the reference build cmd
 
 ## BSP Trace Event Visualization
 
