@@ -2,7 +2,9 @@
 #define __FFMPEG_DEMUXER_HPP__
 
 #include <bsp_container/IDemuxer.hpp>
+extern "C" {
 #include <libavformat/avformat.h>
+}
 
 namespace bsp_container
 {

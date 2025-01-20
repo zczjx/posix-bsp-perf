@@ -16,10 +16,7 @@ if(DEFINED BSP_PKG_CONFIG_PATH)
 endif()
 
 find_package(PkgConfig  REQUIRED)
-# Find ffmpeg libraries
-pkg_check_modules(PC_AVFORMAT REQUIRED libavformat)
-pkg_check_modules(PC_AVUTIL REQUIRED libavutil)
-
+pkg_check_modules(PC_FFMPEG REQUIRED libavformat libavutil libavcodec libswresample)
 # Add the source files
 set(SOURCES
   impl/IDemuxer.cpp
@@ -34,14 +31,27 @@ add_library(${PROJECT_NAME} SHARED ${SOURCES})
 set_target_properties(${PROJECT_NAME} PROPERTIES INSTALL_RPATH "$ORIGIN/../lib")
 target_link_libraries(${PROJECT_NAME} PRIVATE bsp_shared)
 
-if(PC_AVFORMAT_LIBRARIES)
-  target_link_libraries(${PROJECT_NAME} PRIVATE ${PC_AVFORMAT_LDFLAGS})
-  target_include_directories(${PROJECT_NAME} PRIVATE ${PC_AVFORMAT_INCLUDE_DIRS})
-endif()
-
-if(PC_AVUTIL_LIBRARIES)
-  target_link_libraries(${PROJECT_NAME} PRIVATE ${PC_AVUTIL_LDFLAGS})
-  target_include_directories(${PROJECT_NAME} PRIVATE ${PC_AVUTIL_INCLUDE_DIRS})
+if(PC_FFMPEG_LIBRARIES)
+  if(ENABLE_RK_MPP)
+    if(DEFINED BSP_LIB_PATH)
+      set(RK_MPP_LIB ${BSP_LIB_PATH}/librockchip_mpp.so)
+    else()
+      set(RK_MPP_LIB /usr/lib/librockchip_mpp.so)
+    endif()
+    target_link_libraries(${PROJECT_NAME} PUBLIC ${RK_MPP_LIB})
+  endif()
+  if(ENABLE_RKRGA)
+    if(DEFINED BSP_LIB_PATH)
+      set(RKRGA_LIB ${BSP_LIB_PATH}/librga.so)
+    else()
+      set(RKRGA_LIB /usr/lib/librga.so)
+    endif()
+    target_link_libraries(${PROJECT_NAME} PUBLIC ${RKRGA_LIB})
+  endif()
+  message(STATUS "PC_FFMPEG_LDFLAGS: ${PC_FFMPEG_LDFLAGS}")
+  message(STATUS "PC_FFMPEG_LIBRARY_DIRS: ${PC_FFMPEG_LIBRARY_DIRS}")
+  target_link_libraries(${PROJECT_NAME} PUBLIC ${PC_FFMPEG_LDFLAGS})
+  target_include_directories(${PROJECT_NAME} PUBLIC ${PC_FFMPEG_INCLUDE_DIRS})
 endif()
 
 target_include_directories(${PROJECT_NAME} PRIVATE

@@ -2,7 +2,9 @@
 #include "ffmpegCodecHeader.hpp"
 #include <iostream>
 #include <cstring>
+extern "C" {
 #include <libavutil/dict.h>
+}
 namespace bsp_container
 {
 

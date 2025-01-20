@@ -21,7 +21,6 @@ using namespace bsp_dnn;
 class ObjDetectApp : public bsp_perf::common::BasePerfCase
 {
 public:
-
     ObjDetectApp(bsp_perf::shared::ArgParser&& args):
         BasePerfCase(std::move(args)),
         m_logger{std::make_unique<bsp_perf::shared::BspLogger>("ObjDetectApp")}

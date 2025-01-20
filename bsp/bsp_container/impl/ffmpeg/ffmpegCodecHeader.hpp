@@ -3,7 +3,9 @@
 #include <unordered_map>
 #include <string>
 #include <mutex>
+extern "C" {
 #include <libavcodec/codec_id.h>
+}
 
 namespace bsp_container
 {

@@ -2,9 +2,12 @@
 #define __FFMPEG_MUXER_HPP__
 
 #include <bsp_container/IMuxer.hpp>
-#include <libavformat/avformat.h>
 #include <memory>
 #include <string>
+
+extern "C" {
+#include <libavformat/avformat.h>
+}
 
 namespace bsp_container
 {
