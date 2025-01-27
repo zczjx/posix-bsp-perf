@@ -24,6 +24,8 @@ public:
 
     int seekStreamFrame(int stream_index, int64_t timestamp) override;
 
+    std::shared_ptr<StreamWriter> getStreamWriter(int stream_index, const std::string& filename) override;
+
 private:
     void getStreamDisposition(const AVStream* stream, std::vector<std::string>& disposition_list);
 

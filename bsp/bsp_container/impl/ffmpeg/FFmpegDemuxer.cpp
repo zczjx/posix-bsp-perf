@@ -1,6 +1,8 @@
 #include "FFmpegDemuxer.hpp"
 #include <iostream>
 #include <cstring>
+#include "ffmpegCodecHeader.hpp"
+#include "FFmpegStreamWriter.hpp"
 extern "C" {
 #include <libavutil/dict.h>
 }
@@ -62,6 +64,14 @@ int FFmpegDemuxer::getContainerInfo(ContainerInfo& containerInfo)
         StreamInfo streamInfo;
         streamInfo.index = m_format_Ctx->streams[i]->index;
         streamInfo.codec_params.codec_type = av_get_media_type_string(m_format_Ctx->streams[i]->codecpar->codec_type);
+        streamInfo.codec_params.codec_name = ffmpegCodecHeader::getInstance().FFmpegCodingToStr(m_format_Ctx->streams[i]->codecpar->codec_id);
+        if (streamInfo.codec_params.codec_name.compare("h264") == 0
+        || streamInfo.codec_params.codec_name.compare("hevc") == 0)
+        {
+            std::cout << "copy the extradata_size to stream" << std::endl;
+            streamInfo.codec_params.extra_data.resize(m_format_Ctx->streams[i]->codecpar->extradata_size);
+            std::memcpy(streamInfo.codec_params.extra_data.data(), m_format_Ctx->streams[i]->codecpar->extradata, m_format_Ctx->streams[i]->codecpar->extradata_size);
+        }
         const AVDictionaryEntry* tag = nullptr;
         while ((tag = av_dict_iterate(m_format_Ctx->streams[i]->metadata, tag)))
         {
@@ -194,6 +204,28 @@ int FFmpegDemuxer::readStreamPacket(StreamPacket& streamPacket)
 int FFmpegDemuxer::seekStreamFrame(int stream_index, int64_t timestamp)
 {
     return 0;
+}
+
+std::shared_ptr<StreamWriter> FFmpegDemuxer::getStreamWriter(int stream_index, const std::string& filename)
+{
+    if (m_format_Ctx == nullptr)
+    {
+        std::cerr << "Container not opened." << std::endl;
+        return nullptr;
+    }
+    if (stream_index >= m_format_Ctx->nb_streams)
+    {
+        std::cerr << "Invalid stream index." << std::endl;
+        return nullptr;
+    }
+    std::shared_ptr<StreamWriter> streamWriter = std::make_shared<FFmpegStreamWriter>();
+    int ret = streamWriter->openStreamWriter(filename, m_format_Ctx->streams[stream_index]->codecpar);
+    if (ret < 0)
+    {
+        std::cerr << "Could not open stream writer." << std::endl;
+        return nullptr;
+    }
+    return streamWriter;
 }
 
 

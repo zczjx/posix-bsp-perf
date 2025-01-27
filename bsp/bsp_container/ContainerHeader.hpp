@@ -40,6 +40,15 @@ struct StreamCodecParams
     int height;
     /// audio specific params
     int sample_rate;
+
+    /**
+     * @brief extra data such as
+     * - the sps/pps for h264
+     * - the vps/sps/pps for hevc
+     * - the extradata for aac
+     * - the extradata for mp3
+     */
+    std::vector<uint8_t> extra_data{};
 };
 
 struct StreamInfo

@@ -6,6 +6,7 @@
 #include <unordered_map>
 #include <vector>
 #include "ContainerHeader.hpp"
+#include "StreamWriter.hpp"
 
 namespace bsp_container
 {
@@ -23,6 +24,8 @@ public:
     virtual int readStreamPacket(StreamPacket& streamPacket) = 0;
 
     virtual int seekStreamFrame(int stream_index, int64_t timestamp) = 0;
+
+    virtual std::shared_ptr<StreamWriter> getStreamWriter(int stream_index, const std::string& filename) = 0;
 
     virtual ~IDemuxer() = default;
 

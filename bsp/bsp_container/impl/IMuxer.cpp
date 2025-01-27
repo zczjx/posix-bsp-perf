@@ -6,7 +6,7 @@ namespace bsp_container
 {
 std::unique_ptr<IMuxer> IMuxer::create(const std::string& containerPlatform)
 {
-    if (containerPlatform.compare("ffmpeg") == 0)
+    if (containerPlatform.compare("FFmpegMuxer") == 0)
     {
         return std::make_unique<FFmpegMuxer>();
     }
