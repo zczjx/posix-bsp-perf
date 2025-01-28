@@ -5,16 +5,17 @@ option(BUILD_SRC_SHARED "Build bsp/shared" ON)
 option(BUILD_SRC_CORE "Build bsp/core" OFF)
 option(BUILD_SRC_PROFILER "Build profiler" ON)
 option(BUILD_SRC_BSP_SOCKETS "Build bsp_sockets" ON)
-option(BUILD_SRC_BSP_CONTAINER "Build bsp_container" ON)
 
 if(BUILD_PLATFORM_RK35XX)
     option(BUILD_SRC_BSP_DNN "Build bsp_dnn" ON)
     option(BUILD_SRC_BSP_G2D "Build bsp_g2d" ON)
     option(BUILD_SRC_BSP_CODEC "Build bsp_codec" ON)
+    option(BUILD_SRC_BSP_CONTAINER "Build bsp_container" ON)
 else()
     option(BUILD_SRC_BSP_DNN "Build bsp_dnn" OFF)
     option(BUILD_SRC_BSP_G2D "Build bsp_g2d" OFF)
     option(BUILD_SRC_BSP_CODEC "Build bsp_codec" OFF)
+    option(BUILD_SRC_BSP_CONTAINER "Build bsp_container" OFF)
 endif()
 
 # 根据选项包含子项目的CMakeLists.txt
