@@ -3,7 +3,6 @@
 
 #include <memory>
 #include <string>
-#include <unordered_map>
 #include <vector>
 #include "ContainerHeader.hpp"
 #include "StreamWriter.hpp"

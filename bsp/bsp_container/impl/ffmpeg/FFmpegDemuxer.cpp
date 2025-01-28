@@ -184,7 +184,7 @@ int FFmpegDemuxer::readStreamPacket(StreamPacket& streamPacket)
 
     if (av_read_frame(m_format_Ctx.get(), m_packet.get()) < 0)
     {
-        std::cerr << "Could not read frame." << std::endl;
+        std::cerr << "Could not read frame or EOF." << std::endl;
         return -1;
     }
 

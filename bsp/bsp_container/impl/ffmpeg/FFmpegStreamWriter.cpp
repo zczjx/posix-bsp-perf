@@ -1,5 +1,6 @@
 #include "FFmpegStreamWriter.hpp"
 #include <iostream>
+#include <cstring>
 
 namespace bsp_container
 {
@@ -58,6 +59,7 @@ void FFmpegStreamWriter::closeStreamWriter()
     {
         return;
     }
+    m_packet.reset();
     avio_close(m_format_Ctx->pb);
     m_format_Ctx.reset();
 }
@@ -87,14 +89,26 @@ int FFmpegStreamWriter::writePacket(const StreamPacket &packet)
         return -1;
     }
 
-    AVPacket pkt;
-    pkt.data = const_cast<uint8_t*>(packet.pkt_data.data());
-    pkt.size = packet.pkt_size;
-    pkt.pts = packet.pts;
-    pkt.dts = packet.dts;
-    pkt.stream_index = packet.stream_index;
+    if (m_packet == nullptr)
+    {
+        AVPacket* tmp_packet = av_packet_alloc();
+        m_packet = std::shared_ptr<AVPacket>(tmp_packet, [](AVPacket* p) { av_packet_free(&p); });
+        av_new_packet(m_packet.get(), packet.pkt_size);
+    }
 
-    if (av_interleaved_write_frame(m_format_Ctx.get(), &pkt) < 0)
+    if (m_packet->size < packet.pkt_size)
+    {
+        av_grow_packet(m_packet.get(), packet.pkt_size);
+        m_packet->size = packet.pkt_size;
+    }
+
+    std::memcpy(m_packet->data, packet.pkt_data.data(), m_packet->size);
+    m_packet->pts = packet.pts;
+    m_packet->dts = packet.dts;
+    m_packet->stream_index = packet.stream_index;
+    m_packet->pos = packet.pos;
+
+    if (av_interleaved_write_frame(m_format_Ctx.get(), m_packet.get()) < 0)
     {
         std::cerr << "Could not write frame." << std::endl;
         return -1;
@@ -102,7 +116,7 @@ int FFmpegStreamWriter::writePacket(const StreamPacket &packet)
     return 0;
 }
 
-int FFmpegStreamWriter::writeTrailer(const uint8_t *data, size_t size)
+int FFmpegStreamWriter::writeTrailer()
 {
     if (m_format_Ctx == nullptr)
     {

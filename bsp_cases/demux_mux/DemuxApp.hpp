@@ -6,6 +6,7 @@
 #include <shared/ArgParser.hpp>
 #include <bsp_container/IDemuxer.hpp>
 #include <shared/BspFileUtils.hpp>
+#include <bsp_container/StreamWriter.hpp>
 #include <memory>
 #include <string>
 #include <iostream>
@@ -42,7 +43,6 @@ public:
     }
 
 private:
-
     void onInit() override
     {
         auto& params = getArgs();
@@ -89,11 +89,10 @@ private:
                 stream_item.codec_params.sample_aspect_ratio, stream_item.codec_params.frame_rate, stream_item.codec_params.width,
                 stream_item.codec_params.height, stream_item.codec_params.sample_rate);
             m_streamInfoMap[stream_item.index] = stream_item;
+            std::string outputVideoPath;
+            params.getOptionVal("--outputVideoPath", outputVideoPath);
+            m_streamWriterMap[stream_item.index] = m_demuxer->getStreamWriter(stream_item.index,  std::to_string(stream_item.index) + "_" + outputVideoPath);
         }
-
-        std::string outputVideoPath;
-        params.getOptionVal("--outputVideoPath", outputVideoPath);
-        m_out_fp = std::shared_ptr<FILE>(fopen(outputVideoPath.c_str(), "wb"), fclose);
     }
 
     void onProcess() override
@@ -112,36 +111,17 @@ private:
                 if(1 == m_frame_count)
                 {
                     m_logger->printStdoutLog(bsp_perf::shared::BspLogger::LogLevel::Info, "DemuxApp::onProcess() write h264 header");
-                    std::vector<uint8_t>& nal_unit = m_streamInfoMap[streamPacket.stream_index].codec_params.extra_data;
-                    std::cout << "nal_unit.size(): " << nal_unit.size() << std::endl;
-                    for (size_t i = 0; i < nal_unit.size(); ++i)
-                    {
-                        if (i % 16 == 0) {
-                            std::cout << std::endl;
-                        }
-                        std::cout << std::hex << std::setw(2) << std::setfill('0') << static_cast<int>(nal_unit[i]) << " ";
-                    }
-                    std::cout << std::dec << std::endl;
-                    auto sps_data = getSPS_Data(nal_unit);
-                    writeNAL_Unit(sps_data);
-                    auto pps_data = getPPS_Data(nal_unit);
-                    writeNAL_Unit(pps_data);
-                    m_logger->printStdoutLog(bsp_perf::shared::BspLogger::LogLevel::Info, "first packet data len: {}:--------------", streamPacket.pkt_data.size());
-                    for (size_t i = 0; i < streamPacket.pkt_data.size(); ++i)
-                    {
-                        if (i % 16 == 0) {
-                            std::cout << std::endl;
-                        }
-                        std::cout << std::hex << std::setw(2) << std::setfill('0') << static_cast<int>(streamPacket.pkt_data[i]) << " ";
-                    }
-                    std::cout << std::dec << std::endl;
+                    m_streamWriterMap[streamPacket.stream_index]->writeHeader();
                 }
                 m_logger->printStdoutLog(bsp_perf::shared::BspLogger::LogLevel::Info,
                     "DemuxApp::onProcess() video streamPacket: stream_index: {}, pts: {}, dts: {}, size: {}",
                     streamPacket.stream_index, streamPacket.pts, streamPacket.dts, streamPacket.pkt_size);
-                writePacketData(streamPacket.pkt_data);
-                // fwrite(streamPacket.pkt_data.data(), 1, streamPacket.pkt_size, m_out_fp.get());
+                m_streamWriterMap[streamPacket.stream_index]->writePacket(streamPacket);
             }
+        }
+        for (auto& writer_pair : m_streamWriterMap)
+        {
+            writer_pair.second->writeTrailer();
         }
     }
 
@@ -153,64 +133,11 @@ private:
     void onRelease() override
     {
         std::this_thread::sleep_for(std::chrono::seconds(1));
-        fflush(m_out_fp.get());
-        m_out_fp.reset();
+        for (auto& writer_pair : m_streamWriterMap)
+        {
+            writer_pair.second->closeStreamWriter();
+        }
         m_demuxer.reset();
-    }
-
-private:
-    void writePacketData(std::vector<uint8_t>& pkt_data)
-    {
-        // uint8_t start_code[] = {0x00, 0x00, 0x00, 0x01};
-
-        // fwrite(start_code, 1, sizeof(start_code), m_out_fp.get());
-        fwrite(pkt_data.data(), 1, pkt_data.size(), m_out_fp.get());
-    }
-
-    void writeNAL_Unit(std::vector<uint8_t>& nal_unit)
-    {
-        uint8_t start_code[] = {0x00, 0x00, 0x00, 0x01};
-
-        fwrite(start_code, 1, sizeof(start_code), m_out_fp.get());
-        fwrite(nal_unit.data(), 1, nal_unit.size(), m_out_fp.get());
-    }
-
-    std::vector<uint8_t> getSPS_Data(std::vector<uint8_t>& nal_unit)
-    {
-        std::vector<uint8_t> sps_data;
-        size_t i = 0;
-        while (i < nal_unit.size())
-        {
-            if (nal_unit[i] == 0x67)
-            {
-                uint16_t sps_length = (nal_unit[i -2] << 8) | nal_unit[i -1];
-                std::cout << "sps_length: " << sps_length << std::endl;
-                sps_data.resize(sps_length);
-                std::copy(nal_unit.begin() + i, nal_unit.begin() + i + sps_length, sps_data.begin());
-                break;
-            }
-            i++;
-        }
-        return sps_data;
-    }
-
-    std::vector<uint8_t> getPPS_Data(std::vector<uint8_t>& nal_unit)
-    {
-        std::vector<uint8_t> pps_data;
-        size_t i = 0;
-        while (i < nal_unit.size())
-        {
-            if (nal_unit[i] == 0x68)
-            {
-                uint16_t pps_length = (nal_unit[i -2] << 8) | nal_unit[i -1];
-                std::cout << "pps_length: " << pps_length << std::endl;
-                pps_data.resize(pps_length);
-                std::copy(nal_unit.begin() + i, nal_unit.begin() + i + pps_length, pps_data.begin());
-                break;
-            }
-            i++;
-        }
-        return pps_data;
     }
 
 private:
@@ -218,7 +145,7 @@ private:
     std::unique_ptr<bsp_perf::shared::BspLogger> m_logger{nullptr};
     std::unique_ptr<IDemuxer> m_demuxer{nullptr};
     std::unordered_map<int, StreamInfo> m_streamInfoMap{};
-    std::shared_ptr<FILE> m_out_fp{nullptr};
+    std::unordered_map<int, std::shared_ptr<StreamWriter>> m_streamWriterMap{};
     size_t m_frame_count{0};
 };
 } // namespace perf_cases

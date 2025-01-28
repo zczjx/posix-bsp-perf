@@ -21,7 +21,7 @@ public:
 
     /**
      * @brief Opens a stream writer for the given filename.
-     * 
+     *
      * @param filename The name of the file to open for writing.
      * @param params A std::any object containing AVCodecParameters*.
      * @return int Returns 0 on success, or a negative error code on failure.
@@ -31,10 +31,11 @@ public:
     void closeStreamWriter() override;
     int writeHeader() override;
     int writePacket(const StreamPacket &packet) override;
-    int writeTrailer(const uint8_t *data, size_t size) override;
+    int writeTrailer() override;
 
 private:
     std::shared_ptr<AVFormatContext> m_format_Ctx{nullptr};
+    std::shared_ptr<AVPacket> m_packet{nullptr};
 };
 
 

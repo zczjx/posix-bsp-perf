@@ -18,7 +18,7 @@ public:
     virtual void closeStreamWriter() = 0;
     virtual int writeHeader() = 0;
     virtual int writePacket(const StreamPacket& packet) = 0;
-    virtual int writeTrailer(const uint8_t* data, size_t size) = 0;
+    virtual int writeTrailer() = 0;
 
 };
 } // namespace bsp_container
