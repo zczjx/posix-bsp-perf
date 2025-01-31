@@ -20,17 +20,16 @@ int FFmpegStreamReader::openStreamReader(const std::string& filename)
         return -1;
     }
 
-    if (avformat_find_stream_info(format_Ctx, nullptr) < 0)
+    m_format_Ctx = std::shared_ptr<AVFormatContext>(format_Ctx, [](AVFormatContext* p) { avformat_close_input(&p); });
+
+    if (avformat_find_stream_info(m_format_Ctx.get(), nullptr) < 0)
     {
         std::cerr << "Could not find stream information." << std::endl;
         avformat_close_input(&format_Ctx);
         return -1;
     }
-
     av_dump_format(format_Ctx, 0, filename.c_str(), 0);
-
-    m_format_Ctx = std::shared_ptr<AVFormatContext>(format_Ctx, [](AVFormatContext *p) { avformat_close_input(&p); });
-
+    return 0;
 }
 
 void FFmpegStreamReader::closeStreamReader()
@@ -46,11 +45,8 @@ void FFmpegStreamReader::closeStreamReader()
 std::any FFmpegStreamReader::getStreamParams()
 {
     AVStream *in_stream = m_format_Ctx->streams[0];
-
-    std::shared_ptr<AVCodecParameters> codecParams{nullptr};
-
-    codecParams.reset(in_stream->codecpar);
-
+    std::shared_ptr<AVCodecParameters> codecParams = std::shared_ptr<AVCodecParameters>(avcodec_parameters_alloc(), [](AVCodecParameters* p) { avcodec_parameters_free(&p); });
+    std::memcpy(codecParams.get(), in_stream->codecpar, sizeof(AVCodecParameters));
     return codecParams;
 }
 

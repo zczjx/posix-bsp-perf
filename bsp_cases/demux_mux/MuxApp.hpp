@@ -82,7 +82,7 @@ private:
         {
             reader_pair.second->closeStreamReader();
         }
-        m_muxer.reset();
+        m_muxer->closeContainerMux();
     }
 private:
     std::string m_name {"[MuxerApp]:"};

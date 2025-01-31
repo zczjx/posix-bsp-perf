@@ -33,7 +33,15 @@ int FFmpegMuxer::openContainerMux(const std::string& path, MuxConfig& config)
 
 void FFmpegMuxer::closeContainerMux()
 {
-    m_packet.reset();
+    if (m_format_Ctx == nullptr)
+    {
+        return;
+    }
+
+    if (!(m_format_Ctx->oformat->flags & AVFMT_NOFILE))
+    {
+        avio_closep(&m_format_Ctx->pb);
+    }
     m_format_Ctx.reset();
 }
 
@@ -259,11 +267,8 @@ int FFmpegMuxer::endStreamMux()
     }
 
     av_write_trailer(m_format_Ctx.get());
-
-    if (!(m_format_Ctx->oformat->flags & AVFMT_NOFILE))
-    {
-        avio_closep(&m_format_Ctx->pb);
-    }
+    m_packet.reset();
+    m_header_written = false;
 }
 
 } // namespace bsp_container
