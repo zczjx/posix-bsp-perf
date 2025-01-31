@@ -200,7 +200,9 @@ int FFmpegMuxer::writeStreamPacket(StreamPacket& streamPacket)
 
     if (m_packet->size < streamPacket.useful_pkt_size)
     {
-        av_grow_packet(m_packet.get(), streamPacket.useful_pkt_size);
+        // padding the small packet
+        int grow_by = FFALIGN(streamPacket.useful_pkt_size, 64) + 1024;
+        av_grow_packet(m_packet.get(), grow_by);
         m_packet->size = streamPacket.useful_pkt_size;
     }
 
