@@ -1,5 +1,6 @@
 #include "FFmpegMuxer.hpp"
 #include "ffmpegCodecHeader.hpp"
+#include "FFmpegStreamReader.hpp"
 #include <iostream>
 #include <cstring>
 extern "C" {
@@ -13,8 +14,9 @@ FFmpegMuxer::~FFmpegMuxer()
     closeContainerMux();
 }
 
-int FFmpegMuxer::openContainerMux(const std::string& path)
+int FFmpegMuxer::openContainerMux(const std::string& path, MuxConfig& config)
 {
+    int ret = 0;
     AVFormatContext* format_Ctx = nullptr;
     avformat_alloc_output_context2(&format_Ctx, nullptr, nullptr, path.c_str());
     if (format_Ctx == nullptr)
@@ -25,11 +27,13 @@ int FFmpegMuxer::openContainerMux(const std::string& path)
 
     m_format_Ctx = std::shared_ptr<AVFormatContext>(format_Ctx, [](AVFormatContext* p) { avformat_free_context(p); });
     m_path = path;
-
+    m_mux_cfg.ts_recreate = config.ts_recreate;
+    m_mux_cfg.video_fps = config.video_fps;
 }
 
 void FFmpegMuxer::closeContainerMux()
 {
+    m_packet.reset();
     m_format_Ctx.reset();
 }
 
@@ -91,9 +95,74 @@ int FFmpegMuxer::addStream(StreamInfo& streamInfo)
         return -1;
     }
 
-    return 0;
+    m_stream_frames_count_map[out_stream->id] = 0;
+    return out_stream->id;
 
 }
+
+int FFmpegMuxer::addStream(std::shared_ptr<StreamReader> strReader)
+{
+    std::shared_ptr<AVCodecParameters> codecParams = std::any_cast<std::shared_ptr<AVCodecParameters>>(strReader->getStreamParams());
+    if (codecParams == nullptr)
+    {
+        std::cerr << "Codec parameters not provided." << std::endl;
+        return -1;
+    }
+
+    AVStream *out_stream = avformat_new_stream(m_format_Ctx.get(), nullptr);
+    if (out_stream == nullptr)
+    {
+        std::cerr << "Could not allocate output stream." << std::endl;
+        return -1;
+    }
+
+    out_stream->id = m_format_Ctx->nb_streams - 1;
+
+    if (avcodec_parameters_copy(out_stream->codecpar, codecParams.get()) < 0)
+    {
+        std::cerr << "Could not copy codec parameters." << std::endl;
+        return -1;
+    }
+
+    out_stream->codecpar->codec_tag = 0;
+    m_stream_frames_count_map[out_stream->id] = 0;
+    return out_stream->id;
+}
+
+int64_t FFmpegMuxer::recreatePTS(int stream_index)
+{
+    if (m_stream_frames_count_map.find(stream_index) == m_stream_frames_count_map.end())
+    {
+        std::cerr << "Stream index not found." << std::endl;
+        return -1;
+    }
+
+    AVStream * outstream = m_format_Ctx->streams[stream_index];
+
+    float_t duration_secs = 1.0 / m_mux_cfg.video_fps;
+
+    int64_t duration_ts = (duration_secs * outstream->time_base.den) / outstream->time_base.num;
+
+    return m_stream_frames_count_map[stream_index] * duration_ts;
+}
+
+int64_t FFmpegMuxer::recreateDTS(int stream_index)
+{
+    if (m_stream_frames_count_map.find(stream_index) == m_stream_frames_count_map.end())
+    {
+        std::cerr << "Stream index not found." << std::endl;
+        return -1;
+    }
+
+    AVStream * outstream = m_format_Ctx->streams[stream_index];
+
+    float_t duration_secs = 1.0 / m_mux_cfg.video_fps;
+
+    int64_t duration_ts = (duration_secs * outstream->time_base.den) / outstream->time_base.num;
+
+    return (m_stream_frames_count_map[stream_index] - 1) * duration_ts;
+}
+
 
 int FFmpegMuxer::writeStreamPacket(StreamPacket& streamPacket)
 {
@@ -122,22 +191,61 @@ int FFmpegMuxer::writeStreamPacket(StreamPacket& streamPacket)
         m_header_written = true;
     }
 
-    AVPacket pkt;
+    if (m_packet == nullptr)
+    {
+        AVPacket* tmp_packet = av_packet_alloc();
+        m_packet = std::shared_ptr<AVPacket>(tmp_packet, [](AVPacket* p) { av_packet_free(&p); });
+        av_new_packet(m_packet.get(), streamPacket.useful_pkt_size);
+    }
 
-    pkt.stream_index = streamPacket.stream_index;
-    pkt.pts = streamPacket.pts;
-    pkt.dts = streamPacket.dts;
-    pkt.data = streamPacket.pkt_data.data();
-    pkt.size = streamPacket.pkt_data.size();
-    pkt.pos = streamPacket.pos;
+    if (m_packet->size < streamPacket.useful_pkt_size)
+    {
+        av_grow_packet(m_packet.get(), streamPacket.useful_pkt_size);
+        m_packet->size = streamPacket.useful_pkt_size;
+    }
 
-    if (av_interleaved_write_frame(m_format_Ctx.get(), &pkt) < 0)
+    std::memcpy(m_packet->data, streamPacket.pkt_data.data(), streamPacket.useful_pkt_size);
+    m_packet->stream_index = streamPacket.stream_index;
+
+    if (true == m_mux_cfg.ts_recreate)
+    {
+        m_packet->pts = recreatePTS(streamPacket.stream_index);
+        m_packet->dts = recreateDTS(streamPacket.stream_index);
+    }
+    else
+    {
+        m_packet->pts = streamPacket.pts;
+        m_packet->dts = streamPacket.dts;
+    }
+    m_packet->pos = -1;
+
+    if (av_interleaved_write_frame(m_format_Ctx.get(), m_packet.get()) < 0)
     {
         std::cerr << "Could not write frame." << std::endl;
         return -1;
     }
 
+    m_stream_frames_count_map[streamPacket.stream_index]++;
     return 0;
+}
+
+std::shared_ptr<StreamReader> FFmpegMuxer::getStreamReader(const std::string& filename)
+{
+    if (m_format_Ctx == nullptr)
+    {
+        std::cerr << "Output format context is null." << std::endl;
+        return nullptr;
+    }
+
+    std::shared_ptr<StreamReader> strReader = std::make_shared<FFmpegStreamReader>();
+    int ret = strReader->openStreamReader(filename);
+    if (ret < 0)
+    {
+        std::cerr << "Could not open stream reader." << std::endl;
+        return nullptr;
+    }
+
+    return strReader;
 }
 
 int FFmpegMuxer::endStreamMux()

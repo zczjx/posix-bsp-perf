@@ -1,7 +1,7 @@
 #include <iostream>
 #include <string>
 #include "DemuxApp.hpp"
-// #include "MuxApp.hpp"
+#include "MuxApp.hpp"
 
 using namespace bsp_perf::perf_cases;
 using namespace bsp_perf::shared;
@@ -25,11 +25,11 @@ int main(int argc, char* argv[])
         DemuxApp app(std::move(parser));
         app.run();
     }
-    // else if (model == "mux")
-    // {
-    //     MuxApp app(std::move(parser));
-    //     app.run();
-    // }
+    else if (model == "mux")
+    {
+        MuxApp app(std::move(parser));
+        app.run();
+    }
     else
     {
         std::cout << "Invalid model: " << model << std::endl;

@@ -22,8 +22,9 @@ set(SOURCES
   impl/IDemuxer.cpp
   impl/IMuxer.cpp
   impl/ffmpeg/FFmpegDemuxer.cpp
-  impl/ffmpeg/FFmpegStreamWriter.cpp
   impl/ffmpeg/FFmpegMuxer.cpp
+  impl/ffmpeg/FFmpegStreamWriter.cpp
+  impl/ffmpeg/FFmpegStreamReader.cpp
 )
 
 # Add the library target

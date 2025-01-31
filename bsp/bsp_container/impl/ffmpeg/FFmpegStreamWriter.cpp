@@ -36,6 +36,7 @@ int FFmpegStreamWriter::openStreamWriter(const std::string &filename, std::any p
         return -1;
     }
 
+
     if (avcodec_parameters_copy(out_stream->codecpar, codecParams) < 0)
     {
         std::cerr << "Could not copy codec parameters." << std::endl;
@@ -93,20 +94,24 @@ int FFmpegStreamWriter::writePacket(const StreamPacket &packet)
     {
         AVPacket* tmp_packet = av_packet_alloc();
         m_packet = std::shared_ptr<AVPacket>(tmp_packet, [](AVPacket* p) { av_packet_free(&p); });
-        av_new_packet(m_packet.get(), packet.pkt_size);
+        av_new_packet(m_packet.get(), packet.useful_pkt_size);
     }
 
-    if (m_packet->size < packet.pkt_size)
+    if (m_packet->size < packet.useful_pkt_size)
     {
-        av_grow_packet(m_packet.get(), packet.pkt_size);
-        m_packet->size = packet.pkt_size;
+        av_grow_packet(m_packet.get(), packet.useful_pkt_size);
+        m_packet->size = packet.useful_pkt_size;
     }
 
     std::memcpy(m_packet->data, packet.pkt_data.data(), m_packet->size);
     m_packet->pts = packet.pts;
     m_packet->dts = packet.dts;
+    std::cerr << "FFmpegStreamWriter::writePacket: m_packet->pts: " << m_packet->pts << std::endl;
+    std::cerr << "FFmpegStreamWriter::writePacket: m_packet->dts: " << m_packet->dts << std::endl;
     m_packet->stream_index = packet.stream_index;
     m_packet->pos = packet.pos;
+    m_packet->time_base.num = 1;
+    m_packet->time_base.den  = 30;
 
     if (av_interleaved_write_frame(m_format_Ctx.get(), m_packet.get()) < 0)
     {

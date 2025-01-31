@@ -27,8 +27,6 @@ public:
         m_logger->setPattern();
         auto& params = getArgs();
         std::string demuxerImpl;
-        std::string pluginPath;
-        std::string labelTextPath;
         params.getOptionVal("--demuxerImpl", demuxerImpl);
         m_demuxer = bsp_container::IDemuxer::create(demuxerImpl);
     }
@@ -102,7 +100,7 @@ private:
         {
             m_logger->printStdoutLog(bsp_perf::shared::BspLogger::LogLevel::Info,
                 "DemuxApp::onProcess() streamPacket: stream_index: {}, pts: {}, dts: {}, size: {}",
-                streamPacket.stream_index, streamPacket.pts, streamPacket.dts, streamPacket.pkt_size);
+                streamPacket.stream_index, streamPacket.pts, streamPacket.dts, streamPacket.useful_pkt_size);
 
             std::string codec_type = m_streamInfoMap[streamPacket.stream_index].codec_params.codec_type;
             if (codec_type == "video")
@@ -114,8 +112,8 @@ private:
                     m_streamWriterMap[streamPacket.stream_index]->writeHeader();
                 }
                 m_logger->printStdoutLog(bsp_perf::shared::BspLogger::LogLevel::Info,
-                    "DemuxApp::onProcess() video streamPacket: stream_index: {}, pts: {}, dts: {}, size: {}",
-                    streamPacket.stream_index, streamPacket.pts, streamPacket.dts, streamPacket.pkt_size);
+                    "DemuxApp::onProcess() video streamPacket: stream_index: {}, pts: {}, dts: {}, duration: {}, size: {}",
+                    streamPacket.stream_index, streamPacket.pts, streamPacket.dts, streamPacket.duration, streamPacket.useful_pkt_size);
                 m_streamWriterMap[streamPacket.stream_index]->writePacket(streamPacket);
             }
         }

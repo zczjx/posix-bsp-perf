@@ -191,12 +191,13 @@ int FFmpegDemuxer::readStreamPacket(StreamPacket& streamPacket)
     streamPacket.stream_index = m_packet->stream_index;
     streamPacket.pts = m_packet->pts;
     streamPacket.dts = m_packet->dts;
-    streamPacket.pkt_size = m_packet->size;
-    if(streamPacket.pkt_data.size() < streamPacket.pkt_size)
+    streamPacket.duration = m_packet->duration;
+    streamPacket.useful_pkt_size = m_packet->size;
+    if(streamPacket.pkt_data.size() < streamPacket.useful_pkt_size)
     {
-        streamPacket.pkt_data.resize(streamPacket.pkt_size);
+        streamPacket.pkt_data.resize(streamPacket.useful_pkt_size);
     }
-    std::memcpy(streamPacket.pkt_data.data(), m_packet->data, streamPacket.pkt_size);
+    std::memcpy(streamPacket.pkt_data.data(), m_packet->data, streamPacket.useful_pkt_size);
     streamPacket.pos = m_packet->pos;
     return 0;
 }
@@ -219,6 +220,9 @@ std::shared_ptr<StreamWriter> FFmpegDemuxer::getStreamWriter(int stream_index, c
         return nullptr;
     }
     std::shared_ptr<StreamWriter> streamWriter = std::make_shared<FFmpegStreamWriter>();
+    AVStream* idx_stream = m_format_Ctx->streams[stream_index];
+    std::cerr << "zczjx--> stream_index->time_base.num " << idx_stream->time_base.num << std::endl;
+    std::cerr << "zczjx--> stream_index->time_base.den " << idx_stream->time_base.den << std::endl;
     int ret = streamWriter->openStreamWriter(filename, m_format_Ctx->streams[stream_index]->codecpar);
     if (ret < 0)
     {

@@ -76,9 +76,10 @@ struct StreamPacket
 {
     int64_t pts;
     int64_t dts;
+    int64_t duration;
     int stream_index;
     std::vector<uint8_t> pkt_data{};
-    size_t pkt_size{0};
+    size_t useful_pkt_size{0};
     int64_t pos;
 };
 
