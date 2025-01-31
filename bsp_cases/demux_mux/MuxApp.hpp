@@ -47,6 +47,8 @@ private:
         params.getOptionVal("--outputVideoPath", outputVideoPath);
 
         IMuxer::MuxConfig muxConfig{true, 29.97};
+        muxConfig.ts_recreate = params.getSubFlagVal("mux", "--ts_recreate");
+        params.getSubOptionVal("mux", "--video_fps", muxConfig.video_fps);
         m_muxer->openContainerMux(outputVideoPath, muxConfig);
 
         std::string inputVideoPath;

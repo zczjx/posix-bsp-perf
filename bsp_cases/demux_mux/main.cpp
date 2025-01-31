@@ -14,6 +14,10 @@ int main(int argc, char* argv[])
     parser.addOption("--output, --outputVideoPath", std::string("./"), "Path to the output video file");
     parser.addOption("--demuxer, --demuxerImpl", std::string("FFmpegDemuxer"), "demuxer Impl: FFmpegDemuxer");
     parser.addOption("--muxer, --muxerImpl", std::string("FFmpegMuxer"), "Muxer Impl: FFmpegMuxer");
+
+    parser.addSubFlag("mux", "--ts_recreate", true, "timestamp recreate flag for remux");
+    parser.addSubOption("mux", "--video_fps", float(29.97), "video fps for remux");
+
     parser.setConfig("--cfg", "config.ini", "set an configuration ini file for all options");
     parser.parseArgs(argc, argv);
 
