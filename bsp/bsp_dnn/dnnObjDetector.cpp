@@ -5,7 +5,7 @@
 namespace bsp_dnn
 {
 
-dnnObjDetector::dnnObjDetector(const std::string& dnnType, const std::string& pluginPath, const std::string& labelTextPath):
+dnnObjDetector::dnnObjDetector(const std::string& dnnType, const std::string& pluginPath, const std::string& pluginType,const std::string& labelTextPath):
     m_logger{std::make_unique<BspLogger>("dnnObjDetector")},
     m_dnnEngine{IDnnEngine::create(dnnType)},
     m_labelTextPath{labelTextPath}
@@ -23,15 +23,38 @@ dnnObjDetector::dnnObjDetector(const std::string& dnnType, const std::string& pl
         m_logger->printStdoutLog(BspLogger::LogLevel::Error, "Failed to open plugin library: {}", dlerror());
         throw std::runtime_error(dlerror());
     }
-
-    auto create = reinterpret_cast<IDnnObjDetectorPlugin* (*)()>(dlsym(m_pluginLibraryHandle.get(), "create"));
-    if (create == nullptr)
+    if (pluginType.compare("yolov5") == 0)
     {
-        m_logger->printStdoutLog(BspLogger::LogLevel::Error, "Failed to load symbol create: {}", dlerror());
-        throw std::runtime_error(dlerror());
-    }
+        auto create = reinterpret_cast<IDnnObjDetectorPlugin* (*)()>(dlsym(m_pluginLibraryHandle.get(), "create_yolov5"));
+        if (create == nullptr)
+        {
+            m_logger->printStdoutLog(BspLogger::LogLevel::Error, "Failed to load symbol create: {}", dlerror());
+            throw std::runtime_error(dlerror());
+        }
 
-    m_dnnPluginHandle.reset(create());
+        m_dnnPluginHandle.reset(create());
+    }
+    else if (pluginType.compare("yolov8") == 0)
+    {
+        auto create = reinterpret_cast<IDnnObjDetectorPlugin* (*)()>(dlsym(m_pluginLibraryHandle.get(), "create_yolov8"));
+        if (create == nullptr)
+        {
+            m_logger->printStdoutLog(BspLogger::LogLevel::Error, "Failed to load symbol create: {}", dlerror());
+            throw std::runtime_error(dlerror());
+        }
+
+        m_dnnPluginHandle.reset(create());
+    }
+    
+    
+    //auto create = reinterpret_cast<IDnnObjDetectorPlugin* (*)()>(dlsym(m_pluginLibraryHandle.get(), "create"));
+    // if (create == nullptr)
+    // {
+    //     m_logger->printStdoutLog(BspLogger::LogLevel::Error, "Failed to load symbol create: {}", dlerror());
+    //     throw std::runtime_error(dlerror());
+    // }
+
+    // m_dnnPluginHandle.reset(create());
 
     if (m_dnnPluginHandle == nullptr)
     {
@@ -45,8 +68,9 @@ dnnObjDetector::~dnnObjDetector()
 {
     if (m_dnnPluginHandle != nullptr)
     {
-        auto destroy = reinterpret_cast<void (*)(IDnnObjDetectorPlugin*)>(dlsym(m_pluginLibraryHandle.get(), "destroy"));
-        if (destroy == nullptr)
+        auto destroy_yolov5 = reinterpret_cast<void (*)(IDnnObjDetectorPlugin*)>(dlsym(m_pluginLibraryHandle.get(), "destroy_yolov5"));
+        auto destroy_yolov8 = reinterpret_cast<void (*)(IDnnObjDetectorPlugin*)>(dlsym(m_pluginLibraryHandle.get(), "destroy_yolov8"));
+        if (destroy_yolov5 == nullptr && destroy_yolov8 ==nullptr)
         {
             m_logger->printStdoutLog(BspLogger::LogLevel::Error, "Failed to load symbol destroy: {}", dlerror());
             throw std::runtime_error(dlerror());

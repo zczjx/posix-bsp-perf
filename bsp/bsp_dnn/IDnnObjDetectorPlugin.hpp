@@ -6,6 +6,7 @@
 #include <string>
 #include <vector>
 #include <any>
+#include <rockchip/rknn_api.h>
 
 namespace bsp_dnn
 {
@@ -45,6 +46,10 @@ struct ObjDetectParams
     size_t model_input_width;
     size_t model_input_height;
     size_t model_input_channel;
+
+    std::vector<rknn_tensor_attr> output_attrs{};
+    rknn_input_output_num io_num;
+
     float conf_threshold;
     float nms_threshold;
     float scale_width;
@@ -70,11 +75,21 @@ public:
 
 }
 
-#define CREATE_PLUGIN_INSTANCE(PLUGIN_CLASS) \
-    extern "C" bsp_dnn::IDnnObjDetectorPlugin* create() { \
+#define CREATE_PLUGIN_INSTANCE_YOLOV5(PLUGIN_CLASS) \
+    extern "C" bsp_dnn::IDnnObjDetectorPlugin* create_yolov5() { \
         return new PLUGIN_CLASS(); \
     } \
-    extern "C" void destroy(bsp_dnn::IDnnObjDetectorPlugin* plugin) { \
+    extern "C" void destroy_yolov5(bsp_dnn::IDnnObjDetectorPlugin* plugin) { \
+        delete plugin; \
+    }
+
+
+
+#define CREATE_PLUGIN_INSTANCE_YOLOV8(PLUGIN_CLASS) \
+    extern "C" bsp_dnn::IDnnObjDetectorPlugin* create_yolov8() { \
+        return new PLUGIN_CLASS(); \
+    } \
+    extern "C" void destroy_yolov8(bsp_dnn::IDnnObjDetectorPlugin* plugin) { \
         delete plugin; \
     }
 
