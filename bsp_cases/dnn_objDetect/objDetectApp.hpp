@@ -13,6 +13,7 @@
 #include <opencv2/core/core.hpp>
 #include <opencv2/imgcodecs.hpp>
 #include <opencv2/imgproc.hpp>
+#include <rockchip/rknn_api.h>
 
 namespace bsp_perf {
 namespace perf_cases {
@@ -29,11 +30,13 @@ public:
         auto& params = getArgs();
         std::string dnnType;
         std::string pluginPath;
+        std::string pluginType;
         std::string labelTextPath;
         params.getOptionVal("--dnnType", dnnType);
         params.getOptionVal("--pluginPath", pluginPath);
+        params.getOptionVal("--pluginType", pluginType);
         params.getOptionVal("--labelTextPath", labelTextPath);
-        m_dnnObjDetector = std::make_unique<bsp_dnn::dnnObjDetector>(dnnType, pluginPath, labelTextPath);
+        m_dnnObjDetector = std::make_unique<bsp_dnn::dnnObjDetector>(dnnType, pluginPath, pluginType, labelTextPath);
     }
     ObjDetectApp(const ObjDetectApp&) = delete;
     ObjDetectApp& operator=(const ObjDetectApp&) = delete;
@@ -128,6 +131,24 @@ private:
         objDetectParams.model_input_width = shape.width;
         objDetectParams.model_input_height = shape.height;
         objDetectParams.model_input_channel = shape.channel;
+
+        auto& params = getArgs();
+        std::string dnnType;
+        params.getOptionVal("--dnnType", dnnType);
+        if (dnnType.compare("rknn")==0)
+        {
+            std::vector<rknn_tensor_attr> output_attrs
+            m_dnnObjDetector->getOutputAttr(output_attrs);
+            objDetectParams.output_attrs = output_attrs;
+
+            rknn_input_output_num io_num;
+            m_dnnObjDetector->getInputOutputNum(io_num);
+            objDetectParams.io_num = io_num;
+        }
+        
+
+        
+
         params.getSubOptionVal("objDetectParams", "--conf_threshold", objDetectParams.conf_threshold);
         params.getSubOptionVal("objDetectParams", "--nms_threshold", objDetectParams.nms_threshold);
         objDetectParams.scale_width = static_cast<float>(shape.width) / static_cast<float>(m_orig_image_ptr->cols);

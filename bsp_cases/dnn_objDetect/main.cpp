@@ -10,6 +10,7 @@ int main(int argc, char* argv[])
     ArgParser parser("ObjDetectApp");
     parser.addOption("--dnn, --dnnType", std::string("rknn"), "DNN type: trt or rknn");
     parser.addOption("--plugin, --pluginPath", std::string(""), "Path to the plugin library");
+    parser.addOption("--plugin, --pluginType", std::string(""), "Type of the plugin, yolov5 or yolov8");
     parser.addOption("--label, --labelTextPath", std::string(""), "Path to the label text file");
     parser.addOption("--model, --modelPath", std::string(""), "Path to the model file");
     parser.addOption("--image, --imagePath", std::string(""), "Path to the input image file");
