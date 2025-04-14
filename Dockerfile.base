@@ -4,11 +4,11 @@ FROM nvidia/cuda:12.4.1-cudnn-devel-ubuntu22.04
 ARG DEBIAN_FRONTEND=noninteractive
 
 RUN apt-get update && \
-    apt-get install -y cmake make git vim gcc g++ gdb gdbserver tree sudo tcpdump python3-pip && \
+    apt-get install -y cmake make git vim gcc g++ gdb gdbserver tree sudo tcpdump time python3-pip && \
     apt-get install -y autoconf automake pkg-config libssl-dev libboost-all-dev ncurses-dev nfs-common && \
     apt-get install -y net-tools openssh-server openssh-client rsync cpio unzip bc && \
     apt-get install -y build-essential libgtest-dev libgmock-dev libmosquitto-dev libdbus-1-dev libprotobuf-dev protobuf-compiler && \
-    apt-get install -y curl lsb-release software-properties-common locales tzdata x11-apps
+    apt-get install -y curl lsb-release software-properties-common locales tzdata x11-apps libzmq3-dev
 
     # 设置环境变量
 ENV TZ=Asia/Shanghai
