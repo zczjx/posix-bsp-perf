@@ -1,0 +1,69 @@
+{
+    "rig": {
+        "properties": {
+            "layout": "HIL"
+        },
+        "vehicle": {
+            "bp_id": "vehicle.tesla.model3",
+            "name": "ego_vehicle",
+            "value": {
+                "actuation": {
+                    "maxSteeringWheelAngle": 8.290313720703125
+                }
+            }
+        },
+        "sensors":
+        [
+            {
+                "type": "camera",
+                "bp_id": "sensor.camera.rgb",
+                "name": "view_camera",
+                "status": "enabled",
+                "spawn_point": {"x": -7.2, "y": 0.0, "z": 3.4, "roll": 0.0, "pitch": -10.0, "yaw": 0.0},
+                "image_size_x": 1280,
+                "image_size_y": 720,
+                "fov": 90.0,
+                "encode_format": "raw",
+                "zmq_ipc": "ipc:///build/tmp/view_camera.raw",
+                "zmq_transport": "tcp://192.168.2.110:12001",
+                "protocol": "h264.rtp",
+                "display_position": [0, 0]
+            }
+        ],
+        "vehicle_states":
+        [
+            {
+                "bp_id": "sensor.other.collision",
+                "name": "collision",
+                "status": "enabled",
+                "spawn_point": {"x": 0.0, "y": 0.0, "z": 0.0}
+            },
+            {
+                "bp_id": "sensor.other.lane_invasion",
+                "name": "lane_invasion",
+                "status": "enabled",
+                "spawn_point": {"x": 0.0, "y": 0.0, "z": 0.0}
+            },
+            {
+                "bp_id": "sensor.pseudo.tf",
+                "name": "tf",
+                "status": "enabled"
+            },
+            {
+                "bp_id": "sensor.pseudo.odom",
+                "name": "odometry",
+                "status": "enabled"
+            },
+            {
+                "bp_id": "sensor.pseudo.speedometer",
+                "name": "speedometer",
+                "status": "enabled"
+            },
+            {
+                "bp_id": "actor.pseudo.control",
+                "name": "control",
+                "status": "enabled"
+            }
+        ]
+    }
+}
