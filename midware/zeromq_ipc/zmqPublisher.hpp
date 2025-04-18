@@ -11,8 +11,20 @@ namespace zeromq_ipc
 class ZmqPublisher
 {
 public:
-    ZmqPublisher();
-    ~ZmqPublisher();
+    ZmqPublisher(const ZmqPublisher&) = delete;
+    ZmqPublisher& operator=(const ZmqPublisher&) = delete;
+    ZmqPublisher(ZmqPublisher&&) = delete;
+    ZmqPublisher& operator=(ZmqPublisher&&) = delete;
+    /**
+     * @brief Construct a new Zmq Publisher object
+     *
+     * @param topic example: "tcp://127.0.0.1:5555"
+     */
+    explicit ZmqPublisher(const std::string& topic);
+
+    virtual ~ZmqPublisher();
+
+    int sendData(const void* data, size_t size);
 
 private:
     std::shared_ptr<zmq::context_t> m_context;

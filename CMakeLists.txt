@@ -13,6 +13,7 @@ set(CMAKE_INSTALL_PREFIX "${CMAKE_CURRENT_BINARY_DIR}/install")
 option(BUILD_PLATFORM_RK35XX "Build Platform RK35xx" OFF)
 option(BUILD_PLATFORM_JETSON "Build Platform Jetson" OFF)
 
+
 # 为不同的构建类型设置编译选项
 if(CMAKE_BUILD_TYPE MATCHES "Debug")
     # Debug 构建选项
@@ -31,6 +32,7 @@ endif()
 # 添加子目录
 add_subdirectory(bsp)
 add_subdirectory(bsp_cases)
+add_subdirectory(midware)
 
 
 # Clean target

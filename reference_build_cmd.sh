@@ -35,11 +35,14 @@ cd /opt/tools_conf/
 ls -A | grep '^\.' | xargs -I {} cp -r {} ~/
 source /opt/tools_conf/.bashrc
 
-cmake .. -DBSP_PKG_CONFIG_PATH=/opt/cross_env/x86/install/lib/pkgconfig:/opt/cross_env/x86/install/share/pkgconfig -DCMAKE_BUILD_TYPE=NoOptimize
+cmake .. -DBSP_PKG_CONFIG_PATH=/opt/cross_env/x86/install/lib/pkgconfig:/opt/cross_env/x86/install/share/pkgconfig \
+    -DCMAKE_BUILD_TYPE=NoOptimize
 
-cmake .. -DBSP_PKG_CONFIG_PATH=/opt/cross_env/x86/install/lib/pkgconfig:/opt/cross_env/x86/install/share/pkgconfig -DCMAKE_BUILD_TYPE=Debug
+cmake .. -DBSP_PKG_CONFIG_PATH=/opt/cross_env/x86/install/lib/pkgconfig:/opt/cross_env/x86/install/share/pkgconfig \
+    -DCMAKE_BUILD_TYPE=Debug
 
-cmake .. -DBSP_PKG_CONFIG_PATH=/opt/cross_env/x86/install/lib/pkgconfig:/opt/cross_env/x86/install/share/pkgconfig -DCMAKE_BUILD_TYPE=Release
+cmake .. -DBSP_PKG_CONFIG_PATH=/opt/cross_env/x86/install/lib/pkgconfig:/opt/cross_env/x86/install/share/pkgconfig \
+    -DCMAKE_BUILD_TYPE=Release
 
 
 make -j8 install
