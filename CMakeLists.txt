@@ -33,6 +33,7 @@ endif()
 add_subdirectory(bsp)
 add_subdirectory(bsp_cases)
 add_subdirectory(midware)
+add_subdirectory(midware_cases)
 
 
 # Clean target
