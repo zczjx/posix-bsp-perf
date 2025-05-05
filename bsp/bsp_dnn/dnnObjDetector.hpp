@@ -30,7 +30,7 @@ public:
      *
      * @return dnnObjDetector A unique pointer to the created dnn Detector instance.
      */
-    dnnObjDetector(const std::string& dnnType, const std::string& pluginPath, const std::string& labelTextPath);
+    dnnObjDetector(const std::string& dnnType, const std::string& pluginPath, const std::string& pluginType, const std::string& labelTextPath);
 
     virtual ~dnnObjDetector();
 
@@ -40,6 +40,16 @@ public:
     int getInputShape(IDnnEngine::dnnInputShape& shape)
     {
         return m_dnnEngine->getInputShape(shape);
+    }
+    
+    int getOutputAttr(std::vector<rknn_tensor_attr>& output_attrs)
+    {
+        return m_dnnEngine->getOutputAttr(output_attrs);
+    }
+
+    int getInputOutputNum(rknn_input_output_num& io_num)
+    {
+        return m_dnnEngine->getInputOutputNum(io_num);
     }
 
     int getOutputQuantParams(std::vector<int32_t>& zeroPoints, std::vector<float>& scales)

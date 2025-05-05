@@ -156,6 +156,17 @@ int rknn::getInputShape(dnnInputShape& shape)
     return 0;
 }
 
+int rknn::getOutputAttr(std::vector<rknn_tensor_attr>& output_attrs)
+{
+    output_attrs = m_params.m_output_attrs;
+    return 0;
+}
+
+int rknn::getInputOutputNum(rknn_input_output_num& io_num)
+{
+    io_num = m_params.m_io_num;
+}
+
 int rknn::getOutputQuantParams(std::vector<int32_t>& zeroPoints, std::vector<float>& scales)
 {
     for (int i = 0; i < m_params.m_io_num.n_output; i++)
