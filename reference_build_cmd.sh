@@ -35,6 +35,9 @@ cd /opt/tools_conf/
 ls -A | grep '^\.' | xargs -I {} cp -r {} ~/
 source /opt/tools_conf/.bashrc
 
+export LD_LIBRARY_PATH=/opt/cross_env/x86/install/lib:$LD_LIBRARY_PATH
+export PATH=/opt/cross_env/x86/install/bin:$PATH
+
 cmake .. -DBSP_PKG_CONFIG_PATH=/opt/cross_env/x86/install/lib/pkgconfig:/opt/cross_env/x86/install/share/pkgconfig \
     -DCMAKE_BUILD_TYPE=NoOptimize
 
