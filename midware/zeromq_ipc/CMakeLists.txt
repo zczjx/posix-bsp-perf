@@ -18,7 +18,7 @@ add_library(${PROJECT_NAME} SHARED ${SOURCES})
 
 set_target_properties(${PROJECT_NAME} PROPERTIES INSTALL_RPATH "$ORIGIN/../lib")
 
-target_link_libraries(${PROJECT_NAME} PRIVATE ${PC_ZMQ_LIBRARIES})
+target_link_libraries(${PROJECT_NAME} PRIVATE ${PC_ZMQ_LDFLAGS})
 
 target_include_directories(${PROJECT_NAME} PRIVATE
     $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/..>
