@@ -5,9 +5,10 @@
 #include <string>
 #include <vector>
 #include <memory>
+#include <atomic>
 #include "SensorClient.hpp"
-using json = nlohmann::json;
 
+using json = nlohmann::json;
 namespace apps
 {
 namespace data_recorder
@@ -21,7 +22,7 @@ public:
     void runLoop();
     void stop()
     {
-        m_stopSignal = true;
+        m_stopSignal.store(true);
     }
 
     ~SensorManager();

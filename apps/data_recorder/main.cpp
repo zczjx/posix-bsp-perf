@@ -21,13 +21,11 @@ int main(int argc, char* argv[])
 
     std::string output_file;
     parser.getOptionVal("--output", output_file);
-
-    std::ifstream rig_file(rig_file);
-    json rig_json;
+    json json_data{};
 
     try
     {
-        rig_json = json::parse(rig_file, nullptr, true, true);
+        json_data = json::parse(std::ifstream(rig_file));
     }
     catch (const json::parse_error& e)
     {
@@ -35,7 +33,7 @@ int main(int argc, char* argv[])
         return -1;
     }
 
-    CarlaVehicle vehicle(rig_json["rig"], output_file);
+    CarlaVehicle vehicle(json_data["rig"], output_file);
     vehicle.run();
 
     return 0;

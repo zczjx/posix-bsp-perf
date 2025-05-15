@@ -28,7 +28,7 @@ void SensorManager::runLoop()
 {
     size_t cycle_count = 0;
 
-    while (!m_stopSignal)
+    while (!m_stopSignal.load())
     {
         std::this_thread::sleep_for(std::chrono::milliseconds(1000));
         cycle_count++;
@@ -38,7 +38,7 @@ void SensorManager::runLoop()
 
 SensorManager::~SensorManager()
 {
-    m_stopSignal = true;
+    m_stopSignal.store(true);
     m_clients_list.clear();
 }
 
