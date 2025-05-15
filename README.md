@@ -1,6 +1,12 @@
 # posix-bsp-perf
 bsp perf test for posix OS(such as Linux/QNX/Rtthread)
 
+## Design doc
+
+You can follow the AI generated wiki to get the Structure of the project and ask AI the question and demo.
+
+[Design doc](https://deepwiki.com/zczjx/posix-bsp-perf)
+
 ## Build in Docker
 
 - Dockerfile.base is base image for building
