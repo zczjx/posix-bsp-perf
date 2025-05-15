@@ -21,7 +21,9 @@ public:
 
     int parseHeader(const uint8_t* data, size_t size, RtpHeader& header);
 
-    RtpPayload getPayload(const uint8_t* pkt_data, size_t pkt_size);
+    RtpPayload extractPayload(const uint8_t* pkt_data, size_t pkt_size);
+
+    int extractPayload(const uint8_t* pkt_data, size_t pkt_size, std::vector<uint8_t>& payload);
 
 };
 

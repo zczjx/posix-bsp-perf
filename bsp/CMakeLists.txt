@@ -6,7 +6,7 @@ option(BUILD_SRC_CORE "Build bsp/core" OFF)
 option(BUILD_SRC_PROFILER "Build profiler" ON)
 option(BUILD_SRC_BSP_SOCKETS "Build bsp_sockets" ON)
 option(BUILD_SRC_BSP_CONTAINER "Build bsp_container" ON)
-
+option(BUILD_SRC_PROTOCOL "Build protocol" ON)
 if(BUILD_PLATFORM_RK35XX)
     option(BUILD_SRC_BSP_DNN "Build bsp_dnn" ON)
     option(BUILD_SRC_BSP_G2D "Build bsp_g2d" ON)
@@ -52,4 +52,8 @@ endif()
 
 if(BUILD_SRC_BSP_CONTAINER)
     add_subdirectory(bsp_container)
+endif()
+
+if(BUILD_SRC_PROTOCOL)
+    add_subdirectory(protocol)
 endif()

@@ -28,7 +28,7 @@ int RtpReader::parseHeader(const uint8_t* data, size_t size, RtpHeader& header)
     return 0;
 }
 
-RtpPayload RtpReader::getPayload(const uint8_t* pkt_data, size_t pkt_size)
+RtpPayload RtpReader::extractPayload(const uint8_t* pkt_data, size_t pkt_size)
 {
     RtpPayload payload{nullptr, 0};
     if (pkt_size < sizeof(RtpHeader))
@@ -39,6 +39,17 @@ RtpPayload RtpReader::getPayload(const uint8_t* pkt_data, size_t pkt_size)
     payload.data = const_cast<uint8_t*>(pkt_data + sizeof(RtpHeader));
     payload.size = pkt_size - sizeof(RtpHeader);
     return payload;
+}
+
+int RtpReader::extractPayload(const uint8_t* pkt_data, size_t pkt_size, std::vector<uint8_t>& payload)
+{
+    if (pkt_size < sizeof(RtpHeader))
+    {
+        return -1;
+    }
+
+    payload.assign(pkt_data + sizeof(RtpHeader), pkt_data + pkt_size);
+    return 0;
 }
 
 } // namespace protocol

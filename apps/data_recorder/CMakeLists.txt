@@ -13,7 +13,7 @@ add_executable(${PROJECT_NAME}
 )
 
 target_include_directories(${PROJECT_NAME} PRIVATE ${CMAKE_SOURCE_DIR}/apps/data_recorder ${CMAKE_SOURCE_DIR}/midware ${CMAKE_SOURCE_DIR}/bsp ${CMAKE_SOURCE_DIR}/3rdparty)
-target_link_libraries(${PROJECT_NAME} PRIVATE  zeromq_ipc bsp_shared)
+target_link_libraries(${PROJECT_NAME} PRIVATE  zeromq_ipc bsp_shared bsp_protocol)
 set_target_properties(${PROJECT_NAME} PROPERTIES INSTALL_RPATH "$ORIGIN/../lib")
 
 install(TARGETS ${PROJECT_NAME}

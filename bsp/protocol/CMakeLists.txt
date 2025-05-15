@@ -2,7 +2,7 @@
 cmake_minimum_required(VERSION 3.12)
 
 # Set the project name
-project(bsp_shared VERSION 0.0.1 LANGUAGES CXX)
+project(bsp_protocol VERSION 0.0.1 LANGUAGES CXX)
 
 # Set the language version
 set(CMAKE_C_STANDARD 11)
@@ -11,39 +11,16 @@ set(CMAKE_CXX_STANDARD 17)
 
 message(STATUS "CMAKE_MODULE_PATH: ${CMAKE_MODULE_PATH}")
 
-# 检查是否已设置 MY_PKG_CONFIG_PATH 变量
-if(DEFINED BSP_PKG_CONFIG_PATH)
-    # 设置环境变量 PKG_CONFIG_PATH
-    set(ENV{PKG_CONFIG_PATH} ${BSP_PKG_CONFIG_PATH})
-    message(STATUS "ENV{PKG_CONFIG_PATH}: $ENV{PKG_CONFIG_PATH}")
-endif()
-
-find_package(PkgConfig REQUIRED)
-pkg_check_modules(PC_SPDLOG REQUIRED spdlog)
-pkg_check_modules(PC_CLI11 REQUIRED CLI11)
 
 # Add the source files
 set(SOURCES
-  ArgParser.hpp
-  BspLogger.hpp
-  BspLogger.cpp
-  BspFileUtils.hpp
-  BspFileUtils.cpp
+  RtpHeader.hpp
+  RtpReader.cpp
     # Add more source files here if needed
 )
 
 # Add the library target
 add_library(${PROJECT_NAME} SHARED ${SOURCES})
-
-if(PC_SPDLOG_LIBRARIES)
-  target_link_options(${PROJECT_NAME} PUBLIC ${PC_SPDLOG_LDFLAGS} "-Wl,-rpath,${PC_SPDLOG_LIBRARY_DIRS}")
-  # target_link_libraries(${PROJECT_NAME} PUBLIC ${PC_SPDLOG_LIBRARIES})
-  target_include_directories(${PROJECT_NAME} PUBLIC ${PC_SPDLOG_INCLUDE_DIRS})
-endif()
-
-if(PC_CLI11_CFLAGS)
-  target_include_directories(${PROJECT_NAME} PUBLIC ${PC_CLI11_INCLUDE_DIRS})
-endif()
 
 target_include_directories(${PROJECT_NAME} PRIVATE
     $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/..>
