@@ -28,11 +28,14 @@ void CameraClient::runLoop()
 {
     uint64_t frame_count = 0;
     std::cout << "runLoop" << std::endl;
+    std::vector<uint8_t> data;
 
     while(!m_stopSignal.load())
     {
-        std::this_thread::sleep_for(std::chrono::milliseconds(1));
         frame_count++;
+        receiveTpcData(data);
+        std::cout << "data size: " << data.size() << std::endl;
+        std::cout << "frame_count: " << frame_count << std::endl;
     }
     std::cout << "runLoop end" << std::endl;
 }

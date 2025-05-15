@@ -23,5 +23,10 @@ size_t SensorClient::recvIpcData(uint8_t* buffer, size_t bytes)
 {
     return m_input_sub->receiveData(buffer, bytes);
 }
+
+int SensorClient::receiveTpcData(std::vector<uint8_t>& data)
+{
+    return m_input_sub->receiveData(data);
+}
 } // namespace data_recorder
 } // namespace apps
