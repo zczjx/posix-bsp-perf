@@ -33,7 +33,7 @@ void CameraClient::runLoop()
     while(!m_stopSignal.load())
     {
         frame_count++;
-        receiveTpcData(data);
+        receiveTpcDataMore(data);
         std::cout << "data size: " << data.size() << std::endl;
         std::cout << "frame_count: " << frame_count << std::endl;
     }

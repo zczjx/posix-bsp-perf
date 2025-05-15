@@ -56,6 +56,21 @@ size_t ZmqSubscriber::receiveDataMore(uint8_t* buffer, size_t bytes)
     return bytes_index;
 }
 
+int ZmqSubscriber::receiveDataMore(std::vector<uint8_t>& data)
+{
+    zmq::message_t message;
+    m_socket->recv(&message);
+    data.assign(static_cast<uint8_t*>(message.data()), static_cast<uint8_t*>(message.data()) + message.size());
+
+    while(message.more())
+    {
+        m_socket->recv(&message);
+        data.insert(data.end(), static_cast<uint8_t*>(message.data()), static_cast<uint8_t*>(message.data()) + message.size());
+    }
+
+    return 0;
+}
+
 size_t ZmqSubscriber::receiveData(uint8_t* buffer, size_t bytes)
 {
     zmq::message_t message;

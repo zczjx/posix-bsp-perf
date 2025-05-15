@@ -9,9 +9,9 @@ SensorClient::SensorClient(const json& sensor_context)
 {
     m_type = sensor_context["type"];
     m_name = sensor_context["name"];
-    m_ipc_topic = sensor_context["ipc_topic"];
+    m_zmq_transport = sensor_context["zmq_transport"];
 
-    m_input_sub = std::make_shared<ZmqSubscriber>(m_ipc_topic);
+    m_input_sub = std::make_shared<ZmqSubscriber>(m_zmq_transport);
 }
 
 SensorClient::~SensorClient()
@@ -27,6 +27,11 @@ size_t SensorClient::recvIpcData(uint8_t* buffer, size_t bytes)
 int SensorClient::receiveTpcData(std::vector<uint8_t>& data)
 {
     return m_input_sub->receiveData(data);
+}
+
+int SensorClient::receiveTpcDataMore(std::vector<uint8_t>& data)
+{
+    return m_input_sub->receiveDataMore(data);
 }
 } // namespace data_recorder
 } // namespace apps

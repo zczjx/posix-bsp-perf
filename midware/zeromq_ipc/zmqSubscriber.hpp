@@ -54,6 +54,13 @@ public:
      */
     size_t receiveDataMore(uint8_t* buffer, size_t bytes);
 
+    /**
+     * @brief Receive data from the topic with more flag
+     *
+     * @param data
+     * @return int
+     */
+    int receiveDataMore(std::vector<uint8_t>& data);
 
 private:
     std::shared_ptr<zmq::context_t> m_context;

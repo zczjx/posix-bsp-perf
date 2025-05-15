@@ -29,6 +29,8 @@ protected:
 
     int receiveTpcData(std::vector<uint8_t>& data);
 
+    int receiveTpcDataMore(std::vector<uint8_t>& data);
+
     std::shared_ptr<ZmqSubscriber> getInputSub() const
     {
         return m_input_sub;
@@ -38,7 +40,7 @@ private:
     std::shared_ptr<ZmqSubscriber> m_input_sub;
     std::string m_type;
     std::string m_name;
-    std::string m_ipc_topic;
+    std::string m_zmq_transport;
 };
 
 
