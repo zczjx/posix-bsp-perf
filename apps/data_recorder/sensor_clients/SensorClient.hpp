@@ -27,9 +27,13 @@ public:
 protected:
     size_t recvIpcData(uint8_t* buffer, size_t bytes);
 
-    int receiveTpcData(std::vector<uint8_t>& data);
+    size_t recvIpcData(std::shared_ptr<uint8_t[]> buffer, size_t bytes);
 
-    int receiveTpcDataMore(std::vector<uint8_t>& data);
+    size_t recvIpcDataMore(std::shared_ptr<uint8_t[]> buffer, size_t bytes);
+
+    int recvIpcData(std::vector<uint8_t>& data);
+
+    int recvIpcDataMore(std::vector<uint8_t>& data);
 
     std::shared_ptr<ZmqSubscriber> getInputSub() const
     {

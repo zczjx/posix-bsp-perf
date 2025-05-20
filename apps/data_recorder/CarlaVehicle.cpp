@@ -10,7 +10,7 @@ CarlaVehicle::CarlaVehicle(const json& rig_json, const std::string& output_file)
     : m_rig_json(rig_json),
     m_output_file(output_file)
 {
-    m_sensor_manager = std::make_unique<SensorManager>(m_rig_json["sensors"]);
+    m_sensor_manager = std::make_unique<SensorManager>(m_rig_json["sensors"], m_rig_json["vehicle"]);
 }
 
 void CarlaVehicle::run()

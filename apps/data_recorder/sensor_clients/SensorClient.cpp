@@ -24,12 +24,23 @@ size_t SensorClient::recvIpcData(uint8_t* buffer, size_t bytes)
     return m_input_sub->receiveData(buffer, bytes);
 }
 
-int SensorClient::receiveTpcData(std::vector<uint8_t>& data)
+
+size_t SensorClient::recvIpcData(std::shared_ptr<uint8_t[]> buffer, size_t bytes)
+{
+    return m_input_sub->receiveData(buffer, bytes);
+}
+
+size_t SensorClient::recvIpcDataMore(std::shared_ptr<uint8_t[]> buffer, size_t bytes)
+{
+    return m_input_sub->receiveDataMore(buffer, bytes);
+}
+
+int SensorClient::recvIpcData(std::vector<uint8_t>& data)
 {
     return m_input_sub->receiveData(data);
 }
 
-int SensorClient::receiveTpcDataMore(std::vector<uint8_t>& data)
+int SensorClient::recvIpcDataMore(std::vector<uint8_t>& data)
 {
     return m_input_sub->receiveDataMore(data);
 }

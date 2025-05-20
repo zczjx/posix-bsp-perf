@@ -1,5 +1,5 @@
-#ifndef RKMPPDEC_HPP
-#define RKMPPDEC_HPP
+#ifndef __RKMPP_DEC_HPP__
+#define __RKMPP_DEC_HPP__
 
 #include <bsp_codec/IDecoder.hpp>
 #include <rockchip/rk_mpi.h>

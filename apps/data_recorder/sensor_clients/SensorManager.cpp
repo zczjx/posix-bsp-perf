@@ -10,7 +10,7 @@ namespace apps
 namespace data_recorder
 {
 
-SensorManager::SensorManager(const json& sensors_array)
+SensorManager::SensorManager(const json& sensors_array, const json& vehicle_info)
 {
     for (const auto& sensor: sensors_array)
     {
@@ -19,7 +19,7 @@ SensorManager::SensorManager(const json& sensors_array)
         if (sensor_type.compare("camera") == 0)
         {
             std::cout << "Camera client created" << std::endl;
-            m_clients_list.push_back(std::make_unique<CameraClient>(sensor));
+            m_clients_list.push_back(std::make_unique<CameraClient>(sensor, vehicle_info));
         }
     }
 }

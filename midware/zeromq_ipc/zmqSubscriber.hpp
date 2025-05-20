@@ -46,6 +46,11 @@ public:
      */
     size_t receiveData(uint8_t* buffer, size_t bytes);
 
+    size_t receiveData(std::shared_ptr<uint8_t[]> buffer, size_t bytes)
+    {
+        return receiveData(buffer.get(), bytes);
+    }
+
     /**
      * @brief Receive data from the topic with more flag
      *
@@ -53,6 +58,11 @@ public:
      * @return total number of bytes received
      */
     size_t receiveDataMore(uint8_t* buffer, size_t bytes);
+
+    size_t receiveDataMore(std::shared_ptr<uint8_t[]> buffer, size_t bytes)
+    {
+        return receiveDataMore(buffer.get(), bytes);
+    }
 
     /**
      * @brief Receive data from the topic with more flag

@@ -20,8 +20,8 @@ int RtpReader::parseHeader(const uint8_t* data, size_t size, RtpHeader& header)
         return -1;
     }
 
-    header.vpxcc = data[0];
-    header.mpt = data[1];
+    header.start_of_header = data[0];
+    header.payload_type = data[1];
     header.sequence_number = (data[2] << 8) | data[3];
     header.timestamp = (data[4] << 24) | (data[5] << 16) | (data[6] << 8) | data[7];
     header.ssrc = (data[8] << 24) | (data[9] << 16) | (data[10] << 8) | data[11];
@@ -31,6 +31,7 @@ int RtpReader::parseHeader(const uint8_t* data, size_t size, RtpHeader& header)
 RtpPayload RtpReader::extractPayload(const uint8_t* pkt_data, size_t pkt_size)
 {
     RtpPayload payload{nullptr, 0};
+
     if (pkt_size < sizeof(RtpHeader))
     {
         return payload;

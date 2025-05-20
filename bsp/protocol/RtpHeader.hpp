@@ -10,8 +10,8 @@ namespace protocol
 
 struct RtpHeader
 {
-    uint8_t vpxcc;
-    uint8_t mpt;
+    uint8_t start_of_header;
+    uint8_t payload_type;
     uint16_t sequence_number;
     uint32_t timestamp;
     uint32_t ssrc;

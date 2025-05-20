@@ -10,7 +10,8 @@
                 "actuation": {
                     "maxSteeringWheelAngle": 8.290313720703125
                 }
-            }
+            },
+            "target_platform": "rk3588"
         },
         "sensors":
         [
