@@ -18,13 +18,15 @@ CameraClient::CameraClient(const json& sensor_context, const json& vehicle_info)
     };
     m_video_dec_helper->setupAndStartDecoder(cfg);
     m_main_thread = std::make_unique<std::thread>([this]() {runLoop();});
+    m_consumer_thread = std::make_unique<std::thread>([this]() {consumerLoop();});
 }
 
 CameraClient::~CameraClient()
 {
-    if (m_main_thread->joinable())
+    if (m_main_thread->joinable() || m_consumer_thread->joinable())
     {
         m_stopSignal.store(true);
+        m_consumer_thread->join();
         m_main_thread->join();
     }
 }
@@ -32,6 +34,22 @@ CameraClient::~CameraClient()
 std::shared_ptr<DecodeOutFrame> CameraClient::getCameraVideoFrame()
 {
     return m_video_dec_helper->getDecodedFrame();
+}
+
+void CameraClient::consumerLoop()
+{
+    size_t frame_count = 0;
+    while (!m_stopSignal.load())
+    {
+        std::shared_ptr<DecodeOutFrame> frame = getCameraVideoFrame();
+        if (frame != nullptr)
+        {
+            frame_count++;
+            std::cout << "CameraClient::consumerLoop() get a frame, frame_count: " << frame_count << std::endl;
+            frame.reset();
+        }
+    }
+    std::cout << "CameraClient::consumerLoop() end, frame_count: " << frame_count << std::endl;
 }
 
 void CameraClient::runLoop()
@@ -79,6 +97,7 @@ void CameraClient::runLoop()
         }
         rtp_buffer->payload_valid = true;
         m_video_dec_helper->sendToDecoder(rtp_buffer);
+        rtp_buffer.reset();
         frame_count++;
         std::cout << "frame_count: " << frame_count << std::endl;
     }

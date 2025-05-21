@@ -27,16 +27,25 @@ VideoDecHelper::VideoDecHelper(const std::string& decoder_name)
 
 int VideoDecHelper::setupAndStartDecoder(DecodeConfig& cfg)
 {
+    auto decoderCallback = [this](std::any userdata, std::shared_ptr<DecodeOutFrame> frame)
+    {
+        std::lock_guard<std::mutex> lock(m_decoded_frame_queue_mutex);
+        m_decoded_frame_queue.push(frame);
+
+        while (m_decoded_frame_queue.size() > m_reserved_frame_num)
+        {
+            std::cerr << "VideoDecHelper::decoderCallback() drop the oldest frame" << std::endl;
+            m_decoded_frame_queue.pop();
+        }
+    };
+
     m_decoder->setup(cfg);
+
     m_decoder->setDecodeReadyCallback(decoderCallback, nullptr);
     m_dec_thread = std::make_unique<std::thread>([this]() {decoderLoop();});
     return 0;
 }
 
-void VideoDecHelper::decoderCallback(std::any userdata, std::shared_ptr<DecodeOutFrame> frame)
-{
-    auto video_dec_helper = std::any_cast<VideoDecHelper*>(userdata);
-}
 
 void VideoDecHelper::decoderLoop()
 {
@@ -64,7 +73,7 @@ void VideoDecHelper::decoderLoop()
             };
             m_decoder->decode(dec_pkt);
             releaseRtpVideoBuffer(rtp_pkt);
-            rtp_pkt = nullptr;
+            rtp_pkt.reset();
         }
 
     }
@@ -75,12 +84,13 @@ int VideoDecHelper::sendToDecoder(std::shared_ptr<VideoDecHelper::RtpBuffer> rtp
     std::lock_guard<std::mutex> lock(m_encode_pkt_queue_mutex);
     m_encode_pkt_queue.push(rtp_pkt);
 
-    if (m_encode_pkt_queue.size() > m_reserved_encode_pkt_num)
+    while (m_encode_pkt_queue.size() > m_reserved_encode_pkt_num)
     {
         std::cerr << "VideoDecHelper::sendToDecoder() drop the oldest rtp packet" << std::endl;
         auto oldest_pkt = m_encode_pkt_queue.front();
-        m_encode_pkt_queue.pop();
         releaseRtpVideoBuffer(oldest_pkt);
+        m_encode_pkt_queue.pop();
+        oldest_pkt.reset();
     }
     return 0;
 }
@@ -129,6 +139,12 @@ int VideoDecHelper::releaseRtpVideoBuffer(std::shared_ptr<RtpBuffer> buffer)
     buffer->valid_data_bytes = 0;
     buffer->payload_valid = false;
     m_free_buffer_sort_queue.push_back(buffer);
+
+    while (m_free_buffer_sort_queue.size() > m_free_buffer_sort_queue_size)
+    {
+        m_free_buffer_sort_queue.erase(m_free_buffer_sort_queue.begin());
+    }
+
     std::sort(m_free_buffer_sort_queue.begin(), m_free_buffer_sort_queue.end(),
         [](const std::shared_ptr<RtpBuffer> a, const std::shared_ptr<RtpBuffer> b)
     {

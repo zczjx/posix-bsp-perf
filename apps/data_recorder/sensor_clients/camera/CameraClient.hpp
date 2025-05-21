@@ -30,6 +30,7 @@ public:
 private:
 
     void runLoop() override;
+    void consumerLoop();
 
 private:
     int m_xres;
@@ -41,6 +42,8 @@ private:
     RtpHeader m_rtp_info{};
     std::mutex m_rtp_info_mutex;
     std::unique_ptr<VideoDecHelper> m_video_dec_helper;
+
+    std::unique_ptr<std::thread> m_consumer_thread{nullptr};
 };
 
 } // namespace data_recorder
