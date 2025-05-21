@@ -11,7 +11,15 @@ CameraClient::CameraClient(const json& sensor_context, const json& vehicle_info)
     m_xres = sensor_context["image_size_x"];
     m_yres = sensor_context["image_size_y"];
     m_raw_pixel_format = sensor_context["raw_pixel_format"];
-    m_video_dec_helper = std::make_unique<VideoDecHelper>(vehicle_info["target_platform"]);
+    m_target_platform = vehicle_info["target_platform"];
+    if (m_target_platform.compare("rk3588") == 0)
+    {
+        m_video_dec_helper = std::make_unique<VideoDecHelper>("rkmpp");
+    }
+    else
+    {
+        m_video_dec_helper = std::make_unique<VideoDecHelper>("ffmpeg");
+    }
     DecodeConfig cfg = {
         .encoding = "h264",
         .fps = 30,

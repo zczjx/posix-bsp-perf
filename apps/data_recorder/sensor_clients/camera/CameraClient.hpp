@@ -11,7 +11,8 @@
 #include <thread>
 #include <atomic>
 #include <mutex>
-#include <VideoDecHelper.hpp>
+#include "VideoDecHelper.hpp"
+
 using namespace bsp_perf::protocol;
 namespace apps
 {
@@ -36,6 +37,7 @@ private:
     int m_xres;
     int m_yres;
     std::string m_raw_pixel_format;
+    std::string m_target_platform;
     std::unique_ptr<std::thread> m_main_thread{nullptr};
     std::atomic<bool> m_stopSignal{false};
     RtpReader m_rtp_reader;

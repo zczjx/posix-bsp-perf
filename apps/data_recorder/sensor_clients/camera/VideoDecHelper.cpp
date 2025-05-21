@@ -30,6 +30,8 @@ int VideoDecHelper::setupAndStartDecoder(DecodeConfig& cfg)
     auto decoderCallback = [this](std::any userdata, std::shared_ptr<DecodeOutFrame> frame)
     {
         std::lock_guard<std::mutex> lock(m_decoded_frame_queue_mutex);
+        std::cout << "VideoDecHelper::decoderCallback() frame->width: " << frame->width << " frame->height: " << frame->height << std::endl;
+        std::cout << "VideoDecHelper::decoderCallback() frame->format: " << frame->format << std::endl;
         m_decoded_frame_queue.push(frame);
 
         while (m_decoded_frame_queue.size() > m_reserved_frame_num)
