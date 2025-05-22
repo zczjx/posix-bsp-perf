@@ -9,7 +9,8 @@
             "image_size_y": 720,
             "fov": 90.0,
             "pixel_format": "YUV420SP",
-            "zmq_ipc": "ipc:///tmp/view_camera.raw"
+            "zmq_data_ipc": "ipc:///tmp/view_camera.data",
+            "zmq_info_ipc": "ipc:///tmp/view_camera.info"
         }
     ]
 }
