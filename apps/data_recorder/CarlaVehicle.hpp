@@ -19,7 +19,7 @@ namespace data_recorder
 class CarlaVehicle
 {
 public:
-    explicit CarlaVehicle(const json& rig_json, const std::string& output_file);
+    explicit CarlaVehicle(const json& rig_json, const std::string& output_file, const json& sensor_ipc);
 
     void run();
 
@@ -34,6 +34,7 @@ public:
 private:
     json m_rig_json;
     std::string m_output_file;
+    json m_sensor_ipc;
     std::unique_ptr<SensorManager> m_sensor_manager;
     std::atomic<bool> m_stopSignal{false};
 };

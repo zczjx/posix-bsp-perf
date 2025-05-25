@@ -22,7 +22,7 @@ namespace data_recorder
 class CameraClient : public SensorClient
 {
 public:
-    explicit CameraClient(const json& sensor_context, const json& vehicle_info);
+    explicit CameraClient(const json& sensor_context, const json& vehicle_info, const json& sensor_ipc);
 
     virtual ~CameraClient();
 

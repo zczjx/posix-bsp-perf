@@ -1,5 +1,6 @@
 #include "rkmppCodecHeader.hpp"
 #include "rkmppDec.hpp"
+#include <bsp_g2d/BytesPerPixel.hpp>
 #include <iostream>
 #include <sys/time.h>
 #include <unistd.h>
@@ -259,7 +260,7 @@ int rkmppDec::decode(DecodePacket& pkt_data)
                     if (m_callback != nullptr)
                     {
                         MppFrameFormat format = mpp_frame_get_fmt(m_frame);
-                        char *data_vir =(char *) mpp_buffer_get_ptr(mpp_frame_get_buffer(m_frame));
+                        uint8_t *data_vir =(uint8_t *) mpp_buffer_get_ptr(mpp_frame_get_buffer(m_frame));
                         int fd = mpp_buffer_get_fd(mpp_frame_get_buffer(m_frame));
                         std::shared_ptr<DecodeOutFrame> frame = std::make_shared<DecodeOutFrame>();
                         frame->width = hor_width;
@@ -268,6 +269,7 @@ int rkmppDec::decode(DecodePacket& pkt_data)
                         frame->height_stride = ver_stride;
                         frame->format = rkmppCodecHeader::getInstance().mppFrameFormatToStr(format);
                         frame->virt_addr = data_vir;
+                        frame->valid_data_size = frame->width * frame->height * bsp_g2d::BytesPerPixel::getInstance().getBytesPerPixel(frame->format);
                         frame->fd = fd;
                         m_callback(m_userdata, frame);
                     }

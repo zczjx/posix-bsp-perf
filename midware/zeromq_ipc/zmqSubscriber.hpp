@@ -72,6 +72,11 @@ public:
      */
     int receiveDataMore(std::vector<uint8_t>& data);
 
+    const std::string& getTopic() const
+    {
+        return m_topic;
+    }
+
 private:
     std::shared_ptr<zmq::context_t> m_context;
     std::shared_ptr<zmq::socket_t> m_socket;

@@ -69,7 +69,8 @@ struct DecodeOutFrame
     int width_stride;
     int height_stride;
     std::string format{"YUV420SP"};
-    char *virt_addr{nullptr};
+    uint8_t *virt_addr{nullptr};
+    size_t valid_data_size{0};
     int fd;
     int eos_flag;
 };

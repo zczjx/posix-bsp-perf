@@ -5,8 +5,8 @@ namespace apps
 namespace data_recorder
 {
 
-CameraClient::CameraClient(const json& sensor_context, const json& vehicle_info)
-    : SensorClient(sensor_context)
+CameraClient::CameraClient(const json& sensor_context, const json& vehicle_info, const json& sensor_ipc)
+    : SensorClient(sensor_context, sensor_ipc)
 {
     m_xres = sensor_context["image_size_x"];
     m_yres = sensor_context["image_size_y"];
@@ -54,6 +54,13 @@ void CameraClient::consumerLoop()
         {
             frame_count++;
             std::cout << "CameraClient::consumerLoop() get a frame, frame_count: " << frame_count << std::endl;
+            std::cout << "frame->width: " << frame->width << std::endl;
+            std::cout << "frame->height: " << frame->height << std::endl;
+            std::cout << "frame->width_stride: " << frame->width_stride << std::endl;
+            std::cout << "frame->height_stride: " << frame->height_stride << std::endl;
+            std::cout << "frame->format: " << frame->format << std::endl;
+            std::cout << "frame->valid_data_size: " << frame->valid_data_size << std::endl;
+            pubSensorData(frame->virt_addr, frame->valid_data_size);
             frame.reset();
         }
     }

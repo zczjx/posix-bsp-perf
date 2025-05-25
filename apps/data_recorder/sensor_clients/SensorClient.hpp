@@ -7,7 +7,7 @@
 #include <vector>
 #include <memory>
 #include <zeromq_ipc/zmqSubscriber.hpp>
-
+#include <zeromq_ipc/zmqPublisher.hpp>
 using json = nlohmann::json;
 using namespace midware::zeromq_ipc;
 
@@ -19,7 +19,7 @@ namespace data_recorder
 class SensorClient
 {
 public:
-    explicit SensorClient(const json& sensor_context);
+    explicit SensorClient(const json& sensor_context, const json& sensor_ipc);
     virtual ~SensorClient();
 
     virtual void runLoop() = 0;
@@ -35,9 +35,27 @@ protected:
 
     int recvIpcDataMore(std::vector<uint8_t>& data);
 
+    size_t pubSensorData(const uint8_t* data, size_t bytes);
+
+    size_t pubSensorData(std::shared_ptr<uint8_t[]> buffer, size_t bytes);
+
+    size_t pubSensorInfo(const uint8_t* data, size_t bytes);
+
+    size_t pubSensorInfo(std::shared_ptr<uint8_t[]> buffer, size_t bytes);
+
     std::shared_ptr<ZmqSubscriber> getInputSub() const
     {
         return m_input_sub;
+    }
+
+    std::shared_ptr<ZmqPublisher> getZmqPubData() const
+    {
+        return m_zmq_pub_data;
+    }
+
+    std::shared_ptr<ZmqPublisher> getZmqPubInfo() const
+    {
+        return m_zmq_pub_info;
     }
 
 private:
@@ -45,6 +63,10 @@ private:
     std::string m_type;
     std::string m_name;
     std::string m_zmq_transport;
+
+    std::shared_ptr<ZmqPublisher> m_zmq_pub_data;
+    std::shared_ptr<ZmqPublisher> m_zmq_pub_info;
+
 };
 
 
