@@ -37,17 +37,31 @@ add_custom_command(
     COMMENT "Running moc on VideoFrameWidget.h"
 )
 
+add_custom_command(
+    OUTPUT moc_FrameWidget.cpp
+    COMMAND ${MOC_EXEC} ${CMAKE_CURRENT_SOURCE_DIR}/FrameWidget.h -o moc_FrameWidget.cpp
+    DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/FrameWidget.h
+    COMMENT "Running moc on FrameWidget.h"
+)
+
 add_custom_target(qt_generated_files DEPENDS
     ui_CameraView.h
     moc_VideoFrameWidget.cpp
+    moc_FrameWidget.cpp
 )
 
 set(PROJECT_SOURCES
         VideoFrameWidget.h
         VideoFrameWidget.cpp
+        FrameWidget.h
+        GuiClient.hpp
+        GuiClient.cpp
+        DataSource.hpp
+        DataSource.cpp
         main.cpp
         ui_CameraView.h
         moc_VideoFrameWidget.cpp
+        moc_FrameWidget.cpp
 )
 
 add_executable(${PROJECT_NAME} ${PROJECT_SOURCES})
@@ -63,9 +77,17 @@ set_target_properties(${PROJECT_NAME} PROPERTIES
 
 target_link_libraries(${PROJECT_NAME} PUBLIC
     ${QT5_WIDGETS_LDFLAGS}
+    zeromq_ipc
+    bsp_shared
+    bsp_g2d
 )
 
-target_include_directories(${PROJECT_NAME} PUBLIC ${QT5_WIDGETS_INCLUDE_DIRS})
+target_include_directories(${PROJECT_NAME} PUBLIC
+    ${QT5_WIDGETS_INCLUDE_DIRS}
+    ${CMAKE_SOURCE_DIR}/midware
+    ${CMAKE_SOURCE_DIR}/bsp
+    ${CMAKE_SOURCE_DIR}/3rdparty
+)
 
 install(TARGETS ${PROJECT_NAME}
   RUNTIME DESTINATION bin

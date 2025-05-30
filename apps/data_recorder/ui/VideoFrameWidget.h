@@ -16,6 +16,9 @@ public:
     VideoFrameWidget(QWidget* parent = nullptr);
     ~VideoFrameWidget();
 
+    void setFrame(const QImage& image);
+    void setFrame(const uint8_t* data, int width, int height);
+
 
 private:
     Ui::VideoFrameWidget *ui;

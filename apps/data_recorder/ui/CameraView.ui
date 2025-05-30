@@ -11,11 +11,11 @@
    </rect>
   </property>
   <property name="windowTitle">
-   <string>BGRA 视频帧显示</string>
+   <string>RGB888 视频帧显示</string>
   </property>
   <layout class="QVBoxLayout" name="verticalLayout">
    <item>
-    <widget class="QWidget" name="frameWidget" native="true">
+    <widget class="FrameWidget" name="frameWidget" native="true">
      <property name="minimumSize">
       <size>
        <width>320</width>
@@ -29,6 +29,14 @@
    </item>
   </layout>
  </widget>
+ <customwidgets>
+  <customwidget>
+   <class>FrameWidget</class>
+   <extends>QWidget</extends>
+   <header>FrameWidget.h</header>
+   <container>1</container>
+  </customwidget>
+ </customwidgets>
  <resources/>
  <connections/>
 </ui>

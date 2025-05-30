@@ -11,3 +11,13 @@ VideoFrameWidget::~VideoFrameWidget()
 {
     delete ui;
 }
+
+void VideoFrameWidget::setFrame(const QImage& image)
+{
+    ui->frameWidget->setFrame(image);
+}
+
+void VideoFrameWidget::setFrame(const uint8_t* data, int width, int height)
+{
+    ui->frameWidget->setFrame(data, width, height);
+}
