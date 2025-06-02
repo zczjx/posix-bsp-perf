@@ -24,7 +24,7 @@ CameraClient::CameraClient(const json& sensor_context, const json& vehicle_info,
     }
     DecodeConfig cfg = {
         .encoding = "h264",
-        .fps = 65,
+        .fps = 75,
     };
     m_video_dec_helper->setupAndStartDecoder(cfg);
     m_main_thread = std::make_unique<std::thread>([this]() {runLoop();});
