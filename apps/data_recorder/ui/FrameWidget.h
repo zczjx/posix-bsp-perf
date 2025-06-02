@@ -3,7 +3,7 @@
 #include <QWidget>
 #include <QImage>
 #include <QMutex>
-#include <QPainter>
+#include <QElapsedTimer>
 
 class FrameWidget : public QWidget
 {
@@ -13,48 +13,21 @@ public:
         : QWidget(parent)
     {}
 
-    void setFrame(const QImage& img)
-    {
-        QMutexLocker locker(&m_mutex);
-        m_img = img.copy();
-        update();
-    }
+    void setFrame(const QImage& img);
 
-    void setFrame(const uint8_t* data, int width, int height)
-    {
-        QMutexLocker locker(&m_mutex);
-        m_img = QImage(data, width, height, QImage::Format_RGB888).copy();
-        update();
-    }
+    void setFrame(const uint8_t* data, int width, int height);
 
 protected:
-    void paintEvent(QPaintEvent* event) override
-    {
-        Q_UNUSED(event);
-        QPainter painter(this);
-        QMutexLocker locker(&m_mutex);
-
-        if (!m_img.isNull())
-        {
-            QSize widgetSize = size();
-            QSize imgSize = m_img.size();
-            imgSize.scale(widgetSize, Qt::KeepAspectRatio);
-
-            QPoint topLeft((widgetSize.width() - imgSize.width()) / 2,
-                           (widgetSize.height() - imgSize.height()) / 2);
-
-            painter.fillRect(rect(), Qt::black);
-            painter.drawImage(QRect(topLeft, imgSize), m_img);
-        }
-        else
-        {
-            painter.fillRect(rect(), Qt::black);
-        }
-    }
+    void paintEvent(QPaintEvent* event) override;
 
 private:
     QImage m_img;
     QMutex m_mutex;
+    bool m_img_initialized{false};
+
+    int m_frame_count{0};
+    QElapsedTimer m_timer;
+    bool m_timer_started{false};
 };
 
 #endif // FRAMEWIDGET_H

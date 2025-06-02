@@ -7,6 +7,8 @@ namespace apps
 {
 namespace data_recorder
 {
+namespace ui
+{
 
 GuiClient::GuiClient(int argc, char *argv[], const json& gui_ipc, const std::string& g2dPlatform):
     m_app(std::make_unique<QApplication>(argc, argv)),
@@ -70,6 +72,6 @@ GuiClient::~GuiClient()
     m_app->quit();
 }
 
-
+} // namespace ui
 } // namespace data_recorder
 } // namespace apps

@@ -2,6 +2,8 @@
 #define __VIDEOFRAMEWIDGET_H__
 
 #include <QWidget>
+#include <memory>
+
 
 QT_BEGIN_NAMESPACE
 namespace Ui {
@@ -21,7 +23,8 @@ public:
 
 
 private:
-    Ui::VideoFrameWidget *ui;
+    std::unique_ptr<Ui::VideoFrameWidget> m_ui;
 };
+
 
 #endif // VIDEOFRAMEWIDGET_H

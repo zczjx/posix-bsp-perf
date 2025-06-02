@@ -54,6 +54,7 @@ set(PROJECT_SOURCES
         VideoFrameWidget.h
         VideoFrameWidget.cpp
         FrameWidget.h
+        FrameWidget.cpp
         GuiClient.hpp
         GuiClient.cpp
         DataSource.hpp

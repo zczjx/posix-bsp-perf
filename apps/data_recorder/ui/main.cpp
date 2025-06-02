@@ -6,7 +6,7 @@
 
 #include "GuiClient.hpp"
 
-using namespace apps::data_recorder;
+using namespace apps::data_recorder::ui;
 using namespace bsp_perf::shared;
 using json = nlohmann::json;
 

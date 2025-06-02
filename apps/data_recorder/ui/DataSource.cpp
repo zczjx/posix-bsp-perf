@@ -7,6 +7,8 @@ namespace apps
 {
 namespace data_recorder
 {
+namespace ui
+{
 
 DataSource::DataSource(const json& data_source_config, const std::string& g2dPlatform):
     m_g2d{IGraphics2D::create(g2dPlatform)}
@@ -114,12 +116,10 @@ void DataSource::runLoop()
                 m_flip_frame_callback(m_in_buffer.data(), m_image_size_x, m_image_size_y);
             }
         }
-
-
-        std::cout << "DataSource::runLoop() " << m_name << std::endl;
     }
 
 }
 
+} // namespace ui
 } // namespace data_recorder
 } // apps

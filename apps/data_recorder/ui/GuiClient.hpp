@@ -20,6 +20,8 @@ namespace apps
 {
 namespace data_recorder
 {
+namespace ui
+{
 
 class GuiClient
 {
@@ -41,10 +43,11 @@ private:
     std::unordered_map<std::string, std::shared_ptr<DataSource>> m_data_sources;
     std::vector<std::thread> m_data_source_threads;
 
-
 };
 
+} // namespace ui
 } // namespace data_recorder
 } // namespace apps
+
 
 #endif // __GUI_CLIENT_HPP__

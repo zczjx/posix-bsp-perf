@@ -17,6 +17,8 @@ namespace apps
 {
 namespace data_recorder
 {
+namespace ui
+{
 
 class DataSource
 {
@@ -81,7 +83,8 @@ private:
 
 };
 
-}
-}
+} // namespace ui
+} // namespace data_recorder
+} // namespace apps
 
 #endif // __DATA_SOURCE_HPP__
