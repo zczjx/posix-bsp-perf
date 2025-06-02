@@ -55,15 +55,15 @@ private:
     // largest raw_data_bytes at the end
     std::vector<std::shared_ptr<RtpBuffer>> m_free_buffer_sort_queue;
     std::mutex m_free_buffer_sort_queue_mutex;
-    const size_t m_free_buffer_sort_queue_size{10};
+    const size_t m_free_buffer_sort_queue_size{30};
 
     std::queue<std::shared_ptr<DecodeOutFrame>> m_decoded_frame_queue;
     std::mutex m_decoded_frame_queue_mutex;
-    const size_t m_reserved_frame_num{10};
+    const size_t m_reserved_frame_num{30};
 
     std::queue<std::shared_ptr<RtpBuffer>> m_encode_pkt_queue;
     std::mutex m_encode_pkt_queue_mutex;
-    const size_t m_reserved_encode_pkt_num{10};
+    const size_t m_reserved_encode_pkt_num{30};
 };
 
 } // namespace data_recorder

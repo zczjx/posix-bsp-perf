@@ -1,5 +1,7 @@
 #include "CameraClient.hpp"
 #include <iostream>
+#include <chrono>
+
 namespace apps
 {
 namespace data_recorder
@@ -22,7 +24,7 @@ CameraClient::CameraClient(const json& sensor_context, const json& vehicle_info,
     }
     DecodeConfig cfg = {
         .encoding = "h264",
-        .fps = 30,
+        .fps = 65,
     };
     m_video_dec_helper->setupAndStartDecoder(cfg);
     m_main_thread = std::make_unique<std::thread>([this]() {runLoop();});
@@ -47,19 +49,21 @@ std::shared_ptr<DecodeOutFrame> CameraClient::getCameraVideoFrame()
 void CameraClient::consumerLoop()
 {
     size_t frame_count = 0;
+    auto last_time = std::chrono::steady_clock::now();
     while (!m_stopSignal.load())
     {
         std::shared_ptr<DecodeOutFrame> frame = getCameraVideoFrame();
         if (frame != nullptr)
         {
             frame_count++;
-            std::cout << "CameraClient::consumerLoop() get a frame, frame_count: " << frame_count << std::endl;
-            std::cout << "frame->width: " << frame->width << std::endl;
-            std::cout << "frame->height: " << frame->height << std::endl;
-            std::cout << "frame->width_stride: " << frame->width_stride << std::endl;
-            std::cout << "frame->height_stride: " << frame->height_stride << std::endl;
-            std::cout << "frame->format: " << frame->format << std::endl;
-            std::cout << "frame->valid_data_size: " << frame->valid_data_size << std::endl;
+            auto now = std::chrono::steady_clock::now();
+            auto elapsed = std::chrono::duration_cast<std::chrono::seconds>(now - last_time).count();
+            if (elapsed >= 1)
+            {
+                std::cout << "CameraClient::Decoding FPS: " << frame_count << std::endl;
+                frame_count = 0;
+                last_time = now;
+            }
             pubSensorData(frame->virt_addr, frame->valid_data_size);
             frame.reset();
         }
@@ -69,11 +73,11 @@ void CameraClient::consumerLoop()
 
 void CameraClient::runLoop()
 {
-    uint64_t frame_count = 0;
+    size_t frame_count = 0;
     std::cout << "runLoop" << std::endl;
     size_t min_buffer_size = 1024 * 1024;
     RtpHeader header;
-
+    auto last_time = std::chrono::steady_clock::now();
     while(!m_stopSignal.load())
     {
         std::shared_ptr<VideoDecHelper::RtpBuffer> rtp_buffer = m_video_dec_helper->getRtpVideoBuffer(min_buffer_size) ;
@@ -97,12 +101,6 @@ void CameraClient::runLoop()
             std::lock_guard<std::mutex> lock(m_rtp_info_mutex);
             m_rtp_info = header;
         }
-        std::cout << "m_rtp_info.start_of_header: 0x" << std::hex << static_cast<int>(m_rtp_info.start_of_header) << std::endl;
-        std::cout << "m_rtp_info.payload_type: 0x" << std::hex << static_cast<int>(m_rtp_info.payload_type) << std::endl;
-        std::cout << "m_rtp_info.sequence_number: 0x" << std::hex << m_rtp_info.sequence_number << std::endl;
-        std::cout << "m_rtp_info.timestamp: 0x" << std::hex << m_rtp_info.timestamp << std::endl;
-        std::cout << "m_rtp_info.ssrc: 0x" << std::hex << m_rtp_info.ssrc << std::endl;
-        std::cout << std::dec;
 
         rtp_buffer->payload = m_rtp_reader.extractPayload(rtp_buffer->raw_data.get(), valid_bytes);
         if (rtp_buffer->payload.size <= 0)
@@ -113,8 +111,18 @@ void CameraClient::runLoop()
         rtp_buffer->payload_valid = true;
         m_video_dec_helper->sendToDecoder(rtp_buffer);
         rtp_buffer.reset();
+
         frame_count++;
-        std::cout << "frame_count: " << frame_count << std::endl;
+        auto now = std::chrono::steady_clock::now();
+        auto elapsed = std::chrono::duration_cast<std::chrono::seconds>(now - last_time).count();
+
+        if (elapsed >= 1)
+        {
+            std::cout << "camera client frame_count: " << frame_count << std::endl;
+            std::cout << "camera client recv FPS: " << frame_count << std::endl;
+            frame_count = 0;
+            last_time = now;
+        }
     }
     std::cout << "runLoop end" << std::endl;
 }
