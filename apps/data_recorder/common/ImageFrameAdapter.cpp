@@ -1,4 +1,4 @@
-#include "DataSource.hpp"
+#include "ImageFrameAdapter.hpp"
 #include <bsp_g2d/BytesPerPixel.hpp>
 #include <iostream>
 
@@ -7,10 +7,8 @@ namespace apps
 {
 namespace data_recorder
 {
-namespace ui
-{
 
-DataSource::DataSource(const json& data_source_config, const std::string& g2dPlatform):
+ImageFrameAdapter::ImageFrameAdapter(const json& data_source_config, const std::string& g2dPlatform):
     m_g2d{IGraphics2D::create(g2dPlatform)}
 {
     m_name = data_source_config["name"];
@@ -30,7 +28,7 @@ DataSource::DataSource(const json& data_source_config, const std::string& g2dPla
     m_sub_data = std::make_shared<ZmqSubscriber>(m_data_topic);
 }
 
-bool DataSource::needPixelConverter()
+bool ImageFrameAdapter::needPixelConverter()
 {
     if (m_pixel_format.compare("RGB888") == 0)
     {
@@ -40,7 +38,7 @@ bool DataSource::needPixelConverter()
     return true;
 }
 
-void DataSource::runLoop()
+void ImageFrameAdapter::runLoop()
 {
     size_t min_buffer_bytes = m_image_size_x * m_image_size_y
         * bsp_g2d::BytesPerPixel::getInstance().getBytesPerPixel(m_pixel_format);
@@ -58,7 +56,7 @@ void DataSource::runLoop()
         size_t bytes_received = m_sub_data->receiveData(m_in_buffer.data(), m_in_buffer.size());
         if (bytes_received <= 0)
         {
-            std::cerr << "DataSource::runLoop() " << m_name << " receive data failed" << std::endl;
+            std::cerr << "ImageFrameAdapter::runLoop() " << m_name << " receive data failed" << std::endl;
             continue;
         }
 
@@ -100,7 +98,7 @@ void DataSource::runLoop()
             int ret = m_g2d->imageCvtColor(m_g2d_in_buf, m_g2d_out_buf, m_pixel_format, "RGB888");
             if (ret != 1)
             {
-                std::cerr << "DataSource::runLoop() " << m_name << " imageCvtColor failed" <<  "ret: " << ret << std::endl;
+                std::cerr << "ImageFrameAdapter::runLoop() " << m_name << " imageCvtColor failed" <<  "ret: " << ret << std::endl;
                 continue;
             }
 
@@ -120,6 +118,5 @@ void DataSource::runLoop()
 
 }
 
-} // namespace ui
 } // namespace data_recorder
 } // apps

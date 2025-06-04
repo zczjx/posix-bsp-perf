@@ -3,7 +3,7 @@
 
 #include <QApplication>
 #include "VideoFrameWidget.h"
-#include "DataSource.hpp"
+#include <common/ImageFrameAdapter.hpp>
 
 #include <nlohmann/json.hpp>
 #include <string>
@@ -15,6 +15,7 @@
 
 using json = nlohmann::json;
 using namespace midware::zeromq_ipc;
+using namespace apps::data_recorder;
 
 namespace apps
 {
@@ -34,14 +35,14 @@ public:
 private:
     void installGuiUpdateCallback();
 
-    void installFlipFrameCallbackCallback(std::shared_ptr<DataSource> data_source);
+    void installFlipFrameCallbackCallback(std::shared_ptr<ImageFrameAdapter> data_adapter);
 
 private:
     std::unique_ptr<QApplication> m_app;
     std::unique_ptr<VideoFrameWidget> m_video_frame_widget;
 
-    std::unordered_map<std::string, std::shared_ptr<DataSource>> m_data_sources;
-    std::vector<std::thread> m_data_source_threads;
+    std::unordered_map<std::string, std::shared_ptr<ImageFrameAdapter>> m_data_adapters;
+    std::vector<std::thread> m_data_adapter_threads;
 
 };
 

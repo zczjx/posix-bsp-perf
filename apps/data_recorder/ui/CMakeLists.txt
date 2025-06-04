@@ -57,12 +57,11 @@ set(PROJECT_SOURCES
         FrameWidget.cpp
         GuiClient.hpp
         GuiClient.cpp
-        DataSource.hpp
-        DataSource.cpp
         main.cpp
         ui_CameraView.h
         moc_VideoFrameWidget.cpp
         moc_FrameWidget.cpp
+        ${CMAKE_SOURCE_DIR}/apps/data_recorder/common/ImageFrameAdapter.cpp
 )
 
 add_executable(${PROJECT_NAME} ${PROJECT_SOURCES})
@@ -88,6 +87,7 @@ target_include_directories(${PROJECT_NAME} PUBLIC
     ${CMAKE_SOURCE_DIR}/midware
     ${CMAKE_SOURCE_DIR}/bsp
     ${CMAKE_SOURCE_DIR}/3rdparty
+    ${CMAKE_SOURCE_DIR}/apps/data_recorder
 )
 
 install(TARGETS ${PROJECT_NAME}

@@ -1,4 +1,3 @@
-
 #include "GuiClient.hpp"
 #include <iostream>
 #include <thread>
@@ -18,31 +17,31 @@ GuiClient::GuiClient(int argc, char *argv[], const json& gui_ipc, const std::str
 
     for (const auto& sensor: gui_ipc["camera"])
     {
-        m_data_sources[sensor["name"]] = std::make_shared<DataSource>(sensor, g2dPlatform);
+        m_data_adapters[sensor["name"]] = std::make_shared<ImageFrameAdapter>(sensor, g2dPlatform);
     }
 
-    for (const auto& data_source: m_data_sources)
+    for (const auto& data_adapter: m_data_adapters)
     {
-        m_data_source_threads.push_back(std::thread([data_source]() {
-            data_source.second->runLoop();
+        m_data_adapter_threads.push_back(std::thread([data_adapter]() {
+            data_adapter.second->runLoop();
         }));
     }
 }
 
 void GuiClient::installGuiUpdateCallback()
 {
-    for (const auto& data_source: m_data_sources)
+    for (const auto& data_adapter: m_data_adapters)
     {
-        if (data_source.second->getType() == "camera")
+        if (data_adapter.second->getType() == "camera")
         {
-            installFlipFrameCallbackCallback(data_source.second);
+            installFlipFrameCallbackCallback(data_adapter.second);
         }
     }
 }
 
-void GuiClient::installFlipFrameCallbackCallback(std::shared_ptr<DataSource> data_source)
+void GuiClient::installFlipFrameCallbackCallback(std::shared_ptr<ImageFrameAdapter> data_adapter)
 {
-    data_source->setFlipFrameCallback([this](const uint8_t* data, int width, int height) {
+    data_adapter->setFlipFrameCallback([this](const uint8_t* data, int width, int height) {
         m_video_frame_widget->setFrame(data, width, height);
     });
 }
@@ -56,12 +55,12 @@ void GuiClient::runLoop()
 
 GuiClient::~GuiClient()
 {
-    for (auto& data_source: m_data_sources)
+    for (auto& data_adapter: m_data_adapters)
     {
-        data_source.second->stop();
+        data_adapter.second->stop();
     }
 
-    for (auto& thread: m_data_source_threads)
+    for (auto& thread: m_data_adapter_threads)
     {
         if (thread.joinable())
         {

@@ -1,5 +1,5 @@
-#ifndef __DATA_SOURCE_HPP__
-#define __DATA_SOURCE_HPP__
+#ifndef __IMAGE_FRAME_ADAPTER_HPP__
+#define __IMAGE_FRAME_ADAPTER_HPP__
 
 #include <zeromq_ipc/zmqSubscriber.hpp>
 #include <bsp_g2d/IGraphics2D.hpp>
@@ -17,18 +17,15 @@ namespace apps
 {
 namespace data_recorder
 {
-namespace ui
-{
-
-class DataSource
+class ImageFrameAdapter
 {
 public:
 
     using FlipFrameCallback = std::function<void(const uint8_t* data, int width, int height)>;
 
 
-    DataSource(const json& data_source_config, const std::string& g2dPlatform);
-    virtual ~DataSource() = default;
+    ImageFrameAdapter(const json& data_source_config, const std::string& g2dPlatform);
+    virtual ~ImageFrameAdapter() = default;
 
     void runLoop();
 
@@ -83,8 +80,7 @@ private:
 
 };
 
-} // namespace ui
 } // namespace data_recorder
 } // namespace apps
 
-#endif // __DATA_SOURCE_HPP__
+#endif // __IMAGE_FRAME_ADAPTER_HPP__
