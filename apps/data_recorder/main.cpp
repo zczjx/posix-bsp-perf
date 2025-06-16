@@ -13,7 +13,7 @@ int main(int argc, char* argv[])
 {
     ArgParser parser("DataRecorder");
     parser.addOption("--rig", "carla-vehicle-view.json", "path to the rig file");
-    parser.addOption("--sensor_ipc", "sensor_ipc.json", "path to the sensor ipc file");
+    parser.addOption("--nodes_ipc", "nodes_ipc.json", "path to the sensor ipc file");
     parser.addOption("--output", "data_recorder.mp4", "path to the output file");
     parser.parseArgs(argc, argv);
 
@@ -34,20 +34,20 @@ int main(int argc, char* argv[])
         return -1;
     }
 
-    std::string sensor_ipc_file;
-    parser.getOptionVal("--sensor_ipc", sensor_ipc_file);
-    json sensor_ipc{};
+    std::string nodes_ipc_file;
+    parser.getOptionVal("--nodes_ipc", nodes_ipc_file);
+    json nodes_ipc{};
     try
     {
-        sensor_ipc = json::parse(std::ifstream(sensor_ipc_file));
+        nodes_ipc = json::parse(std::ifstream(nodes_ipc_file));
     }
     catch (const json::parse_error& e)
     {
-        std::cerr << "Failed to parse sensor ipc file: " << e.what() << std::endl;
+        std::cerr << "Failed to parse nodes ipc file: " << e.what() << std::endl;
         return -1;
     }
 
-    CarlaVehicle vehicle(json_data["rig"], output_file, sensor_ipc);
+    CarlaVehicle vehicle(json_data["rig"], output_file, nodes_ipc);
     vehicle.run();
 
     return 0;

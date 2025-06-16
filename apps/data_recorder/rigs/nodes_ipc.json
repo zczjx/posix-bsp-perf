@@ -56,7 +56,11 @@
             "image_size_y": 720,
             "fov": 90.0,
             "pixel_format": "YUV420SP",
-            "zmq_pub_data": "ipc:///tmp/yolov5_detection.rgb"
+            "msg_serialized_format": "msgpack",
+            "zmq_msg_pub": "ipc:///tmp/yolov5_detection.msg",
+            "out_image_shm": "/tmp/yolov5_detection.rgb",
+            "out_image_shm_slots": 32,
+            "out_image_shm_single_buffer_size": 2764800
         }
     ]
 }

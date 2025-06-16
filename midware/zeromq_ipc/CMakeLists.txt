@@ -12,6 +12,8 @@ pkg_check_modules(PC_ZMQ REQUIRED libzmq)
 set(SOURCES
   zmqPublisher.cpp
   zmqSubscriber.cpp
+  sharedMemPublisher.cpp
+  sharedMemSubscriber.cpp
 )
 
 add_library(${PROJECT_NAME} SHARED ${SOURCES})

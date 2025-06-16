@@ -3,16 +3,15 @@
 #include <string>
 #include <shared/ArgParser.hpp>
 #include <nlohmann/json.hpp>
+#include "objDetector.hpp"
 
-#include "GuiClient.hpp"
-
-using namespace apps::data_recorder::ui;
+using namespace apps::data_recorder;
 using namespace bsp_perf::shared;
 using json = nlohmann::json;
 
 int main(int argc, char *argv[])
 {
-    ArgParser parser("DataRecorderUI");
+    ArgParser parser("DataRecorderObjDetection");
     parser.addOption("--nodes_ipc", "nodes_ipc.json", "path to the sensor ipc file");
     parser.addOption("--g2d, --graphics2D", std::string("rkrga"), "graphics 2d platform type: rkrga");
     parser.parseArgs(argc, argv);
@@ -33,8 +32,8 @@ int main(int argc, char *argv[])
     std::string g2dPlatform;
     parser.getOptionVal("--graphics2D", g2dPlatform);
 
-    GuiClient gui_client(argc, argv, nodes_ipc, g2dPlatform);
-    gui_client.runLoop();
+    ObjDetector obj_detector(nodes_ipc, g2dPlatform);
+    obj_detector.runLoop();
 
     return 0;
 }
