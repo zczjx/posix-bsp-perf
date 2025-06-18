@@ -22,7 +22,7 @@ public:
      * @param single_buffer_size Size of each slot's buffer in bytes
      */
     explicit SharedMemPublisher(const std::string& topic, const std::string& shm_name,
-                                size_t slots, size_t single_buffer_size);
+                            size_t slots, size_t single_buffer_size);
 
     virtual ~SharedMemPublisher();
 

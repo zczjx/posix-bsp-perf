@@ -5,7 +5,6 @@
 #include <shared/BspLogger.hpp>
 #include <shared/ArgParser.hpp>
 #include <bsp_container/IDemuxer.hpp>
-#include <shared/BspFileUtils.hpp>
 #include <bsp_container/StreamWriter.hpp>
 #include <memory>
 #include <string>
