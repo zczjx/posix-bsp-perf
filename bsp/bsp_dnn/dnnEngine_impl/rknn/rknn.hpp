@@ -58,6 +58,10 @@ public:
 
     int getInputShape(dnnInputShape& shape) override;
 
+    int getOutputAttr(std::vector<rknn_tensor_attr>& output_attrs);
+
+    int getInputOutputNum(rknn_input_output_num& io_num);
+
     int getOutputQuantParams(std::vector<int32_t>& zeroPoints, std::vector<float>& scales) override;
 
     int pushInputData(dnnInput& inputData) override;

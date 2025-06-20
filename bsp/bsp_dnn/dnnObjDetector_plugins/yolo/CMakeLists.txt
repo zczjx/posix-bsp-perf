@@ -27,7 +27,9 @@ set(PLUGIN_NAME rknn_yolov5)
 
 add_library(${PLUGIN_NAME} SHARED
     rknnYolov5.cpp
+    rknnYolov8.cpp
     common/YoloPostProcess.cpp
+    common/Yolov8PostProcess.cpp
 )
 
 target_include_directories(${PLUGIN_NAME} PRIVATE
