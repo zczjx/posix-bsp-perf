@@ -72,10 +72,13 @@ public:
         return m_topic;
     }
 
+    int waitSync(const std::string& sync_topic);
+
 private:
     std::shared_ptr<zmq::context_t> m_context;
     std::shared_ptr<zmq::socket_t> m_socket;
     std::string m_topic;
+    std::string m_sync_topic;
 };
 
 } // namespace zeromq_ipc

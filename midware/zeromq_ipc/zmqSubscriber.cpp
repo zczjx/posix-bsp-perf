@@ -79,5 +79,17 @@ size_t ZmqSubscriber::receiveData(uint8_t* buffer, size_t bytes)
     std::memcpy(buffer, message.data(), actual_bytes);
     return actual_bytes;
 }
+
+int ZmqSubscriber::replySync(const std::string& sync_topic)
+{
+    m_sync_topic = sync_topic;
+    zmq::socket_t sync_socket(*m_context, zmq::socket_type::req);
+    sync_socket.connect(m_sync_topic);
+    sync_socket.send(zmq::message_t("READY"), zmq::send_flags::none);
+    zmq::message_t sync_reply;
+    sync_socket.recv(sync_reply, zmq::recv_flags::none);
+    sync_socket.close();
+    return 0;
+}
 } // namespace zeromq_ipc
 } // namespace midware

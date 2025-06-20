@@ -43,7 +43,7 @@ bool SharedMemSubscriber::connectToSharedMemory()
 
     if (m_shm_fd == -1)
     {
-        std::cerr << "Failed to create shared memory: " << strerror(errno) << std::endl;
+        std::cerr << "Failed to connect to shared memory: " << strerror(errno) << std::endl;
         return false;
     }
 

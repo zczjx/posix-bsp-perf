@@ -67,6 +67,11 @@ public:
         m_current_slot_index = 0;
     }
 
+    int waitSync(const std::string& sync_topic)
+    {
+        return m_zmq_msg_pub->waitSync(sync_topic);
+    }
+
 private:
 
     bool initSharedMemory();

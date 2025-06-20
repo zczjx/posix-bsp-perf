@@ -12,7 +12,7 @@ struct SharedMsg
     size_t slot_index{0};
     size_t data_size{0};
     int pkt_eos{0};
-    MSGPACK_DEFINE(msg, output_file, slot_index, data_size);
+    MSGPACK_DEFINE(msg, output_file, slot_index, data_size, pkt_eos);
 };
 
 #endif // _SHARED_MSG_HPP_

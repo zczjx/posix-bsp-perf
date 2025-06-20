@@ -4,6 +4,8 @@
 #include <shared/BspFileUtils.hpp>
 #include <msgpack.hpp>
 #include <zeromq_ipc/sharedMemSubscriber.hpp>
+#include <thread>
+#include <chrono>
 #include "sharedMsg.hpp"
 
 using namespace midware::zeromq_ipc;
@@ -13,7 +15,8 @@ int main(int argc, char* argv[])
 {
     ArgParser parser("shmem_sub");
     parser.addOption("--topic", std::string("ipc:///tmp/bsp_shm_test.msg"), "topic for the zmq pub sub");
-    parser.addOption("--shm_name", std::string("/tmp/bsp_shm_test.data"), "shm name");
+    parser.addOption("--sync_topic", std::string("ipc:///tmp/bsp_shm_test.sync"), "sync topic for the zmq pub sub");
+    parser.addOption("--shm_name", std::string("/bsp_shm_test"), "shm name");
     parser.addOption("--slots", size_t(32), "shm slots");
     parser.addOption("--single_buffer_size", int(8192), "shm single buffer size");
     parser.parseArgs(argc, argv);
@@ -30,15 +33,32 @@ int main(int argc, char* argv[])
     int single_buffer_size;
     parser.getOptionVal("--single_buffer_size", single_buffer_size);
 
+    std::string sync_topic;
+    parser.getOptionVal("--sync_topic", sync_topic);
+
     SharedMemSubscriber subscriber(topic, shm_name, slots, single_buffer_size);
-    msgpack::sbuffer sbuf(sizeof(SharedMsg));
-    uint8_t* data_buffer{nullptr};
+    subscriber.replySync(sync_topic);
+
+    std::shared_ptr<uint8_t[]> msg_buffer(new uint8_t[sizeof(SharedMsg)]);
+    std::shared_ptr<uint8_t[]> data_buffer{nullptr};
     std::shared_ptr<FILE> out_fp{nullptr};
     while (true)
     {
-        size_t msg_size = subscriber.receiveMsg(reinterpret_cast<uint8_t*>(sbuf.data()), sbuf.size());
-        msgpack::unpacked result = msgpack::unpack(sbuf.data(), msg_size);
+        subscriber.replySync(sync_topic);
+        size_t msg_size = subscriber.receiveMsg(msg_buffer, sizeof(SharedMsg));
+        std::cout << "msg_buffer size: " << sizeof(SharedMsg) << std::endl;
+        std::cout << "received msg size: " << msg_size << std::endl;
+
+        msgpack::unpacked result = msgpack::unpack(reinterpret_cast<const char*>(msg_buffer.get()), msg_size);
+        std::cout << "result.get().as<SharedMsg>() size: " << sizeof(SharedMsg) << std::endl;
         SharedMsg shmem_msg = result.get().as<SharedMsg>();
+        std::cout << "shmem_msg done: " << std::endl;
+
+        std::cout << "shmem_msg.msg: " << shmem_msg.msg << std::endl;
+        std::cout << "shmem_msg.slot_index: " << shmem_msg.slot_index << std::endl;
+        std::cout << "shmem_msg.data_size: " << shmem_msg.data_size << std::endl;
+        std::cout << "shmem_msg.pkt_eos: " << shmem_msg.pkt_eos << std::endl;
+        std::cout << "shmem_msg.output_file: " << shmem_msg.output_file << std::endl;
 
         if (shmem_msg.slot_index >= slots)
         {
@@ -48,7 +68,7 @@ int main(int argc, char* argv[])
 
         if (data_buffer == nullptr)
         {
-            data_buffer = new uint8_t[shmem_msg.data_size];
+            data_buffer.reset(new uint8_t[shmem_msg.data_size]);
         }
         if (out_fp == nullptr)
         {
@@ -58,14 +78,17 @@ int main(int argc, char* argv[])
 
         if (shmem_msg.pkt_eos == 1)
         {
-            fwrite(data_buffer, 1, shmem_msg.data_size, out_fp.get());
+            fwrite(data_buffer.get(), 1, shmem_msg.data_size, out_fp.get());
+            std::this_thread::sleep_for(std::chrono::seconds(1));
             fflush(out_fp.get());
-            fclose(out_fp.get());
+            out_fp.reset();
+            msg_buffer.reset();
+            data_buffer.reset();
             break;
         }
         else
         {
-            fwrite(data_buffer, 1, shmem_msg.data_size, out_fp.get());
+            fwrite(data_buffer.get(), 1, shmem_msg.data_size, out_fp.get());
         }
     }
 

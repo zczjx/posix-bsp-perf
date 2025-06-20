@@ -60,6 +60,11 @@ public:
 
     const std::string& getSharedMemoryName() const { return m_shm_name; }
 
+    int replySync(const std::string& sync_topic)
+    {
+        return m_zmq_msg_sub->replySync(sync_topic);
+    }
+
 private:
 
     bool connectToSharedMemory();

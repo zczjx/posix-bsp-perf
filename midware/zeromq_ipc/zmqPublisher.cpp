@@ -39,13 +39,17 @@ size_t ZmqPublisher::sendData(const void* data, size_t size, bool more)
     return result.value_or(0);
 }
 
-
-
-
-
-
-
-
+int ZmqPublisher::waitSync(const std::string& sync_topic)
+{
+    m_sync_topic = sync_topic;
+    zmq::socket_t sync_socket(*m_context, zmq::socket_type::rep);
+    sync_socket.bind(m_sync_topic);
+    zmq::message_t sync_request;
+    sync_socket.recv(sync_request, zmq::recv_flags::none);
+    sync_socket.send(zmq::str_buffer(""), zmq::send_flags::none);
+    sync_socket.close();
+    return 0;
+}
 
 } // namespace zeromq_ipc
 } // namespace midware

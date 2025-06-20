@@ -43,6 +43,7 @@ SharedMemPublisher::~SharedMemPublisher()
 bool SharedMemPublisher::initSharedMemory()
 {
     size_t total_size = m_single_buffer_size * m_slots;
+    std::cout << "m_shm_name: " << m_shm_name << std::endl;
     m_shm_fd = shm_open(m_shm_name.c_str(), O_CREAT | O_RDWR, 0666);
 
     if (m_shm_fd == -1)
