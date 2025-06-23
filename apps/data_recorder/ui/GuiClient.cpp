@@ -9,22 +9,29 @@ namespace data_recorder
 namespace ui
 {
 
-GuiClient::GuiClient(int argc, char *argv[], const json& gui_ipc, const std::string& g2dPlatform):
-    m_app(std::make_unique<QApplication>(argc, argv)),
-    m_video_frame_widget(std::make_unique<VideoFrameWidget>())
+GuiClient::GuiClient(int argc, char *argv[], const json& gui_ipc):
+    m_app(std::make_unique<QApplication>(argc, argv))
 {
     m_video_frame_widget->show();
 
     for (const auto& sensor: gui_ipc["camera"])
     {
-        m_data_adapters[sensor["name"]] = std::make_shared<ImageFrameAdapter>(sensor, g2dPlatform);
+        m_input_shmem_ports[sensor["name"]] = std::make_shared<SharedMemSubscriber>(sensor["zmq_pub_info"], sensor["out_image_shm"], sensor["out_image_shm_slots"], sensor["out_image_shm_single_buffer_size"]);
     }
 
-    for (const auto& data_adapter: m_data_adapters)
+    for (const auto& input_port_pair: m_input_shmem_ports)
     {
-        m_data_adapter_threads.push_back(std::thread([data_adapter]() {
-            data_adapter.second->runLoop();
+        m_input_shmem_threads.push_back(std::thread([this, input_port_pair]() {
+            dataConsumerLoop(input_port_pair.second);
         }));
+    }
+}
+
+void GuiClient::dataConsumerLoop(std::shared_ptr<SharedMemSubscriber> input_shmem_port)
+{
+    while (true)
+    {
+        input_shmem_port->receiveSharedMemData(input_shmem_port->getSharedMemData(), input_shmem_port->getSharedMemDataSize(), input_shmem_port->getSharedMemDataSlotIndex());
     }
 }
 

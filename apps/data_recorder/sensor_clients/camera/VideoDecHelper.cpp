@@ -1,4 +1,5 @@
 #include "VideoDecHelper.hpp"
+#include <bsp_g2d/BytesPerPixel.hpp>
 #include <stdexcept>
 #include <iostream>
 #include <thread>
@@ -9,20 +10,11 @@ namespace apps
 namespace data_recorder
 {
 
-VideoDecHelper::VideoDecHelper(const std::string& decoder_name)
+VideoDecHelper::VideoDecHelper(const std::string& decoder_name, const std::string& g2dPlatform, const std::string& out_pixel_format):
+    m_decoder(bsp_codec::IDecoder::create(decoder_name)),
+    m_g2d(IGraphics2D::create(g2dPlatform)),
+    m_out_pixel_format(out_pixel_format)
 {
-    if (decoder_name.compare("rkmpp") == 0)
-    {
-        m_decoder = bsp_codec::IDecoder::create("rkmpp");
-    }
-    else if (decoder_name.compare("ffmpeg") == 0)
-    {
-        m_decoder = bsp_codec::IDecoder::create("ffmpeg");
-    }
-    else
-    {
-        throw std::invalid_argument("Invalid decoder name specified.");
-    }
 }
 
 int VideoDecHelper::setupAndStartDecoder(DecodeConfig& cfg)
@@ -48,6 +40,15 @@ int VideoDecHelper::setupAndStartDecoder(DecodeConfig& cfg)
     return 0;
 }
 
+bool VideoDecHelper::needPixelConverter(const std::string& pixel_format)
+{
+    if (m_out_pixel_format.compare(pixel_format) == 0)
+    {
+        return false;
+    }
+
+    return true;
+}
 
 void VideoDecHelper::decoderLoop()
 {
@@ -97,6 +98,48 @@ int VideoDecHelper::sendToDecoder(std::shared_ptr<VideoDecHelper::RtpBuffer> rtp
     return 0;
 }
 
+std::shared_ptr<DecodeOutFrame> VideoDecHelper::convertPixelFormat(std::shared_ptr<DecodeOutFrame> frame)
+{
+    IGraphics2D::G2DBufferParams in_g2d_params = {
+        .virtual_addr = frame->virt_addr,
+        .rawBufferSize = frame->valid_data_size,
+        .width = frame->width,
+        .height = frame->height,
+        .width_stride = frame->width_stride,
+        .height_stride = frame->height_stride,
+        .format = frame->format,
+    };
+
+    auto in_g2d_buf = m_g2d->createG2DBuffer("virtualaddr", in_g2d_params);
+
+    size_t out_data_size = frame->width * frame->height * bsp_g2d::BytesPerPixel::getInstance().getBytesPerPixel(m_out_pixel_format);
+
+    std::shared_ptr<DecodeOutFrame> out_frame = std::make_shared<DecodeOutFrame>();
+    out_frame->width = frame->width;
+    out_frame->height = frame->height;
+    out_frame->format = m_out_pixel_format;
+    out_frame->virt_addr = new uint8_t[out_data_size];
+    out_frame->valid_data_size = out_data_size;
+    out_frame->width_stride = frame->width;
+    out_frame->height_stride = frame->height;
+
+
+    IGraphics2D::G2DBufferParams out_g2d_params = {
+    .virtual_addr = out_frame->virt_addr,
+    .rawBufferSize = out_frame->valid_data_size,
+    .width = out_frame->width,
+    .height = out_frame->height,
+    .width_stride = out_frame->width_stride,
+    .height_stride = out_frame->height_stride,
+    .format = m_out_pixel_format,
+    };
+
+    auto out_g2d_buf = m_g2d->createG2DBuffer("virtualaddr", out_g2d_params);
+    m_g2d->imageCvtColor(in_g2d_buf, out_g2d_buf, in_g2d_params.format, out_g2d_params.format);
+
+    return out_frame;
+}
+
 std::shared_ptr<DecodeOutFrame> VideoDecHelper::getDecodedFrame()
 {
     std::lock_guard<std::mutex> lock(m_decoded_frame_queue_mutex);
@@ -107,6 +150,12 @@ std::shared_ptr<DecodeOutFrame> VideoDecHelper::getDecodedFrame()
     }
     auto frame = m_decoded_frame_queue.front();
     m_decoded_frame_queue.pop();
+
+    if (needPixelConverter(frame->format))
+    {
+        return convertPixelFormat(frame);
+    }
+
     return frame;
 }
 

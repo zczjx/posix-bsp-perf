@@ -26,7 +26,6 @@
                 "fov": 90.0,
                 "raw_pixel_format": "BGRA",
                 "encode_format": "raw",
-                "zmq_ipc": "ipc:///build/tmp/view_camera.raw",
                 "zmq_transport": "tcp://192.168.2.110:12001",
                 "protocol": "h264.rtp",
                 "display_position": [0, 0]

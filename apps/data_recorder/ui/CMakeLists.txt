@@ -79,7 +79,6 @@ target_link_libraries(${PROJECT_NAME} PUBLIC
     ${QT5_WIDGETS_LDFLAGS}
     zeromq_ipc
     bsp_shared
-    bsp_g2d
 )
 
 target_include_directories(${PROJECT_NAME} PUBLIC

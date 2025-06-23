@@ -7,13 +7,12 @@ namespace apps
 namespace data_recorder
 {
 
-CameraClient::CameraClient(const json& sensor_context, const json& vehicle_info, const json& sensor_ipc)
-    : SensorClient(sensor_context, sensor_ipc)
+CameraClient::CameraClient(const json& sensor_context, const json& vehicle_info, const json& node_ipc)
+    : SensorClient(sensor_context)
 {
-    m_xres = sensor_context["image_size_x"];
-    m_yres = sensor_context["image_size_y"];
-    m_raw_pixel_format = sensor_context["raw_pixel_format"];
-    m_target_platform = vehicle_info["target_platform"];
+    setupInputConfig(sensor_context, vehicle_info);
+    setupOutputConfig(node_ipc);
+
     if (m_target_platform.compare("rk3588") == 0)
     {
         m_video_dec_helper = std::make_unique<VideoDecHelper>("rkmpp");
@@ -31,6 +30,23 @@ CameraClient::CameraClient(const json& sensor_context, const json& vehicle_info,
     m_consumer_thread = std::make_unique<std::thread>([this]() {consumerLoop();});
 }
 
+void CameraClient::setupInputConfig(const json& sensor_context, const json& vehicle_info)
+{
+    m_xres = sensor_context["image_size_x"];
+    m_yres = sensor_context["image_size_y"];
+    m_raw_pixel_format = sensor_context["raw_pixel_format"];
+    m_target_platform = vehicle_info["target_platform"];
+    m_input_port = std::make_shared<ZmqSubscriber>(sensor_context["zmq_transport"]);
+}
+
+void CameraClient::setupOutputConfig(const json& node_ipc)
+{
+    m_out_pixel_format = node_ipc["out_image_pixel_format"];
+    m_output_shmem_port = std::make_shared<SharedMemPublisher>(node_ipc["zmq_pub_info"],
+                            node_ipc["out_image_shm"], node_ipc["out_image_shm_slots"],
+                            node_ipc["out_image_shm_single_buffer_size"]);
+}
+
 CameraClient::~CameraClient()
 {
     if (m_main_thread->joinable() || m_consumer_thread->joinable())
@@ -39,6 +55,14 @@ CameraClient::~CameraClient()
         m_consumer_thread->join();
         m_main_thread->join();
     }
+}
+
+void CameraClient::fillCameraSensorMsg(CameraSensorMsg& msg, size_t data_size, size_t slot_index)
+{
+    msg.publisher_id = getSensorName();
+    msg.pixel_format = m_out_pixel_format;
+    msg.slot_index = slot_index;
+    msg.data_size = data_size;
 }
 
 std::shared_ptr<DecodeOutFrame> CameraClient::getCameraVideoFrame()
@@ -50,6 +74,8 @@ void CameraClient::consumerLoop()
 {
     size_t frame_count = 0;
     auto last_time = std::chrono::steady_clock::now();
+    CameraSensorMsg sensor_msg;
+    msgpack::sbuffer msg_buffer;
     while (!m_stopSignal.load())
     {
         std::shared_ptr<DecodeOutFrame> frame = getCameraVideoFrame();
@@ -64,7 +90,12 @@ void CameraClient::consumerLoop()
                 frame_count = 0;
                 last_time = now;
             }
-            pubSensorData(frame->virt_addr, frame->valid_data_size);
+            fillCameraSensorMsg(sensor_msg, frame->valid_data_size, m_output_shmem_port->getFreeSlotIndex());
+            msg_buffer.clear();
+            msgpack::pack(msg_buffer, sensor_msg);
+            m_output_shmem_port->publishData(reinterpret_cast<const uint8_t*>(msg_buffer.data()),
+                                            msg_buffer.size(), frame->virt_addr,
+                                            sensor_msg.slot_index, sensor_msg.data_size);
             frame.reset();
         }
     }
@@ -81,8 +112,7 @@ void CameraClient::runLoop()
     while(!m_stopSignal.load())
     {
         std::shared_ptr<VideoDecHelper::RtpBuffer> rtp_buffer = m_video_dec_helper->getRtpVideoBuffer(min_buffer_size) ;
-
-        size_t valid_bytes = recvIpcDataMore(rtp_buffer->raw_data, rtp_buffer->buffer_size);
+        size_t valid_bytes = m_input_port->receiveDataMore(rtp_buffer->raw_data, rtp_buffer->buffer_size);
         if (valid_bytes <= 0)
         {
             std::cerr << "recvIpcDataMore failed, buffer size may be too small" << std::endl;

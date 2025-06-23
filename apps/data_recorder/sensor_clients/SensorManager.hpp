@@ -17,7 +17,7 @@ namespace data_recorder
 class SensorManager
 {
 public:
-    explicit SensorManager(const json& sensors_array, const json& vehicle_info, const json& sensor_ipc);
+    explicit SensorManager(const json& sensors_array, const json& vehicle_info, const json& node_ipc);
 
     void runLoop();
     void stop()

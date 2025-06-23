@@ -3,7 +3,7 @@
 
 #include <QApplication>
 #include "VideoFrameWidget.h"
-#include <common/ImageFrameAdapter.hpp>
+#include <zeromq_ipc/sharedMemSubscriber.hpp>
 
 #include <nlohmann/json.hpp>
 #include <string>
@@ -27,7 +27,7 @@ namespace ui
 class GuiClient
 {
 public:
-    GuiClient(int argc, char *argv[], const json& gui_ipc, const std::string& g2dPlatform);
+    GuiClient(int argc, char *argv[], const json& gui_ipc);
     ~GuiClient();
 
     void runLoop();
@@ -35,14 +35,14 @@ public:
 private:
     void installGuiUpdateCallback();
 
-    void installFlipFrameCallbackCallback(std::shared_ptr<ImageFrameAdapter> data_adapter);
+    void dataConsumerLoop(std::shared_ptr<SharedMemSubscriber> input_shmem_port);
 
 private:
     std::unique_ptr<QApplication> m_app;
     std::unique_ptr<VideoFrameWidget> m_video_frame_widget;
 
-    std::unordered_map<std::string, std::shared_ptr<ImageFrameAdapter>> m_data_adapters;
-    std::vector<std::thread> m_data_adapter_threads;
+    std::unordered_map<std::string, std::shared_ptr<SharedMemSubscriber>> m_input_shmem_ports;
+    std::vector<std::thread> m_input_shmem_threads;
 
 };
 

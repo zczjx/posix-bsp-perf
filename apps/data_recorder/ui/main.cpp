@@ -14,7 +14,6 @@ int main(int argc, char *argv[])
 {
     ArgParser parser("DataRecorderUI");
     parser.addOption("--nodes_ipc", "nodes_ipc.json", "path to the sensor ipc file");
-    parser.addOption("--g2d, --graphics2D", std::string("rkrga"), "graphics 2d platform type: rkrga");
     parser.parseArgs(argc, argv);
 
     std::string nodes_ipc_file;
@@ -30,10 +29,7 @@ int main(int argc, char *argv[])
         return -1;
     }
 
-    std::string g2dPlatform;
-    parser.getOptionVal("--graphics2D", g2dPlatform);
-
-    GuiClient gui_client(argc, argv, nodes_ipc, g2dPlatform);
+    GuiClient gui_client(argc, argv, nodes_ipc);
     gui_client.runLoop();
 
     return 0;

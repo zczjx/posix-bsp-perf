@@ -3,20 +3,21 @@
 
 #include <bsp_codec/IDecoder.hpp>
 #include <protocol/RtpHeader.hpp>
-
+#include <bsp_g2d/IGraphics2D.hpp>
 #include <memory>
 #include <thread>
 #include <atomic>
 #include <mutex>
 #include <queue>
+
 using namespace bsp_codec;
 using namespace bsp_perf::protocol;
+using namespace bsp_g2d;
 
 namespace apps
 {
 namespace data_recorder
 {
-
 class VideoDecHelper
 {
 public:
@@ -30,7 +31,7 @@ public:
         bool payload_valid{false};
     };
 
-    VideoDecHelper(const std::string& decoder_name);
+    VideoDecHelper(const std::string& decoder_name, const std::string& g2dPlatform, const std::string& out_pixel_format);
 
     int setupAndStartDecoder(DecodeConfig& cfg);
 
@@ -46,6 +47,10 @@ public:
 
 private:
     void decoderLoop();
+
+    bool needPixelConverter(const std::string& pixel_format);
+
+    std::shared_ptr<DecodeOutFrame> convertPixelFormat(std::shared_ptr<DecodeOutFrame> frame);
 
 private:
     std::unique_ptr<bsp_codec::IDecoder> m_decoder;
@@ -64,6 +69,9 @@ private:
     std::queue<std::shared_ptr<RtpBuffer>> m_encode_pkt_queue;
     std::mutex m_encode_pkt_queue_mutex;
     const size_t m_reserved_encode_pkt_num{30};
+
+    std::unique_ptr<IGraphics2D> m_g2d{nullptr};
+    std::string m_out_pixel_format;
 };
 
 } // namespace data_recorder
