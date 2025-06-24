@@ -1,5 +1,6 @@
 #include <iostream>
 #include <fstream>
+#include <filesystem>
 #include <string>
 #include <thread>
 #include <unistd.h>
@@ -55,7 +56,7 @@ int main(int argc, char* argv[])
     uint8_t* pkt_data_end = pkt_data_start + file_context->size;
     SharedMsg shmem_msg;
     shmem_msg.msg = msg;
-    shmem_msg.output_file = "output_" + std::string(basename(file.c_str()));
+    shmem_msg.output_file = "output_" + std::filesystem::path(file).filename().string();
 
     while (pkt_data_start < pkt_data_end)
     {
