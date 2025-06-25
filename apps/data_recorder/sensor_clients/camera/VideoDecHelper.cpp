@@ -4,6 +4,7 @@
 #include <iostream>
 #include <thread>
 #include <chrono>
+#include <cassert>
 
 namespace apps
 {
@@ -114,7 +115,14 @@ std::shared_ptr<DecodeOutFrame> VideoDecHelper::convertPixelFormat(std::shared_p
 
     size_t out_data_size = frame->width * frame->height * bsp_g2d::BytesPerPixel::getInstance().getBytesPerPixel(m_out_pixel_format);
 
-    std::shared_ptr<DecodeOutFrame> out_frame = std::make_shared<DecodeOutFrame>();
+    std::shared_ptr<DecodeOutFrame> out_frame(new DecodeOutFrame(), [](DecodeOutFrame* frame) {
+        if (frame->virt_addr != nullptr)
+        {
+            delete[] frame->virt_addr;
+            frame->virt_addr = nullptr;
+        }
+        delete frame;
+    });
     out_frame->width = frame->width;
     out_frame->height = frame->height;
     out_frame->format = m_out_pixel_format;
@@ -163,7 +171,13 @@ std::shared_ptr<VideoDecHelper::RtpBuffer> VideoDecHelper::getRtpVideoBuffer(siz
 {
     if (m_free_buffer_sort_queue.empty() || m_free_buffer_sort_queue.back()->buffer_size < min_size)
     {
-        std::shared_ptr<VideoDecHelper::RtpBuffer> buffer = std::make_shared<VideoDecHelper::RtpBuffer>();
+        std::shared_ptr<VideoDecHelper::RtpBuffer> buffer(new RtpBuffer(), [](RtpBuffer* buffer) {
+            if (buffer->raw_data != nullptr)
+            {
+                buffer->raw_data.reset();
+            }
+            delete buffer;
+        });
         size_t alloc_size = min_size * 2;
         buffer->raw_data = std::shared_ptr<uint8_t[]>(new uint8_t[alloc_size]);
         buffer->buffer_size = alloc_size;
@@ -173,6 +187,7 @@ std::shared_ptr<VideoDecHelper::RtpBuffer> VideoDecHelper::getRtpVideoBuffer(siz
     }
 
     std::lock_guard<std::mutex> lock(m_free_buffer_sort_queue_mutex);
+    assert(m_free_buffer_sort_queue.back() != nullptr);
     auto buffer = m_free_buffer_sort_queue.back();
     buffer->valid_data_bytes = 0;
     buffer->payload_valid = false;

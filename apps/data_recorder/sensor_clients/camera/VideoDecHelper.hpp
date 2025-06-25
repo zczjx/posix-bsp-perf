@@ -24,7 +24,7 @@ public:
 
     struct RtpBuffer
     {
-        std::shared_ptr<uint8_t[]> raw_data;
+        std::shared_ptr<uint8_t[]> raw_data{nullptr};
         size_t buffer_size{0};
         size_t valid_data_bytes{0};
         RtpPayload payload;
