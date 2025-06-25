@@ -18,6 +18,7 @@ set(CMAKE_INCLUDE_CURRENT_DIR ON)
 
 find_package(PkgConfig REQUIRED)
 pkg_check_modules(QT5_WIDGETS REQUIRED Qt5Widgets)
+pkg_check_modules(PC_MSGPACK REQUIRED msgpack)
 
 # 1. 设置主机 moc/uic 路径
 set(MOC_EXEC /usr/bin/moc)
@@ -61,7 +62,6 @@ set(PROJECT_SOURCES
         ui_CameraView.h
         moc_VideoFrameWidget.cpp
         moc_FrameWidget.cpp
-        ${CMAKE_SOURCE_DIR}/apps/data_recorder/common/ImageFrameAdapter.cpp
 )
 
 add_executable(${PROJECT_NAME} ${PROJECT_SOURCES})
@@ -79,6 +79,7 @@ target_link_libraries(${PROJECT_NAME} PUBLIC
     ${QT5_WIDGETS_LDFLAGS}
     zeromq_ipc
     bsp_shared
+    ${PC_MSGPACK_LDFLAGS}
 )
 
 target_include_directories(${PROJECT_NAME} PUBLIC
@@ -87,6 +88,7 @@ target_include_directories(${PROJECT_NAME} PUBLIC
     ${CMAKE_SOURCE_DIR}/bsp
     ${CMAKE_SOURCE_DIR}/3rdparty
     ${CMAKE_SOURCE_DIR}/apps/data_recorder
+    ${PC_MSGPACK_INCLUDE_DIRS}
 )
 
 install(TARGETS ${PROJECT_NAME}

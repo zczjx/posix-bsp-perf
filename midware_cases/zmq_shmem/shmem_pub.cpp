@@ -2,8 +2,6 @@
 #include <fstream>
 #include <filesystem>
 #include <string>
-#include <thread>
-#include <unistd.h>
 #include <shared/ArgParser.hpp>
 #include <shared/BspFileUtils.hpp>
 #include <msgpack.hpp>

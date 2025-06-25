@@ -9,14 +9,15 @@ namespace apps
 {
 namespace data_recorder
 {
-
 struct CameraSensorMsg
 {
     std::string publisher_id{};
     std::string pixel_format{};
-    size_t slot_index{0};
+    int width{0};
+    int height{0};
     size_t data_size{0}; // in bytes
-    MSGPACK_DEFINE(publisher_id, pixel_format, slot_index, data_size);
+    size_t slot_index{0};
+    MSGPACK_DEFINE(publisher_id, pixel_format, width, height, data_size, slot_index);
 };
 
 } // namespace data_recorder

@@ -1,6 +1,7 @@
 #include "CameraClient.hpp"
 #include <iostream>
 #include <chrono>
+#include <stdexcept>
 
 namespace apps
 {
@@ -15,11 +16,11 @@ CameraClient::CameraClient(const json& sensor_context, const json& vehicle_info,
 
     if (m_target_platform.compare("rk3588") == 0)
     {
-        m_video_dec_helper = std::make_unique<VideoDecHelper>("rkmpp");
+        m_video_dec_helper = std::make_unique<VideoDecHelper>("rkmpp", "rkrga", m_out_pixel_format);
     }
     else
     {
-        m_video_dec_helper = std::make_unique<VideoDecHelper>("ffmpeg");
+        throw std::runtime_error("Unsupported platform: " + m_target_platform);
     }
     DecodeConfig cfg = {
         .encoding = "h264",
@@ -61,8 +62,10 @@ void CameraClient::fillCameraSensorMsg(CameraSensorMsg& msg, size_t data_size, s
 {
     msg.publisher_id = getSensorName();
     msg.pixel_format = m_out_pixel_format;
-    msg.slot_index = slot_index;
+    msg.width = m_xres;
+    msg.height = m_yres;
     msg.data_size = data_size;
+    msg.slot_index = slot_index;
 }
 
 std::shared_ptr<DecodeOutFrame> CameraClient::getCameraVideoFrame()

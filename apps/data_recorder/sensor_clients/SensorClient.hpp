@@ -22,7 +22,7 @@ class SensorClient
 public:
     explicit SensorClient(const json& sensor_context);
 
-    virtual ~SensorClient();
+    virtual ~SensorClient() = default;
 
     virtual void runLoop() = 0;
 

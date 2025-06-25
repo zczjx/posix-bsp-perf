@@ -11,12 +11,10 @@
 #include <memory>
 #include <unordered_map>
 #include <thread>
-
+#include <atomic>
 
 using json = nlohmann::json;
 using namespace midware::zeromq_ipc;
-using namespace apps::data_recorder;
-
 namespace apps
 {
 namespace data_recorder
@@ -35,14 +33,18 @@ public:
 private:
     void installGuiUpdateCallback();
 
-    void dataConsumerLoop(std::shared_ptr<SharedMemSubscriber> input_shmem_port);
+    void CameraConsumerLoop(std::shared_ptr<SharedMemSubscriber> input_shmem_port);
 
 private:
     std::unique_ptr<QApplication> m_app;
     std::unique_ptr<VideoFrameWidget> m_video_frame_widget;
 
-    std::unordered_map<std::string, std::shared_ptr<SharedMemSubscriber>> m_input_shmem_ports;
+    // the key of the map is the sensor name
+    // the value of the map is (sensor type, shm_subscriber)
+    std::unordered_map<std::string, std::pair<std::string, std::shared_ptr<SharedMemSubscriber>>> m_input_shmem_ports;
     std::vector<std::thread> m_input_shmem_threads;
+
+    std::atomic<bool> m_stopSignal{false};
 
 };
 

@@ -9,6 +9,7 @@
             "image_size_y": 720,
             "fov": 90.0,
             "zmq_pub_info": "ipc:///tmp/view_camera.info",
+            "topic_msg": "CameraSensorMsg",
             "out_image_shm": "/view_camera.rgb",
             "out_image_pixel_format": "RGB888",
             "out_image_shm_slots": 32,
@@ -57,12 +58,7 @@
             "image_size_x": 1280,
             "image_size_y": 720,
             "fov": 90.0,
-            "pixel_format": "YUV420SP",
-            "msg_serialized_format": "msgpack",
-            "zmq_msg_pub": "ipc:///tmp/yolov5_detection.msg",
-            "out_image_shm": "/yolov5_detection.rgb",
-            "out_image_shm_slots": 32,
-            "out_image_shm_single_buffer_size": 2764800
+            "pixel_format": "YUV420SP"
         }
     ]
 }

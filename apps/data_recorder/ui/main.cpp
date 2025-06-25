@@ -3,7 +3,6 @@
 #include <string>
 #include <shared/ArgParser.hpp>
 #include <nlohmann/json.hpp>
-
 #include "GuiClient.hpp"
 
 using namespace apps::data_recorder::ui;
