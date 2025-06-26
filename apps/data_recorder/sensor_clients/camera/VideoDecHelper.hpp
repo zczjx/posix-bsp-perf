@@ -52,6 +52,8 @@ private:
 
     std::shared_ptr<DecodeOutFrame> convertPixelFormat(std::shared_ptr<DecodeOutFrame> frame);
 
+    std::shared_ptr<VideoDecHelper::RtpBuffer> createNewRtpBuffer(size_t min_size);
+
 private:
     std::unique_ptr<bsp_codec::IDecoder> m_decoder;
     std::unique_ptr<std::thread> m_dec_thread;

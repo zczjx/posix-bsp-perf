@@ -6,12 +6,12 @@ namespace apps
 namespace data_recorder
 {
 
-CarlaVehicle::CarlaVehicle(const json& rig_json, const std::string& output_file, const json& sensor_ipc)
+CarlaVehicle::CarlaVehicle(const json& rig_json, const std::string& output_file, const json& nodes_ipc)
     : m_rig_json(rig_json),
     m_output_file(output_file),
-    m_sensor_ipc(sensor_ipc)
+    m_nodes_ipc(nodes_ipc)
 {
-    m_sensor_manager = std::make_unique<SensorManager>(m_rig_json["sensors"], m_rig_json["vehicle"], m_sensor_ipc);
+    m_sensor_manager = std::make_unique<SensorManager>(m_rig_json["sensors"], m_rig_json["vehicle"], m_nodes_ipc);
 }
 
 void CarlaVehicle::run()

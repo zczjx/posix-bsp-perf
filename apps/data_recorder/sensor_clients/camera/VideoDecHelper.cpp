@@ -167,55 +167,68 @@ std::shared_ptr<DecodeOutFrame> VideoDecHelper::getDecodedFrame()
     return frame;
 }
 
-std::shared_ptr<VideoDecHelper::RtpBuffer> VideoDecHelper::getRtpVideoBuffer(size_t min_size)
+std::shared_ptr<VideoDecHelper::RtpBuffer> VideoDecHelper::createNewRtpBuffer(size_t min_size)
 {
-    if (m_free_buffer_sort_queue.empty() || m_free_buffer_sort_queue.back()->buffer_size < min_size)
-    {
-        std::shared_ptr<VideoDecHelper::RtpBuffer> buffer(new RtpBuffer(), [](RtpBuffer* buffer) {
-            if (buffer->raw_data != nullptr)
-            {
-                buffer->raw_data.reset();
-            }
-            delete buffer;
-        });
-        size_t alloc_size = min_size * 2;
-        buffer->raw_data = std::shared_ptr<uint8_t[]>(new uint8_t[alloc_size]);
-        buffer->buffer_size = alloc_size;
-        buffer->valid_data_bytes = 0;
-        buffer->payload_valid = false;
-        return buffer;
-    }
-
-    std::lock_guard<std::mutex> lock(m_free_buffer_sort_queue_mutex);
-    assert(m_free_buffer_sort_queue.back() != nullptr);
-    auto buffer = m_free_buffer_sort_queue.back();
+    std::shared_ptr<VideoDecHelper::RtpBuffer> buffer(new RtpBuffer(), [](RtpBuffer* buffer) {
+        if (buffer->raw_data != nullptr)
+        {
+            buffer->raw_data.reset();
+        }
+        delete buffer;
+    });
+    size_t alloc_size = min_size * 2;
+    buffer->raw_data = std::shared_ptr<uint8_t[]>(new uint8_t[alloc_size]);
+    buffer->buffer_size = alloc_size;
     buffer->valid_data_bytes = 0;
     buffer->payload_valid = false;
-    m_free_buffer_sort_queue.pop_back();
     return buffer;
+}
+
+std::shared_ptr<VideoDecHelper::RtpBuffer> VideoDecHelper::getRtpVideoBuffer(size_t min_size)
+{
+    if (m_free_buffer_sort_queue.empty())
+    {
+        return createNewRtpBuffer(min_size);
+    }
+    {
+        std::lock_guard<std::mutex> lock(m_free_buffer_sort_queue_mutex);
+        auto buffer = m_free_buffer_sort_queue.back();
+        if (buffer->buffer_size < min_size)
+        {
+            return createNewRtpBuffer(min_size);
+        }
+        buffer->valid_data_bytes = 0;
+        buffer->payload_valid = false;
+        m_free_buffer_sort_queue.pop_back();
+        return buffer;
+    }
 }
 
 int VideoDecHelper::releaseRtpVideoBuffer(std::shared_ptr<RtpBuffer> buffer)
 {
-    if (buffer->buffer_size <= 0)
+    if (buffer == nullptr || buffer->buffer_size <= 0)
     {
         return 0;
     }
-    std::lock_guard<std::mutex> lock(m_free_buffer_sort_queue_mutex);
-    buffer->valid_data_bytes = 0;
-    buffer->payload_valid = false;
-    m_free_buffer_sort_queue.push_back(buffer);
-
-    while (m_free_buffer_sort_queue.size() > m_free_buffer_sort_queue_size)
     {
-        m_free_buffer_sort_queue.erase(m_free_buffer_sort_queue.begin());
+        std::lock_guard<std::mutex> lock(m_free_buffer_sort_queue_mutex);
+        buffer->valid_data_bytes = 0;
+        buffer->payload_valid = false;
+        m_free_buffer_sort_queue.push_back(buffer);
+
+        while (m_free_buffer_sort_queue.size() > m_free_buffer_sort_queue_size)
+        {
+            // erase operation will move all the elements after the erased element to the front
+            // the back() will be invalid during erase operation if not guarded by a lock
+            m_free_buffer_sort_queue.erase(m_free_buffer_sort_queue.begin());
+        }
+
+        std::sort(m_free_buffer_sort_queue.begin(), m_free_buffer_sort_queue.end(),
+            [](const std::shared_ptr<RtpBuffer> a, const std::shared_ptr<RtpBuffer> b)
+        {
+            return a->buffer_size < b->buffer_size;
+        });
     }
-
-    std::sort(m_free_buffer_sort_queue.begin(), m_free_buffer_sort_queue.end(),
-        [](const std::shared_ptr<RtpBuffer> a, const std::shared_ptr<RtpBuffer> b)
-    {
-        return a->buffer_size < b->buffer_size;
-    });
 
     return 0;
 }
