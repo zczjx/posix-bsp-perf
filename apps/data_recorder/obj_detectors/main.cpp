@@ -13,7 +13,6 @@ int main(int argc, char *argv[])
 {
     ArgParser parser("DataRecorderObjDetection");
     parser.addOption("--nodes_ipc", "nodes_ipc.json", "path to the sensor ipc file");
-    parser.addOption("--g2d, --graphics2D", std::string("rkrga"), "graphics 2d platform type: rkrga");
     parser.parseArgs(argc, argv);
 
     std::string nodes_ipc_file;
@@ -29,10 +28,7 @@ int main(int argc, char *argv[])
         return -1;
     }
 
-    std::string g2dPlatform;
-    parser.getOptionVal("--graphics2D", g2dPlatform);
-
-    ObjDetector obj_detector(nodes_ipc, g2dPlatform);
+    ObjDetector obj_detector(nodes_ipc);
     obj_detector.runLoop();
 
     return 0;

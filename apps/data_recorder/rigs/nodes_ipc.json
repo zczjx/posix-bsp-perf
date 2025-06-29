@@ -1,4 +1,17 @@
 {
+    "shared_memory":
+    [
+        {
+            "name": "view_camera",
+            "publisher": "view_camera",
+            "status": "enabled",
+            "shm_name": "/view_camera.rgb",
+            "shm_slots": 32,
+            "shm_single_buffer_size": 2764800,
+            "subscriber": ["yolov5_detector"]
+        }
+    ],
+
     "camera":
     [
         {
@@ -8,12 +21,14 @@
             "image_size_x": 1280,
             "image_size_y": 720,
             "fov": 90.0,
-            "zmq_pub_info": "ipc:///tmp/view_camera.info",
-            "topic_msg": "CameraSensorMsg",
-            "out_image_shm": "/view_camera.rgb",
-            "out_image_pixel_format": "RGB888",
-            "out_image_shm_slots": 32,
-            "out_image_shm_single_buffer_size": 2764800
+            "output_pixel_format": "RGB888",
+            "publisher": {
+                "topic": "ipc:///tmp/view_camera.info",
+                "msg_type": "common/msg/CameraSensorMsg",
+                "shmem": "/view_camera.rgb",
+                "shmem_slots": 32,
+                "shmem_single_buffer_size": 2764800
+            }
         }
     ],
 
@@ -58,7 +73,20 @@
             "image_size_x": 1280,
             "image_size_y": 720,
             "fov": 90.0,
-            "pixel_format": "YUV420SP"
+            "subscriber": {
+                "topic": "ipc:///tmp/view_camera.info",
+                "msg_type": "common/msg/CameraSensorMsg",
+                "shmem": "/view_camera.rgb",
+                "shmem_slots": 32,
+                "shmem_single_buffer_size": 2764800
+            },
+            "publisher": {
+                "topic": "ipc:///tmp/yolov5_detector.info",
+                "msg_type": "common/msg/ObjDetectMsg",
+                "shmem": "/yolov5_detector.rgb",
+                "shmem_slots": 32,
+                "shmem_single_buffer_size": 2764800
+            }
         }
     ]
 }
