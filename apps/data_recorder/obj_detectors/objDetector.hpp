@@ -8,6 +8,10 @@
 #include <shared/BspLogger.hpp>
 #include <shared/ArgParser.hpp>
 #include <bsp_dnn/dnnObjDetector.hpp>
+#include <bsp_codec/IDecoder.hpp>
+#include <atomic>
+#include <mutex>
+#include <queue>
 
 using json = nlohmann::json;
 using namespace midware::zeromq_ipc;
@@ -26,9 +30,27 @@ public:
     void runLoop();
 
 private:
+    void inferenceLoop();
+
+    void setObjDetectParams(ArgParser& args);
+
+private:
     std::shared_ptr<SharedMemSubscriber> m_input_shmem_port;
     std::shared_ptr<SharedMemPublisher> m_output_shmem_port;
     std::unique_ptr<bsp_dnn::dnnObjDetector> m_dnnObjDetector;
+    bsp_dnn::ObjDetectParams m_objDetectParams{};
+
+    std::queue<std::shared_ptr<bsp_codec::DecodeOutFrame>> m_free_frames_queue;
+    std::mutex m_free_frames_queue_mutex;
+    const size_t m_free_frames_queue_size{30};
+
+    std::queue<std::shared_ptr<bsp_codec::DecodeOutFrame>> m_inference_frames_queue;
+    std::mutex m_inference_frames_queue_mutex;
+    const size_t m_inference_frames_queue_size{30};
+
+    std::atomic<bool> m_stopSignal{false};
+
+    std::unique_ptr<std::thread> m_inference_thread{nullptr};
 };
 
 } // namespace data_recorder

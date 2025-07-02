@@ -41,7 +41,7 @@ int main(int argc, char *argv[])
         return -1;
     }
 
-    ObjDetector obj_detector(nodes_ipc);
+    ObjDetector obj_detector(std::move(parser), nodes_ipc);
     obj_detector.runLoop();
 
     return 0;
