@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.12)
-project(data_recorder VERSION 0.0.1 LANGUAGES CXX)
+project(obj_detector VERSION 0.0.1 LANGUAGES CXX)
 
 set(CMAKE_C_STANDARD 11)
 set(CMAKE_CXX_STANDARD 17)
@@ -9,11 +9,7 @@ pkg_check_modules(PC_MSGPACK REQUIRED msgpack)
 
 add_executable(${PROJECT_NAME}
     main.cpp
-    CarlaVehicle.cpp
-    sensor_clients/SensorManager.cpp
-    sensor_clients/SensorClient.cpp
-    sensor_clients/camera/CameraClient.cpp
-    sensor_clients/camera/VideoDecHelper.cpp
+    objDetector.cpp
 )
 
 target_include_directories(${PROJECT_NAME} PRIVATE
@@ -26,9 +22,7 @@ target_include_directories(${PROJECT_NAME} PRIVATE
 target_link_libraries(${PROJECT_NAME} PRIVATE
   zeromq_ipc
   bsp_shared
-  bsp_protocol
-  bsp_dec
-  bsp_g2d
+  dnnObjDetector
   ${PC_MSGPACK_LDFLAGS}
 )
 
@@ -38,6 +32,3 @@ install(TARGETS ${PROJECT_NAME}
   RUNTIME DESTINATION bin
   LIBRARY DESTINATION lib
 )
-
-add_subdirectory(ui)
-add_subdirectory(obj_detector)

@@ -29,12 +29,19 @@ public:
 
     void runLoop();
 
+    ~ObjDetector();
+
 private:
     void inferenceLoop();
 
-    void setObjDetectParams(ArgParser& args);
+    void setObjDetectParams(ArgParser& args, std::unique_ptr<bsp_dnn::dnnObjDetector>& dnnObjDetector);
+
+    std::vector<bsp_dnn::ObjDetectOutputBox>& runDnnInference(std::shared_ptr<bsp_codec::DecodeOutFrame> frame);
+
+    void publishObjDetectResults(std::vector<bsp_dnn::ObjDetectOutputBox>& output_boxes, std::shared_ptr<bsp_codec::DecodeOutFrame> frame);
 
 private:
+    std::string m_name;
     std::shared_ptr<SharedMemSubscriber> m_input_shmem_port;
     std::shared_ptr<SharedMemPublisher> m_output_shmem_port;
     std::unique_ptr<bsp_dnn::dnnObjDetector> m_dnnObjDetector;

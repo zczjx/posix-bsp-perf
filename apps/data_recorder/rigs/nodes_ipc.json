@@ -11,7 +11,13 @@
             "subscriber": ["yolov5_detector"]
         }
     ],
-
+    "gui":
+    [
+        {
+            "name": "gui",
+            "status": "enabled"
+        }
+    ],
     "camera":
     [
         {

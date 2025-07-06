@@ -6,6 +6,7 @@
 #include <string>
 #include <vector>
 #include <any>
+#include <msgpack.hpp>
 
 namespace bsp_dnn
 {
@@ -31,6 +32,7 @@ struct bboxRect
     T right;
     T top;
     T bottom;
+    MSGPACK_DEFINE(left, right, top, bottom);
 };
 
 struct ObjDetectOutputBox
@@ -38,6 +40,7 @@ struct ObjDetectOutputBox
     bboxRect<int> bbox{};
     float score{0.0};
     std::string label{};
+    MSGPACK_DEFINE(bbox, score, label);
 };
 
 struct ObjDetectParams

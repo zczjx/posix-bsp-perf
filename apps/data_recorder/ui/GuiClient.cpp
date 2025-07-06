@@ -18,7 +18,8 @@ GuiClient::GuiClient(int argc, char *argv[], const json& gui_ipc):
     for (const auto& sensor: gui_ipc["camera"])
     {
         std::string sensor_type = sensor["type"];
-        m_input_shmem_ports[sensor["name"]] = std::make_pair(sensor_type, std::make_shared<SharedMemSubscriber>(sensor["zmq_pub_info"], sensor["out_image_shm"], sensor["out_image_shm_slots"], sensor["out_image_shm_single_buffer_size"]));
+        const json& publisher = sensor["publisher"];
+        m_input_shmem_ports[sensor["name"]] = std::make_pair(sensor_type, std::make_shared<SharedMemSubscriber>(publisher["topic"], publisher["shmem"], publisher["shmem_slots"], publisher["shmem_single_buffer_size"]));
     }
 
     for (const auto& input_pair: m_input_shmem_ports)

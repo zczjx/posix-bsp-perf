@@ -42,10 +42,11 @@ void CameraClient::setupInputConfig(const json& sensor_context, const json& vehi
 
 void CameraClient::setupOutputConfig(const json& node_ipc)
 {
-    m_out_pixel_format = node_ipc["out_image_pixel_format"];
-    m_output_shmem_port = std::make_shared<SharedMemPublisher>(node_ipc["zmq_pub_info"],
-                            node_ipc["out_image_shm"], node_ipc["out_image_shm_slots"],
-                            node_ipc["out_image_shm_single_buffer_size"]);
+    const json& publisher = node_ipc["publisher"];
+    m_out_pixel_format = node_ipc["output_pixel_format"];
+    m_output_shmem_port = std::make_shared<SharedMemPublisher>(publisher["topic"],
+                            publisher["shmem"], publisher["shmem_slots"],
+                            publisher["shmem_single_buffer_size"]);
 }
 
 CameraClient::~CameraClient()

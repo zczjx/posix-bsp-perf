@@ -11,7 +11,7 @@ using json = nlohmann::json;
 
 int main(int argc, char *argv[])
 {
-    ArgParser parser("DataRecorderObjDetection");
+    ArgParser parser("ObjDetector");
     parser.addOption("--nodes_ipc", "nodes_ipc.json", "path to the sensor ipc file");
     parser.addOption("--dnn, --dnnType", std::string("rknn"), "DNN type: trt or rknn");
     parser.addOption("--plugin, --pluginPath", std::string(""), "Path to the plugin library");
