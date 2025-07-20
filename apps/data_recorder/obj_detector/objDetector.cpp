@@ -2,6 +2,7 @@
 #include <common/msg/ObjDetectMsg.hpp>
 #include <thread>
 #include <chrono>
+#include <iostream>
 
 namespace apps
 {
@@ -106,6 +107,10 @@ void ObjDetector::publishObjDetectResults(std::vector<bsp_dnn::ObjDetectOutputBo
 void ObjDetector::inferenceLoop()
 {
     std::shared_ptr<bsp_codec::DecodeOutFrame> inference_frame{nullptr};
+
+    size_t frame_count = 0;
+    auto start_time = std::chrono::steady_clock::now();
+
     while (!m_stopSignal.load())
     {
         {
@@ -132,8 +137,20 @@ void ObjDetector::inferenceLoop()
             publishObjDetectResults(output_boxes, inference_frame);
 
             std::lock_guard<std::mutex> lock(m_free_frames_queue_mutex);
-            m_free_frames_queue.push(inference_frame);
-            inference_frame = nullptr;
+            if (m_free_frames_queue.size() < m_free_frames_queue_size)
+            {
+                m_free_frames_queue.push(inference_frame);
+            }
+            inference_frame.reset();
+            frame_count++;
+            auto now = std::chrono::steady_clock::now();
+            auto elapsed = std::chrono::duration_cast<std::chrono::seconds>(now - start_time).count();
+            if (elapsed >= 1)
+            {
+                std::cout << "ObjDetector::inferenceLoop() FPS: " << frame_count / elapsed << std::endl;
+                frame_count = 0;
+                start_time = now;
+            }
         }
     }
 }
@@ -150,6 +167,14 @@ void ObjDetector::runLoop()
         if (msg_size <= 0)
         {
             std::cerr << "ObjDetector::runLoop() receive msg failed" << std::endl;
+            continue;
+        }
+
+
+        if (m_inference_frames_queue.size() >= m_inference_frames_queue_size)
+        {
+            std::cout << "ObjDetector::runLoop() inference queue overload, m_inference_frames_queue.size(): " << m_inference_frames_queue.size() << std::endl;
+            continue;
         }
 
         msgpack::unpacked result = msgpack::unpack(reinterpret_cast<const char*>(msg_buffer.get()), msg_size);
@@ -157,7 +182,15 @@ void ObjDetector::runLoop()
 
         if(m_free_frames_queue.empty())
         {
-            inference_frame = std::make_shared<bsp_codec::DecodeOutFrame>();
+            inference_frame.reset(new bsp_codec::DecodeOutFrame(), [](bsp_codec::DecodeOutFrame* frame) {
+                if (frame->virt_addr != nullptr)
+                {
+                    std::cout << "ObjDetector::runLoop() delete frame->virt_addr" << std::endl;
+                    delete[] frame->virt_addr;
+                    frame->virt_addr = nullptr;
+                }
+                delete frame;
+            });
             inference_frame->fd = -1;
             inference_frame->virt_addr = new uint8_t[shmem_msg.data_size];
             inference_frame->valid_data_size = shmem_msg.data_size;
@@ -179,16 +212,21 @@ void ObjDetector::runLoop()
         {
             std::lock_guard<std::mutex> lock(m_inference_frames_queue_mutex);
             m_inference_frames_queue.push(inference_frame);
+            inference_frame.reset();
             while (m_inference_frames_queue.size() > m_inference_frames_queue_size)
             {
+                std::shared_ptr<bsp_codec::DecodeOutFrame> temp_frame = m_inference_frames_queue.front();
                 m_inference_frames_queue.pop();
+                temp_frame.reset();
             }
         }
 
-        while(m_free_frames_queue.size() >= m_free_frames_queue_size)
+        while (m_free_frames_queue.size() >= m_free_frames_queue_size)
         {
             std::lock_guard<std::mutex> lock(m_free_frames_queue_mutex);
+            std::shared_ptr<bsp_codec::DecodeOutFrame> temp_frame = m_free_frames_queue.front();
             m_free_frames_queue.pop();
+            temp_frame.reset();
         }
     }
 }

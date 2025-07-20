@@ -65,6 +65,8 @@ public:
     // Pure virtual function for running inference
     virtual int runInference() = 0;
 
+    virtual int releaseOutputData(std::vector<dnnOutput>& outputVector) = 0;
+
     virtual ~IDnnEngine() = default;
 
 protected:

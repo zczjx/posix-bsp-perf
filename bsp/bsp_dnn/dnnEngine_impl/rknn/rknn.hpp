@@ -67,6 +67,8 @@ public:
     // Pure virtual function for running inference
     int runInference() override;
 
+    int releaseOutputData(std::vector<dnnOutput>& outputVector) override;
+
 
 private:
 

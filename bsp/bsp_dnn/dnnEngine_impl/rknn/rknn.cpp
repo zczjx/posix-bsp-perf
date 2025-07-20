@@ -215,6 +215,15 @@ int rknn::popOutputData(std::vector<dnnOutput>& outputVector)
     return ret;
 }
 
+int rknn::releaseOutputData(std::vector<dnnOutput>& outputVector)
+{
+    if (m_params.m_outputs.size() > 0)
+    {
+        rknn_outputs_release(m_params.m_rknnCtx, m_params.m_io_num.n_output, m_params.m_outputs.data());
+        outputVector.clear();
+    }
+    return 0;
+}
 int rknn::runInference()
 {
     return rknn_run(m_params.m_rknnCtx, nullptr);
