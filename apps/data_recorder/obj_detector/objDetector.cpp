@@ -122,7 +122,7 @@ void ObjDetector::inferenceLoop()
             }
         }
 
-        if (inference_frame == nullptr)
+        if (inference_frame == nullptr || inference_frame->virt_addr == nullptr)
         {
             std::this_thread::sleep_for(std::chrono::milliseconds(1));
             continue;
@@ -170,11 +170,14 @@ void ObjDetector::runLoop()
             continue;
         }
 
-
-        if (m_inference_frames_queue.size() >= m_inference_frames_queue_size)
         {
-            std::cout << "ObjDetector::runLoop() inference queue overload, m_inference_frames_queue.size(): " << m_inference_frames_queue.size() << std::endl;
-            continue;
+            std::lock_guard<std::mutex> lock(m_inference_frames_queue_mutex);
+            while (m_inference_frames_queue.size() >= m_inference_frames_queue_size)
+            {
+                std::shared_ptr<bsp_codec::DecodeOutFrame> temp_frame = m_inference_frames_queue.front();
+                m_inference_frames_queue.pop();
+                temp_frame.reset();
+            }
         }
 
         msgpack::unpacked result = msgpack::unpack(reinterpret_cast<const char*>(msg_buffer.get()), msg_size);
@@ -213,20 +216,16 @@ void ObjDetector::runLoop()
             std::lock_guard<std::mutex> lock(m_inference_frames_queue_mutex);
             m_inference_frames_queue.push(inference_frame);
             inference_frame.reset();
-            while (m_inference_frames_queue.size() > m_inference_frames_queue_size)
-            {
-                std::shared_ptr<bsp_codec::DecodeOutFrame> temp_frame = m_inference_frames_queue.front();
-                m_inference_frames_queue.pop();
-                temp_frame.reset();
-            }
         }
 
-        while (m_free_frames_queue.size() >= m_free_frames_queue_size)
         {
             std::lock_guard<std::mutex> lock(m_free_frames_queue_mutex);
-            std::shared_ptr<bsp_codec::DecodeOutFrame> temp_frame = m_free_frames_queue.front();
-            m_free_frames_queue.pop();
-            temp_frame.reset();
+            while (m_free_frames_queue.size() >= m_free_frames_queue_size)
+            {
+                std::shared_ptr<bsp_codec::DecodeOutFrame> temp_frame = m_free_frames_queue.front();
+                m_free_frames_queue.pop();
+                temp_frame.reset();
+            }
         }
     }
 }

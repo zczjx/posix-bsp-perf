@@ -49,11 +49,11 @@ private:
 
     std::queue<std::shared_ptr<bsp_codec::DecodeOutFrame>> m_free_frames_queue;
     std::mutex m_free_frames_queue_mutex;
-    const size_t m_free_frames_queue_size{30};
+    const size_t m_free_frames_queue_size{50};
 
     std::queue<std::shared_ptr<bsp_codec::DecodeOutFrame>> m_inference_frames_queue;
     std::mutex m_inference_frames_queue_mutex;
-    const size_t m_inference_frames_queue_size{30};
+    const size_t m_inference_frames_queue_size{50};
 
     std::atomic<bool> m_stopSignal{false};
 
