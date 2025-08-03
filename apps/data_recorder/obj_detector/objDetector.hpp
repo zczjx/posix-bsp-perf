@@ -36,9 +36,9 @@ private:
 
     void setObjDetectParams(ArgParser& args, std::unique_ptr<bsp_dnn::dnnObjDetector>& dnnObjDetector);
 
-    std::vector<bsp_dnn::ObjDetectOutputBox>& runDnnInference(std::shared_ptr<bsp_codec::DecodeOutFrame> frame);
+    std::vector<bsp_dnn::ObjDetectOutputBox> runDnnInference(std::shared_ptr<bsp_codec::DecodeOutFrame> frame);
 
-    void publishObjDetectResults(std::vector<bsp_dnn::ObjDetectOutputBox>& output_boxes, std::shared_ptr<bsp_codec::DecodeOutFrame> frame);
+    void publishObjDetectResults(const std::vector<bsp_dnn::ObjDetectOutputBox>& output_boxes, std::shared_ptr<bsp_codec::DecodeOutFrame> frame);
 
 private:
     std::string m_name;

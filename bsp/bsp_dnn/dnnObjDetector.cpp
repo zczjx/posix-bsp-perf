@@ -72,7 +72,7 @@ void dnnObjDetector::pushInputData(std::shared_ptr<ObjDetectInput> dataInput)
     m_dataInput = dataInput;
 }
 
-std::vector<ObjDetectOutputBox>& dnnObjDetector::popOutputData()
+std::vector<ObjDetectOutputBox> dnnObjDetector::popOutputData()
 {
     return m_dataOutputVector;
 }

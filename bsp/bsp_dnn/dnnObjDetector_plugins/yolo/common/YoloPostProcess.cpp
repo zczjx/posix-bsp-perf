@@ -4,6 +4,7 @@
 #include <algorithm>
 #include <set>
 #include <fstream>
+#include <cmath>
 
 namespace bsp_dnn
 {
@@ -43,15 +44,27 @@ int YoloPostProcess::initLabelMap(const std::string& labelMapPath)
 void YoloPostProcess::inverseSortWithIndices(std::vector<float> &input, std::vector<int> &indices)
 {
     // 验证输入参数
-    if (input.empty() || indices.empty()) {
+    if (input.empty() || indices.empty())
+    {
         std::cerr << "YoloPostProcess::inverseSortWithIndices() empty input vectors" << std::endl;
         return;
     }
 
-    if (input.size() != indices.size()) {
+    if (input.size() != indices.size())
+    {
         std::cerr << "YoloPostProcess::inverseSortWithIndices() size mismatch: input="
                   << input.size() << ", indices=" << indices.size() << std::endl;
         return;
+    }
+
+    // 验证输入数据的有效性
+    for (size_t i = 0; i < input.size(); ++i)
+    {
+        if (std::isnan(input[i]) || std::isinf(input[i]))
+        {
+            std::cerr << "YoloPostProcess::inverseSortWithIndices() invalid input value at index " << i << ": " << input[i] << std::endl;
+            return;
+        }
     }
 
     try {
@@ -75,9 +88,23 @@ void YoloPostProcess::inverseSortWithIndices(std::vector<float> &input, std::vec
             input[i] = value_index_pairs[i].first;
             indices[i] = value_index_pairs[i].second;
         }
-    } catch (const std::exception& e) {
+
+        // 验证输出数据的有效性
+        for (size_t i = 0; i < input.size(); ++i)
+        {
+            if (std::isnan(input[i]) || std::isinf(input[i]))
+            {
+                std::cerr << "YoloPostProcess::inverseSortWithIndices() invalid output value at index " << i << ": " << input[i] << std::endl;
+                return;
+            }
+        }
+    }
+    catch (const std::exception& e)
+    {
         std::cerr << "YoloPostProcess::inverseSortWithIndices() exception: " << e.what() << std::endl;
-    } catch (...) {
+    }
+    catch (...)
+    {
         std::cerr << "YoloPostProcess::inverseSortWithIndices() unknown exception" << std::endl;
     }
 }
@@ -155,10 +182,14 @@ int YoloPostProcess::nms(int validCount, std::vector<float> &filterBoxes, std::v
             }
         }
         return 0;
-    } catch (const std::exception& e) {
+    }
+    catch (const std::exception& e)
+    {
         std::cerr << "YoloPostProcess::nms() exception: " << e.what() << std::endl;
         return -1;
-    } catch (...) {
+    }
+    catch (...)
+    {
         std::cerr << "YoloPostProcess::nms() unknown exception" << std::endl;
         return -1;
     }
@@ -195,10 +226,11 @@ int YoloPostProcess::runPostProcess(const ObjDetectParams& params, std::vector<I
         }
 
         // 验证处理结果的一致性
-        if (objScores.size() != validBoxNum || classId.size() != validBoxNum || filterBoxes.size() != validBoxNum * 4) {
-            std::cerr << "YoloPostProcess::runPostProcess() data inconsistency: validBoxNum=" << validBoxNum 
-                      << ", objScores.size=" << objScores.size() 
-                      << ", classId.size=" << classId.size() 
+        if (objScores.size() != validBoxNum || classId.size() != validBoxNum || filterBoxes.size() != validBoxNum * 4)
+        {
+            std::cerr << "YoloPostProcess::runPostProcess() data inconsistency: validBoxNum=" << validBoxNum
+                      << ", objScores.size=" << objScores.size()
+                      << ", classId.size=" << classId.size()
                       << ", filterBoxes.size=" << filterBoxes.size() << std::endl;
             return -1;
         }
@@ -241,15 +273,21 @@ int YoloPostProcess::runPostProcess(const ObjDetectParams& params, std::vector<I
             outputBox.score = objScores[i];
 
             // 验证类别ID的有效性
-            if (n < classId.size()) {
+            if (n < classId.size())
+            {
                 int id = classId[n];
-                if (id >= 0 && id < m_labelMap.size()) {
+                if (id >= 0 && id < m_labelMap.size())
+                {
                     outputBox.label = m_labelMap[id];
-                } else {
+                }
+                else
+                {
                     std::cerr << "YoloPostProcess::runPostProcess() invalid class ID: " << id << std::endl;
                     outputBox.label = "unknown";
                 }
-            } else {
+            }
+            else
+            {
                 std::cerr << "YoloPostProcess::runPostProcess() class ID index out of bounds" << std::endl;
                 outputBox.label = "unknown";
             }
@@ -258,10 +296,14 @@ int YoloPostProcess::runPostProcess(const ObjDetectParams& params, std::vector<I
         }
 
         return 0;
-    } catch (const std::exception& e) {
+    }
+    catch (const std::exception& e)
+    {
         std::cerr << "YoloPostProcess::runPostProcess() exception: " << e.what() << std::endl;
         return -1;
-    } catch (...) {
+    }
+    catch (...)
+    {
         std::cerr << "YoloPostProcess::runPostProcess() unknown exception" << std::endl;
         return -1;
     }
@@ -284,14 +326,16 @@ int YoloPostProcess::doProcess(const int idx, const ObjDetectParams& params, int
     int grid_len = grid_h * grid_w;
 
     // 验证输入参数的有效性
-    if (grid_h <= 0 || grid_w <= 0 || grid_len <= 0) {
+    if (grid_h <= 0 || grid_w <= 0 || grid_len <= 0)
+    {
         std::cerr << "YoloPostProcess::doProcess() invalid grid dimensions: "
                   << grid_h << "x" << grid_w << ", grid_len=" << grid_len << std::endl;
         return 0;
     }
 
     // 验证输入缓冲区
-    if (!inputData.buf || inputData.size <= 0) {
+    if (!inputData.buf || inputData.size <= 0)
+    {
         std::cerr << "YoloPostProcess::doProcess() invalid input buffer: buf="
                   << inputData.buf << ", size=" << inputData.size << std::endl;
         return 0;
@@ -299,7 +343,8 @@ int YoloPostProcess::doProcess(const int idx, const ObjDetectParams& params, int
 
     // 计算所需的最小缓冲区大小
     size_t required_size = PROP_BOX_SIZE * 3 * grid_len;
-    if (inputData.size < required_size) {
+    if (inputData.size < required_size)
+    {
         std::cerr << "YoloPostProcess::doProcess() buffer too small: required="
                   << required_size << ", actual=" << inputData.size << std::endl;
         return 0;

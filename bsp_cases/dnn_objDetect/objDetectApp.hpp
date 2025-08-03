@@ -67,7 +67,7 @@ private:
         m_dnnObjDetector->pushInputData(std::make_shared<bsp_dnn::ObjDetectInput>(objDetectInput));
         setObjDetectParams(m_objDetectParams);
         m_dnnObjDetector->runObjDetect(m_objDetectParams);
-        auto& objDetectOutput = m_dnnObjDetector->popOutputData();
+        auto objDetectOutput = m_dnnObjDetector->popOutputData();
 
         for (const auto& item : objDetectOutput)
             {

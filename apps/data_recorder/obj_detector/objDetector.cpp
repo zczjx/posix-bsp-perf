@@ -73,20 +73,66 @@ void ObjDetector::setObjDetectParams(ArgParser& args, std::unique_ptr<bsp_dnn::d
     dnnObjDetector->getOutputQuantParams(m_objDetectParams.quantize_zero_points, m_objDetectParams.quantize_scales);
 }
 
-std::vector<bsp_dnn::ObjDetectOutputBox>& ObjDetector::runDnnInference(std::shared_ptr<bsp_codec::DecodeOutFrame> frame)
+std::vector<bsp_dnn::ObjDetectOutputBox> ObjDetector::runDnnInference(std::shared_ptr<bsp_codec::DecodeOutFrame> frame)
 {
-    bsp_dnn::ObjDetectInput objDetectInput = {
-        .handleType = "DecodeOutFrame",
-        .imageHandle = frame,
-    };
-    m_dnnObjDetector->pushInputData(std::make_shared<bsp_dnn::ObjDetectInput>(objDetectInput));
-    m_objDetectParams.scale_width = static_cast<float>(m_objDetectParams.model_input_width) / static_cast<float>(frame->width);
-    m_objDetectParams.scale_height = static_cast<float>(m_objDetectParams.model_input_height) / static_cast<float>(frame->height);
-    m_dnnObjDetector->runObjDetect(m_objDetectParams);
-    return m_dnnObjDetector->popOutputData();
+    // 验证输入参数
+    if (!frame || !frame->virt_addr || frame->valid_data_size <= 0)
+    {
+        std::cerr << "ObjDetector::runDnnInference() invalid input frame" << std::endl;
+        return std::vector<bsp_dnn::ObjDetectOutputBox>();
+    }
+
+    try {
+        bsp_dnn::ObjDetectInput objDetectInput =
+        {
+            .handleType = "DecodeOutFrame",
+            .imageHandle = frame,
+        };
+
+        m_dnnObjDetector->pushInputData(std::make_shared<bsp_dnn::ObjDetectInput>(objDetectInput));
+
+        // 验证缩放参数
+        if (frame->width <= 0 || frame->height <= 0)
+        {
+            std::cerr << "ObjDetector::runDnnInference() invalid frame dimensions: "
+                      << frame->width << "x" << frame->height << std::endl;
+            return std::vector<bsp_dnn::ObjDetectOutputBox>();
+        }
+
+        m_objDetectParams.scale_width = static_cast<float>(m_objDetectParams.model_input_width) / static_cast<float>(frame->width);
+        m_objDetectParams.scale_height = static_cast<float>(m_objDetectParams.model_input_height) / static_cast<float>(frame->height);
+
+        // 验证缩放参数的有效性
+        if (m_objDetectParams.scale_width <= 0.0f || m_objDetectParams.scale_height <= 0.0f)
+        {
+            std::cerr << "ObjDetector::runDnnInference() invalid scale parameters: "
+                      << m_objDetectParams.scale_width << ", " << m_objDetectParams.scale_height << std::endl;
+            return std::vector<bsp_dnn::ObjDetectOutputBox>();
+        }
+
+        int result = m_dnnObjDetector->runObjDetect(m_objDetectParams);
+        if (result != 0)
+        {
+            std::cerr << "ObjDetector::runDnnInference() runObjDetect failed with result: " << result << std::endl;
+            return std::vector<bsp_dnn::ObjDetectOutputBox>();
+        }
+
+        // 返回副本而不是引用，避免内存问题
+        return m_dnnObjDetector->popOutputData();
+    }
+    catch (const std::exception& e)
+    {
+        std::cerr << "ObjDetector::runDnnInference() exception: " << e.what() << std::endl;
+        return std::vector<bsp_dnn::ObjDetectOutputBox>();
+    }
+    catch (...)
+    {
+        std::cerr << "ObjDetector::runDnnInference() unknown exception" << std::endl;
+        return std::vector<bsp_dnn::ObjDetectOutputBox>();
+    }
 }
 
-void ObjDetector::publishObjDetectResults(std::vector<bsp_dnn::ObjDetectOutputBox>& output_boxes, std::shared_ptr<bsp_codec::DecodeOutFrame> frame)
+void ObjDetector::publishObjDetectResults(const std::vector<bsp_dnn::ObjDetectOutputBox>& output_boxes, std::shared_ptr<bsp_codec::DecodeOutFrame> frame)
 {
     msgpack::sbuffer msg_buffer;
     ObjDetectMsg objDetectMsg;
@@ -129,7 +175,7 @@ void ObjDetector::inferenceLoop()
         }
         else
         {
-            std::vector<bsp_dnn::ObjDetectOutputBox>& output_boxes = runDnnInference(inference_frame);
+            std::vector<bsp_dnn::ObjDetectOutputBox> output_boxes = runDnnInference(inference_frame);
             for (const auto& output_box : output_boxes)
             {
                 std::cout << "ObjDetector::inferenceLoop() output_box: " << output_box.label << std::endl;

@@ -148,7 +148,7 @@ private:
         };
         m_decoder->setup(cfg);
 
-        auto decoderCallback = [this](std::any userdata, std::shared_ptr<DecodeOutFrame> frame)
+        auto decoderCallback = [this](std::any /*userdata*/, std::shared_ptr<DecodeOutFrame> frame)
         {
             if (m_encoder == nullptr)
             {
@@ -166,7 +166,7 @@ private:
                 m_logger->printStdoutLog(bsp_perf::shared::BspLogger::LogLevel::Debug, "VideoDetectApp::createG2DBuffer() encoder setup ret: {}", ret);
             }
 
-            auto& objDetectOutput = dnnInference(frame);
+            auto objDetectOutput = dnnInference(frame);
             IGraphics2D::G2DBufferParams dec_out_g2d_params = {
                 .virtual_addr = frame->virt_addr,
                 .width = frame->width,
@@ -198,7 +198,7 @@ private:
             };
 
             std::shared_ptr<IGraphics2D::G2DBuffer> rgb888_g2d_buf = m_g2d->createG2DBuffer("virtualaddr", rgb888_g2d_buf_params);
-            int ret = m_g2d->imageCvtColor(g2d_dec_out_buf, rgb888_g2d_buf, frame->format, "RGB888");
+            (void)m_g2d->imageCvtColor(g2d_dec_out_buf, rgb888_g2d_buf, frame->format, "RGB888");
             cv::Mat cvRGB888Image(frame->height, frame->width, CV_8UC3, m_rgb888_buf.data());
             int i = 1 + (std::rand() % m_colors_list.size());
 
@@ -225,7 +225,7 @@ private:
             };
 
             std::shared_ptr<IGraphics2D::G2DBuffer> yuv420_g2d_buf = m_g2d->createG2DBuffer("virtualaddr", yuv420_g2d_buf_params);
-            ret = m_g2d->imageCvtColor(rgb888_g2d_buf, yuv420_g2d_buf, "RGB888", frame->format);
+            (void)m_g2d->imageCvtColor(rgb888_g2d_buf, yuv420_g2d_buf, "RGB888", frame->format);
             std::shared_ptr<EncodeInputBuffer> enc_in_buf = m_encoder->getInputBuffer();
 
             IGraphics2D::G2DBufferParams enc_in_g2d_params = {
@@ -237,7 +237,7 @@ private:
                 .format = frame->format,
             };
             std::shared_ptr<IGraphics2D::G2DBuffer> g2d_enc_in_buf = m_g2d->createG2DBuffer("virtualaddr", enc_in_g2d_params);
-            ret = m_g2d->imageCopy(yuv420_g2d_buf, g2d_enc_in_buf);
+            (void)m_g2d->imageCopy(yuv420_g2d_buf, g2d_enc_in_buf);
             m_frame_index++;
             // Encode to file
             // Write header on first frame->
@@ -284,7 +284,7 @@ private:
         m_dnnObjDetector->getOutputQuantParams(objDetectParams.quantize_zero_points, objDetectParams.quantize_scales);
     }
 
-    std::vector<ObjDetectOutputBox>& dnnInference(std::shared_ptr<DecodeOutFrame> frame)
+    std::vector<ObjDetectOutputBox> dnnInference(std::shared_ptr<DecodeOutFrame> frame)
     {
         bsp_dnn::ObjDetectInput objDetectInput = {
             .handleType = "DecodeOutFrame",

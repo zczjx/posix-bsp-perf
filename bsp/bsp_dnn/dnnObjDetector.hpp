@@ -49,7 +49,7 @@ public:
 
     void pushInputData(std::shared_ptr<ObjDetectInput> dataInput);
 
-    std::vector<ObjDetectOutputBox>& popOutputData();
+    std::vector<ObjDetectOutputBox> popOutputData();
 
     // Pure virtual function for running inference
     int runObjDetect(ObjDetectParams& params);
