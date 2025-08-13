@@ -143,11 +143,16 @@ void ObjDetector::publishObjDetectResults(const std::vector<bsp_dnn::ObjDetectOu
     objDetectMsg.original_frame.height = frame->height;
     objDetectMsg.original_frame.data_size = frame->valid_data_size;
     objDetectMsg.original_frame.slot_index = m_output_shmem_port->getFreeSlotIndex();
-    objDetectMsg.output_boxes = std::vector<bsp_dnn::ObjDetectOutputBox>(output_boxes);
+    for (size_t i = 0; i < output_boxes.size() && i < ObjDetectMsg::MAX_BOXES; i++)
+    {
+        objDetectMsg.output_boxes[i] = output_boxes[i];
+        objDetectMsg.valid_box_count++;
+    }
+    msg_buffer.clear();
     msgpack::pack(msg_buffer, objDetectMsg);
     m_output_shmem_port->publishData(reinterpret_cast<const uint8_t*>(msg_buffer.data()),
                                             msg_buffer.size(), frame->virt_addr,
-                                            objDetectMsg.original_frame.slot_index, objDetectMsg.original_frame.data_size);
+                                            objDetectMsg.original_frame.slot_index , objDetectMsg.original_frame.data_size);
 }
 
 void ObjDetector::inferenceLoop()
@@ -202,14 +207,16 @@ void ObjDetector::inferenceLoop()
 }
 void ObjDetector::runLoop()
 {
-    std::shared_ptr<uint8_t[]> msg_buffer(new uint8_t[sizeof(CameraSensorMsg)]);
+    // 增加缓冲区大小，确保能容纳完整的 msgpack 数据
+    const size_t MAX_MSG_SIZE = 4096; // 4KB 应该足够
+    std::shared_ptr<uint8_t[]> msg_buffer(new uint8_t[MAX_MSG_SIZE]);
     std::shared_ptr<uint8_t[]> data_buffer{nullptr};
     std::shared_ptr<bsp_codec::DecodeOutFrame> inference_frame{nullptr};
 
     while (!m_stopSignal.load())
     {
 
-        size_t msg_size = m_input_shmem_port->receiveMsg(msg_buffer, sizeof(CameraSensorMsg));
+        size_t msg_size = m_input_shmem_port->receiveMsg(msg_buffer, MAX_MSG_SIZE);
         if (msg_size <= 0)
         {
             std::cerr << "ObjDetector::runLoop() receive msg failed" << std::endl;
@@ -226,8 +233,9 @@ void ObjDetector::runLoop()
             }
         }
 
-        msgpack::unpacked result = msgpack::unpack(reinterpret_cast<const char*>(msg_buffer.get()), msg_size);
-        CameraSensorMsg shmem_msg = result.get().as<CameraSensorMsg>();
+        try {
+            msgpack::unpacked result = msgpack::unpack(reinterpret_cast<const char*>(msg_buffer.get()), msg_size);
+            CameraSensorMsg shmem_msg = result.get().as<CameraSensorMsg>();
 
         if(m_free_frames_queue.empty())
         {
@@ -272,6 +280,14 @@ void ObjDetector::runLoop()
                 m_free_frames_queue.pop();
                 temp_frame.reset();
             }
+        }
+        } catch (const msgpack::insufficient_bytes& e) {
+            std::cerr << "ObjDetector::runLoop() msgpack insufficient bytes error: " << e.what() << std::endl;
+            std::cerr << "Received message size: " << msg_size << " bytes" << std::endl;
+            continue;
+        } catch (const std::exception& e) {
+            std::cerr << "ObjDetector::runLoop() msgpack unpack error: " << e.what() << std::endl;
+            continue;
         }
     }
 }

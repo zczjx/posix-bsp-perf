@@ -20,6 +20,14 @@ find_package(PkgConfig REQUIRED)
 pkg_check_modules(QT5_WIDGETS REQUIRED Qt5Widgets)
 pkg_check_modules(PC_MSGPACK REQUIRED msgpack)
 
+if(DEFINED BSP_LIB_PATH)
+  set(OpenCV_DIR ${BSP_LIB_PATH}/cmake/opencv4)
+else()
+    set(OpenCV_DIR /usr/lib/cmake/opencv4)
+endif()
+# Find OpenCV package
+find_package(OpenCV REQUIRED)
+
 # 1. 设置主机 moc/uic 路径
 set(MOC_EXEC /usr/bin/moc)
 set(UIC_EXEC /usr/bin/uic)
@@ -72,7 +80,7 @@ set_target_properties(${PROJECT_NAME} PROPERTIES
     MACOSX_BUNDLE_BUNDLE_VERSION ${PROJECT_VERSION}
     MACOSX_BUNDLE_SHORT_VERSION_STRING ${PROJECT_VERSION_MAJOR}.${PROJECT_VERSION_MINOR}
     INSTALL_RPATH "$ORIGIN/../lib"
-    LINK_FLAGS "-Wl,-rpath-link,${QT5_WIDGETS_LIBRARY_DIRS}"
+    LINK_FLAGS "-Wl,-rpath-link,${QT5_WIDGETS_LIBRARY_DIRS} -Wl,-rpath-link,${OpenCV_LIBRARY_DIRS}"
 )
 
 target_link_libraries(${PROJECT_NAME} PUBLIC
@@ -80,6 +88,7 @@ target_link_libraries(${PROJECT_NAME} PUBLIC
     zeromq_ipc
     bsp_shared
     ${PC_MSGPACK_LDFLAGS}
+    ${OpenCV_LIBRARIES}
 )
 
 target_include_directories(${PROJECT_NAME} PUBLIC
@@ -89,6 +98,7 @@ target_include_directories(${PROJECT_NAME} PUBLIC
     ${CMAKE_SOURCE_DIR}/3rdparty
     ${CMAKE_SOURCE_DIR}/apps/data_recorder
     ${PC_MSGPACK_INCLUDE_DIRS}
+    ${OpenCV_INCLUDE_DIRS}
 )
 
 install(TARGETS ${PROJECT_NAME}

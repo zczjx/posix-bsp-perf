@@ -4,7 +4,7 @@
 #include <msgpack.hpp>
 #include <string>
 #include <cstdint>
-#include <vector>
+#include <array>
 #include <bsp_dnn/IDnnObjDetectorPlugin.hpp>
 #include "CameraSensorMsg.hpp"
 
@@ -14,10 +14,12 @@ namespace data_recorder
 {
 struct ObjDetectMsg
 {
+    static constexpr uint32_t MAX_BOXES = 64;
     std::string publisher_id{};
     CameraSensorMsg original_frame{};
-    std::vector<bsp_dnn::ObjDetectOutputBox> output_boxes{};
-    MSGPACK_DEFINE(publisher_id, original_frame, output_boxes);
+    std::array<bsp_dnn::ObjDetectOutputBox, MAX_BOXES> output_boxes{};
+    uint32_t valid_box_count{0};
+    MSGPACK_DEFINE(publisher_id, original_frame, output_boxes, valid_box_count);
 };
 
 } // namespace data_recorder

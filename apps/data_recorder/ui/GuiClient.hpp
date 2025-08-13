@@ -31,9 +31,14 @@ public:
     void runLoop();
 
 private:
-    void installGuiUpdateCallback();
+
+    void setupCameraConsumer(const json& gui_ipc);
 
     void CameraConsumerLoop(std::shared_ptr<SharedMemSubscriber> input_shmem_port);
+
+    void setupObjectDetectionConsumer(const json& gui_ipc);
+
+    void ObjectDetectionConsumerLoop(std::shared_ptr<SharedMemSubscriber> input_shmem_port);
 
 private:
     std::unique_ptr<QApplication> m_app;
