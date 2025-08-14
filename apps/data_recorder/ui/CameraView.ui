@@ -44,9 +44,37 @@
       </widget>
      </item>
      <item>
+      <widget class="QPushButton" name="toggleBtn">
+       <property name="styleSheet">
+        <string notr="true">QPushButton#toggleBtn {
+    min-width: 60px;
+    padding: 6px 12px;
+    border: 2px outset #999;
+    border-radius: 12px;
+    color: white;
+    background: #d9534f;
+    font-weight: bold;
+}
+QPushButton#toggleBtn:pressed {
+    border-style: inset;
+    padding-top: 8px;
+}
+QPushButton#toggleBtn:checked {
+    background: #5cb85c;
+}</string>
+       </property>
+       <property name="text">
+        <string>Record OFF</string>
+       </property>
+       <property name="checkable">
+        <bool>true</bool>
+       </property>
+      </widget>
+     </item>
+     <item>
       <spacer name="horizontalSpacer">
        <property name="orientation">
-        <enum>Qt::Horizontal</enum>
+        <enum>Qt::Orientation::Horizontal</enum>
        </property>
        <property name="sizeHint" stdset="0">
         <size>

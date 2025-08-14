@@ -157,7 +157,7 @@ void GuiClient::ObjectDetectionConsumerLoop(std::shared_ptr<SharedMemSubscriber>
                 cv::rectangle(cvRGB888Image,
                     cv::Point(shmem_msg.output_boxes[i].bbox.left, shmem_msg.output_boxes[i].bbox.top),
                     cv::Point(shmem_msg.output_boxes[i].bbox.right, shmem_msg.output_boxes[i].bbox.bottom),
-                    cv::Scalar(0, 0, 255), 2);
+                    cv::Scalar(255, 0, 0), 2);
                 cv::putText(cvRGB888Image, shmem_msg.output_boxes[i].label,
                     cv::Point(shmem_msg.output_boxes[i].bbox.left, shmem_msg.output_boxes[i].bbox.top + 12),
                     cv::FONT_HERSHEY_COMPLEX, 0.4, cv::Scalar(255, 255, 255));

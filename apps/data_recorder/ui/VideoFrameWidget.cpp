@@ -57,6 +57,10 @@ void VideoFrameWidget::setupConnections()
     // 连接下拉菜单的信号
     connect(m_ui->dataSourceComboBox, QOverload<const QString &>::of(&QComboBox::currentTextChanged),
             this, &VideoFrameWidget::onDataSourceChanged);
+
+    connect(m_ui->toggleBtn, &QPushButton::toggled, this, [this](bool on){
+        m_ui->toggleBtn->setText(on ? "Record ON" : "Record OFF");
+    });
 }
 
 void VideoFrameWidget::initializeDataSourceComboBox()
