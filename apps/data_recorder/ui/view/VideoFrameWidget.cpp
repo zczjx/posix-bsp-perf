@@ -1,5 +1,5 @@
 #include "VideoFrameWidget.h"
-#include "./ui_CameraView.h" // uic 生成的头文件
+#include "ui_CameraView.h" // uic 生成的头文件
 #include <QDebug>
 
 VideoFrameWidget::VideoFrameWidget(QWidget *parent)

@@ -1,8 +1,8 @@
-#include "GuiClient.hpp"
-#include <common/msg/CameraSensorMsg.hpp>
+#include "ObjectsDetection.hpp"
 #include <common/msg/ObjDetectMsg.hpp>
 #include <iostream>
 #include <thread>
+#include <msgpack.hpp>
 #include <opencv2/opencv.hpp>
 
 namespace apps
@@ -11,41 +11,26 @@ namespace data_recorder
 {
 namespace ui
 {
-GuiClient::GuiClient(int argc, char *argv[], const json& gui_ipc):
-    m_app(std::make_unique<QApplication>(argc, argv)),
-    m_video_frame_widget(std::make_unique<VideoFrameWidget>())
+
+ObjectsDetection::ObjectsDetection(const json& gui_ipc)
 {
-    m_video_frame_widget->show();
-
-    setupCameraConsumer(gui_ipc);
     setupObjectDetectionConsumer(gui_ipc);
-
 }
 
-void GuiClient::setupCameraConsumer(const json& gui_ipc)
+ObjectsDetection::~ObjectsDetection()
 {
-    for (const auto& sensor: gui_ipc["camera"])
-    {
-        std::string sensor_type = sensor["type"];
-        const json& publisher = sensor["publisher"];
-        m_input_shmem_ports[sensor["name"]] = std::make_pair(sensor_type, std::make_shared<SharedMemSubscriber>(publisher["topic"], publisher["shmem"], publisher["shmem_slots"], publisher["shmem_single_buffer_size"]));
-    }
+    m_stopSignal.store(true);
 
-    for (const auto& input_pair: m_input_shmem_ports)
+    for (auto& thread: m_input_shmem_threads)
     {
-        std::string sensor_type = input_pair.second.first;
-
-        if (sensor_type.compare("camera") == 0)
+        if (thread.joinable())
         {
-            m_input_shmem_threads.push_back(std::thread([this, input_pair]() {
-                CameraConsumerLoop(input_pair.second.second);
-            }));
+            thread.join();
         }
     }
-
 }
 
-void GuiClient::setupObjectDetectionConsumer(const json& gui_ipc)
+void ObjectsDetection::setupObjectDetectionConsumer(const json& gui_ipc)
 {
     for (const auto& sensor: gui_ipc["object_detector"])
     {
@@ -67,49 +52,7 @@ void GuiClient::setupObjectDetectionConsumer(const json& gui_ipc)
     }
 }
 
-void GuiClient::CameraConsumerLoop(std::shared_ptr<SharedMemSubscriber> input_shmem_port)
-{
-
-    std::shared_ptr<uint8_t[]> msg_buffer(new uint8_t[sizeof(CameraSensorMsg)]);
-    std::shared_ptr<uint8_t[]> data_buffer{nullptr};
-
-    while (!m_stopSignal.load())
-    {
-        size_t msg_size = input_shmem_port->receiveMsg(msg_buffer, sizeof(CameraSensorMsg));
-        if (msg_size <= 0)
-        {
-            std::cerr << "GuiClient::CameraConsumerLoop() receive msg failed" << std::endl;
-            continue;
-        }
-
-        if (m_video_frame_widget->getCurrentDataSource() != VideoFrameWidget::RawCamera)
-        {
-            continue;
-        }
-
-        std::cout << "GuiClient::CameraConsumerLoop() process msg" << std::endl;
-        msgpack::unpacked result = msgpack::unpack(reinterpret_cast<const char*>(msg_buffer.get()), msg_size);
-        CameraSensorMsg shmem_msg = result.get().as<CameraSensorMsg>();
-
-        if (data_buffer == nullptr)
-        {
-            data_buffer.reset(new uint8_t[shmem_msg.data_size]);
-        }
-
-        input_shmem_port->receiveSharedMemData(data_buffer, shmem_msg.data_size, shmem_msg.slot_index);
-
-        if(shmem_msg.pixel_format.compare("RGB888") == 0)
-        {
-            m_video_frame_widget->setFrame(data_buffer.get(), shmem_msg.width, shmem_msg.height);
-        }
-        else
-        {
-            std::cerr << "GuiClient::CameraConsumerLoop() unsupported pixel format: " << shmem_msg.pixel_format << std::endl;
-        }
-    }
-}
-
-void GuiClient::ObjectDetectionConsumerLoop(std::shared_ptr<SharedMemSubscriber> input_shmem_port)
+void ObjectsDetection::ObjectDetectionConsumerLoop(std::shared_ptr<SharedMemSubscriber> input_shmem_port)
 {
 
     std::shared_ptr<uint8_t[]> msg_buffer(new uint8_t[sizeof(ObjDetectMsg)]);
@@ -121,11 +64,6 @@ void GuiClient::ObjectDetectionConsumerLoop(std::shared_ptr<SharedMemSubscriber>
         if (msg_size <= 0)
         {
             std::cerr << "GuiClient::CameraConsumerLoop() receive msg failed" << std::endl;
-            continue;
-        }
-
-        if (m_video_frame_widget->getCurrentDataSource() != VideoFrameWidget::ObjectsDetection)
-        {
             continue;
         }
 
@@ -162,33 +100,13 @@ void GuiClient::ObjectDetectionConsumerLoop(std::shared_ptr<SharedMemSubscriber>
                     cv::Point(shmem_msg.output_boxes[i].bbox.left, shmem_msg.output_boxes[i].bbox.top + 12),
                     cv::FONT_HERSHEY_COMPLEX, 0.4, cv::Scalar(255, 255, 255));
             }
-            m_video_frame_widget->setFrame(data_buffer.get(), shmem_msg.original_frame.width, shmem_msg.original_frame.height);
+            emit objectsDetectionFrameUpdated(data_buffer.get(), shmem_msg.original_frame.width, shmem_msg.original_frame.height);
         }
         else
         {
             std::cerr << "GuiClient::CameraConsumerLoop() unsupported pixel format: " << shmem_msg.original_frame.pixel_format << std::endl;
         }
     }
-}
-
-void GuiClient::runLoop()
-{
-    m_app->exec();
-}
-
-GuiClient::~GuiClient()
-{
-    m_stopSignal.store(true);
-
-    for (auto& thread: m_input_shmem_threads)
-    {
-        if (thread.joinable())
-        {
-            thread.join();
-        }
-    }
-
-    m_app->quit();
 }
 
 } // namespace ui

@@ -3,7 +3,7 @@
 #include <string>
 #include <shared/ArgParser.hpp>
 #include <nlohmann/json.hpp>
-#include "GuiClient.hpp"
+#include "controller/GuiController.hpp"
 
 using namespace apps::data_recorder::ui;
 using namespace bsp_perf::shared;
@@ -28,8 +28,8 @@ int main(int argc, char *argv[])
         return -1;
     }
 
-    GuiClient gui_client(argc, argv, nodes_ipc);
-    gui_client.runLoop();
+    GuiController gui_controller(argc, argv, nodes_ipc);
+    gui_controller.runLoop();
 
     return 0;
 }
