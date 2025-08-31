@@ -34,9 +34,13 @@ public:
         return m_currentDataSource;
     }
 
+
 private slots:
     // 处理数据源选择变化
     void onDataSourceChanged(const QString& text);
+
+signals:
+    void recordStatusChanged(bool on);
 
 private:
     void setupConnections();

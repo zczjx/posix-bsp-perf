@@ -104,6 +104,8 @@ set(PROJECT_SOURCES
     model/ObjectsDetection.hpp
     model/ObjectsDetection.cpp
     moc_ObjectsDetection.cpp
+    model/Recorder.hpp
+    model/Recorder.cpp
 
     # View层
     view/VideoFrameWidget.h
@@ -133,6 +135,9 @@ target_link_libraries(${PROJECT_NAME} PUBLIC
     ${QT5_WIDGETS_LDFLAGS}
     zeromq_ipc
     bsp_shared
+    bsp_container
+    bsp_enc
+    bsp_g2d
     ${PC_MSGPACK_LDFLAGS}
     ${OpenCV_LIBRARIES}
 )

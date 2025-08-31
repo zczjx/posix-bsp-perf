@@ -60,6 +60,7 @@ void VideoFrameWidget::setupConnections()
 
     connect(m_ui->toggleBtn, &QPushButton::toggled, this, [this](bool on){
         m_ui->toggleBtn->setText(on ? "Record ON" : "Record OFF");
+        emit recordStatusChanged(on);
     });
 }
 

@@ -29,6 +29,7 @@ set(SOURCES
   BspLogger.cpp
   BspFileUtils.hpp
   BspFileUtils.cpp
+  BspTimeUtils.hpp
     # Add more source files here if needed
 )
 

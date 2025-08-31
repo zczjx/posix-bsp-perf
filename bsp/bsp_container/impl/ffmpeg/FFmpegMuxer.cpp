@@ -53,6 +53,7 @@ void FFmpegMuxer::setupVideoStreamParams(AVStream* out_stream, StreamInfo& strea
         return;
     }
 
+    out_stream->codecpar->codec_tag = 0;
     out_stream->codecpar->codec_type = AVMEDIA_TYPE_VIDEO;
     out_stream->codecpar->codec_id = ffmpegCodecHeader::getInstance().strToFFmpegCoding(streamInfo.codec_params.codec_name);
     out_stream->codecpar->bit_rate = streamInfo.codec_params.bit_rate;

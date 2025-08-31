@@ -33,7 +33,7 @@ private:
     void ObjectDetectionConsumerLoop(std::shared_ptr<SharedMemSubscriber> input_shmem_port);
 
 signals:
-    void objectsDetectionFrameUpdated(const uint8_t* data, int width, int height);
+    void objectsDetectionFrameUpdated(uint8_t* data, int width, int height);
 
 private:
     std::unordered_map<std::string, std::pair<std::string, std::shared_ptr<SharedMemSubscriber>>> m_input_shmem_ports;

@@ -8,6 +8,7 @@
 #include <ui/view/VideoFrameWidget.h>
 #include <ui/model/RawCamera.hpp>
 #include <ui/model/ObjectsDetection.hpp>
+#include <ui/model/Recorder.hpp>
 
 #include <nlohmann/json.hpp>
 #include <string>
@@ -39,10 +40,14 @@ public:
 private:
     void setupConnections();
 
-private slots:
-    void onRawCameraFrameUpdated(const uint8_t* data, int width, int height);
+    int updateFrameRecord(uint8_t* data, int width, int height);
 
-    void onObjectsDetectionFrameUpdated(const uint8_t* data, int width, int height);
+private slots:
+    void onRawCameraFrameUpdated(uint8_t* data, int width, int height);
+
+    void onObjectsDetectionFrameUpdated(uint8_t* data, int width, int height);
+
+    void onRecordStatusChanged(bool on);
 
 private:
     // view
@@ -52,6 +57,10 @@ private:
     // model
     std::unique_ptr<RawCamera> m_raw_camera;
     std::unique_ptr<ObjectsDetection> m_objects_detection;
+    std::unique_ptr<Recorder> m_recorder;
+
+    bool m_record_enabled{false};
+    std::mutex m_record_enabled_mutex;
 
 };
 

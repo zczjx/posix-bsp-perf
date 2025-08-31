@@ -34,7 +34,7 @@ private:
     void CameraConsumerLoop(std::shared_ptr<SharedMemSubscriber> input_shmem_port);
 
 signals:
-    void rawCameraFrameUpdated(const uint8_t* data, int width, int height);
+    void rawCameraFrameUpdated(uint8_t* data, int width, int height);
 
 private:
     // the key of the map is the sensor name

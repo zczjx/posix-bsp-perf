@@ -13,6 +13,8 @@ int main(int argc, char *argv[])
 {
     ArgParser parser("DataRecorderUI");
     parser.addOption("--nodes_ipc", "nodes_ipc.json", "path to the sensor ipc file");
+    parser.addOption("--encoder, --encoderType", std::string("rkmpp"), "decoder type: rkmpp");
+    parser.addOption("--g2d, --graphics2D", std::string("rkrga"), "graphics 2d platform type: rkrga");
     parser.parseArgs(argc, argv);
 
     std::string nodes_ipc_file;
