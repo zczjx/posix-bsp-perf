@@ -13,17 +13,22 @@ namespace ui
 
 Recorder::Recorder(int argc, char *argv[])
 {
+    for (int i = 0; i < argc; i++)
+    {
+        std::cout << "arg: " << argv[i] << std::endl;
+    }
     ArgParser parser("Recorder");
-    parser.addOption("--encoder, --encoderType", std::string("rkmpp"), "decoder type: rkmpp");
-    parser.addOption("--g2d, --graphics2D", std::string("rkrga"), "graphics 2d platform type: rkrga");
+    parser.addOption("--encoder", std::string("rkmpp"), "decoder type: rkmpp");
+    parser.addOption("--g2d", std::string("rkrga"), "graphics 2d platform type: rkrga");
+    parser.addOption("--muxer", std::string("FFmpegMuxer"), "Muxer Impl: FFmpegMuxer");
     parser.parseArgs(argc, argv);
 
     std::string encoderType;
     std::string g2dType;
     std::string muxerType;
-    parser.getOptionVal("--encoder, --encoderType", encoderType);
-    parser.getOptionVal("--g2d, --graphics2D", g2dType);
-    parser.getOptionVal("--muxer, --muxerImpl", muxerType);
+    parser.getOptionVal("--encoder", encoderType);
+    parser.getOptionVal("--g2d", g2dType);
+    parser.getOptionVal("--muxer", muxerType);
 
     m_encoder = IEncoder::create(encoderType);
     m_g2d = IGraphics2D::create(g2dType);
