@@ -4,6 +4,8 @@
 #include <memory>
 #include <any>
 #include <string.h>
+#include <thread>
+
 namespace bsp_g2d
 {
 
@@ -78,6 +80,14 @@ void rkrga::releaseG2DBuffer(std::shared_ptr<G2DBuffer> g2dBuffer)
 
 int rkrga::imageResize(std::shared_ptr<G2DBuffer> src, std::shared_ptr<G2DBuffer> dst)
 {
+    // WAR: Set rga core affinity for each thread to avoid RGA2 core3 being scheduled
+    static thread_local bool rga_core_affinity_set = false;
+    if (!rga_core_affinity_set)
+    {
+        imconfig(IM_CONFIG_SCHEDULER_CORE, IM_SCHEDULER_CORE::IM_SCHEDULER_RGA3_CORE0 | IM_SCHEDULER_CORE::IM_SCHEDULER_RGA3_CORE1);
+        rga_core_affinity_set = true;
+    }
+
     im_rect src_rect{};
     im_rect dst_rect{};
     int ret = imcheck(std::any_cast<rga_buffer_t>(src->g2dBufferHandle), std::any_cast<rga_buffer_t>(dst->g2dBufferHandle), src_rect, dst_rect);
@@ -96,6 +106,14 @@ int rkrga::imageCopy(std::shared_ptr<G2DBuffer> src, std::shared_ptr<G2DBuffer> 
 
 int rkrga::imageDrawRectangle(std::shared_ptr<G2DBuffer> dst, ImageRect& rect, uint32_t color, int thickness)
 {
+    // WAR: Set rga core affinity for each thread to avoid RGA2 core3 being scheduled
+    static thread_local bool rga_core_affinity_set = false;
+    if (!rga_core_affinity_set)
+    {
+        imconfig(IM_CONFIG_SCHEDULER_CORE, IM_SCHEDULER_CORE::IM_SCHEDULER_RGA3_CORE0 | IM_SCHEDULER_CORE::IM_SCHEDULER_RGA3_CORE1);
+        rga_core_affinity_set = true;
+    }
+
     im_rect dst_rect = {};
     dst_rect.x = rect.x;
     dst_rect.y = rect.y;
@@ -114,6 +132,14 @@ int rkrga::imageDrawRectangle(std::shared_ptr<G2DBuffer> dst, ImageRect& rect, u
 int rkrga::imageCvtColor(std::shared_ptr<G2DBuffer> src, std::shared_ptr<G2DBuffer> dst,
                     const std::string& src_format, const std::string& dst_format)
 {
+    // WAR: Set rga core affinity for each thread to avoid RGA2 core3 being scheduled
+    static thread_local bool rga_core_affinity_set = false;
+    if (!rga_core_affinity_set)
+    {
+        imconfig(IM_CONFIG_SCHEDULER_CORE, IM_SCHEDULER_CORE::IM_SCHEDULER_RGA3_CORE0 | IM_SCHEDULER_CORE::IM_SCHEDULER_RGA3_CORE1);
+        rga_core_affinity_set = true;
+    }
+
     int src_rga_format = rgaPixelFormat::getInstance().strToRgaPixFormat(src_format);
     int dst_rga_format = rgaPixelFormat::getInstance().strToRgaPixFormat(dst_format);
 
