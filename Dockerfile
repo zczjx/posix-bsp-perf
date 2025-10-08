@@ -7,17 +7,28 @@ ARG GROUP_ID
 ARG DIR_SRC_PATH
 
 # 创建一个新的用户组和用户，使用传入的用户ID和组ID
-RUN groupadd -g ${GROUP_ID} builder && \
-    useradd -l -u ${USER_ID} -g builder builder
+# 如果GID/UID已存在，则重用并重命名
+RUN getent group ${GROUP_ID} || groupadd -g ${GROUP_ID} builder
 
-# 设置用户myuser的密码
+RUN if getent passwd ${USER_ID} > /dev/null 2>&1; then \
+        EXISTING_USER=$(getent passwd ${USER_ID} | cut -d: -f1); \
+        if [ "$EXISTING_USER" != "builder" ]; then \
+            usermod -l builder -d /home/builder -m -g ${GROUP_ID} $EXISTING_USER 2>/dev/null || true; \
+        fi; \
+    else \
+        useradd -l -u ${USER_ID} -g ${GROUP_ID} -m -s /bin/bash builder; \
+    fi
+
+# 设置用户builder的密码
 RUN echo 'builder:builder' | chpasswd
+
 # 配置sudo免密码
 RUN echo 'builder ALL=(ALL) NOPASSWD: ALL' >> /etc/sudoers
+
 # 设置工作目录
 WORKDIR /home/builder
 
-RUN chown builder:builder /home/builder
+RUN chown -R builder:${GROUP_ID} /home/builder
 
 
 # 切换到新用户

@@ -1,4 +1,4 @@
-FROM nvidia/cuda:12.4.1-cudnn-devel-ubuntu22.04
+FROM nvcr.io/nvidia/deepstream:7.1-triton-multiarch
 
 # 安装必要的软件包和交叉编译工具链
 ARG DEBIAN_FRONTEND=noninteractive
@@ -8,9 +8,10 @@ RUN apt-get update && \
     apt-get install -y autoconf automake pkg-config libssl-dev libboost-all-dev ncurses-dev nfs-common && \
     apt-get install -y net-tools openssh-server openssh-client rsync cpio unzip bc && \
     apt-get install -y build-essential libgtest-dev libgmock-dev libmosquitto-dev libdbus-1-dev libprotobuf-dev protobuf-compiler && \
-    apt-get install -y curl lsb-release software-properties-common locales tzdata x11-apps libzmq3-dev libmsgpack-dev
+    apt-get install -y curl lsb-release software-properties-common locales tzdata x11-apps libzmq3-dev libmsgpack-dev && \
+    apt-get install -y gcc-aarch64-linux-gnu g++-aarch64-linux-gnu binutils-aarch64-linux-gnu
 
-    # 设置环境变量
+# 设置环境变量
 ENV TZ=Asia/Shanghai
 # 配置时区
 RUN ln -fs /usr/share/zoneinfo/${TZ} /etc/localtime && \
@@ -27,17 +28,17 @@ RUN echo 'root:root' | chpasswd
 ENV LANG en_US.UTF-8
 ENV LANGUAGE en_US:en
 
-# 添加 ROS 2 apt 仓库和密钥
-RUN curl -sSL https://raw.githubusercontent.com/ros/rosdistro/master/ros.key -o /usr/share/keyrings/ros-archive-keyring.gpg
+# # 添加 ROS 2 apt 仓库和密钥
+# RUN curl -sSL https://raw.githubusercontent.com/ros/rosdistro/master/ros.key -o /usr/share/keyrings/ros-archive-keyring.gpg
 
-RUN echo "deb [arch=$(dpkg --print-architecture) signed-by=/usr/share/keyrings/ros-archive-keyring.gpg] http://packages.ros.org/ros2/ubuntu $(. /etc/os-release && echo $UBUNTU_CODENAME) main" | tee /etc/apt/sources.list.d/ros2.list > /dev/null
+# RUN echo "deb [arch=$(dpkg --print-architecture) signed-by=/usr/share/keyrings/ros-archive-keyring.gpg] http://packages.ros.org/ros2/ubuntu $(. /etc/os-release && echo $UBUNTU_CODENAME) main" | tee /etc/apt/sources.list.d/ros2.list > /dev/null
 
-# 安装 ROS 2 Humble 版本
+# # 安装 ROS 2 Humble 版本
 
-RUN apt-get update && apt-get install -y \
-    ros-humble-desktop
+# RUN apt-get update && apt-get install -y \
+#     ros-humble-desktop
 
-RUN apt install ros-dev-tools -y
+# RUN apt install ros-dev-tools -y
 
 # 设置工作目录
 WORKDIR /build
