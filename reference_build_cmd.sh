@@ -50,17 +50,34 @@ cmake .. -DBSP_PKG_CONFIG_PATH=/opt/cross_env/rk3588s/install/lib/pkgconfig:/opt
     -DBUILD_APP_DATA_RECORDER=ON \
     -DCMAKE_BUILD_TYPE=Release
 
-    ## for rpi
+    ## for Jetson
 
 cd /opt/tools_conf/
 ls -A | grep '^\.' | xargs -I {} cp -r {} ~/
-source /opt/tools_conf/.bashrc.rpi
+source /opt/tools_conf/.bashrc.jetson
 
-cmake .. -DBSP_PKG_CONFIG_PATH=/opt/cross_env/rpi/install/lib/pkgconfig:/opt/cross_env/rpi/install/share/pkgconfig -DCMAKE_BUILD_TYPE=NoOptimize
+cmake .. -DBSP_PKG_CONFIG_PATH=/opt/cross_env/nvidia/install/lib/pkgconfig:/opt/cross_env/nvidia/install/share/pkgconfig \
+    -DBSP_LIB_PATH=/opt/cross_env/nvidia/install/lib \
+    -DBUILD_PLATFORM_JETSON=ON \
+    -DCMAKE_BUILD_TYPE=NoOptimize
 
-cmake .. -DBSP_PKG_CONFIG_PATH=/opt/cross_env/rpi/install/lib/pkgconfig:/opt/cross_env/rpi/install/share/pkgconfig -DCMAKE_BUILD_TYPE=Debug
+cmake .. -DBSP_PKG_CONFIG_PATH=/opt/cross_env/nvidia/install/lib/pkgconfig:/opt/cross_env/nvidia/install/share/pkgconfig \
+    -DBSP_LIB_PATH=/opt/cross_env/nvidia/install/lib \
+    -DBUILD_PLATFORM_JETSON=ON \
+    -DCMAKE_BUILD_TYPE=NoOptimize
 
-cmake .. -DBSP_PKG_CONFIG_PATH=/opt/cross_env/rpi/install/lib/pkgconfig:/opt/cross_env/rpi/install/share/pkgconfig -DCMAKE_BUILD_TYPE=Release
+cmake .. -DBSP_PKG_CONFIG_PATH=/opt/cross_env/nvidia/install/lib/pkgconfig:/opt/cross_env/nvidia/install/share/pkgconfig \
+    -DBSP_LIB_PATH=/opt/cross_env/nvidia/install/lib \
+    -DBUILD_PLATFORM_JETSON=ON \
+    -DBUILD_APP_DATA_RECORDER=ON \
+    -DCMAKE_BUILD_TYPE=Debug
+
+cmake .. -DBSP_PKG_CONFIG_PATH=/opt/cross_env/nvidia/install/lib/pkgconfig:/opt/cross_env/nvidia/install/share/pkgconfig \
+    -DBSP_LIB_PATH=/opt/cross_env/nvidia/install/lib \
+    -DBUILD_PLATFORM_JETSON=ON \
+    -DBUILD_APP_DATA_RECORDER=ON \
+    -DCMAKE_BUILD_TYPE=Release
+
 
 # 3rdparty build, not all validated
 ## build spdlog
