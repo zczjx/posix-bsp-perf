@@ -9,7 +9,7 @@ RUN apt-get update && \
     apt-get install -y net-tools openssh-server openssh-client rsync cpio unzip bc && \
     apt-get install -y build-essential libgtest-dev libgmock-dev libmosquitto-dev libdbus-1-dev libprotobuf-dev protobuf-compiler && \
     apt-get install -y curl lsb-release software-properties-common locales tzdata x11-apps libzmq3-dev libmsgpack-dev && \
-    apt-get install -y gcc-aarch64-linux-gnu g++-aarch64-linux-gnu binutils-aarch64-linux-gnu
+    apt-get install -y gcc-aarch64-linux-gnu g++-aarch64-linux-gnu binutils-aarch64-linux-gnu qtbase5-dev-tools
 
 # 设置环境变量
 ENV TZ=Asia/Shanghai
