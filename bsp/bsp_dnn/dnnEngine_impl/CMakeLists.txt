@@ -1,7 +1,7 @@
-if(ENABLE_RKNN)
+if(BUILD_PLATFORM_RK35XX)
     add_subdirectory(rknn)
 endif()
 
-if(ENABLE_TENSORRT)
-    add_subdirectory(tensorRT)
+if(BUILD_PLATFORM_JETSON)
+    add_subdirectory(tensorrt)
 endif()

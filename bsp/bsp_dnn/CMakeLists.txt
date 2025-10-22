@@ -45,11 +45,17 @@ endif()
 set_target_properties(${PROJECT_NAME} PROPERTIES INSTALL_RPATH "$ORIGIN/../lib")
 target_link_libraries(${PROJECT_NAME} PRIVATE bsp_shared)
 
-option(ENABLE_RKNN "Enable support for RKNN" ON)
-option(ENABLE_TENSORRT "Enable support for TensorRT" OFF)
-
-if(ENABLE_RKNN)
+# Add platform-specific compile definitions and link libraries
+if(BUILD_PLATFORM_RK35XX)
+  target_compile_definitions(${PROJECT_NAME} PRIVATE BUILD_PLATFORM_RK35XX)
   target_link_libraries(${PROJECT_NAME} PUBLIC rknn_Engine)
+  message(STATUS "Building dnnObjDetector for RK35XX platform")
+endif()
+
+if(BUILD_PLATFORM_JETSON)
+  target_compile_definitions(${PROJECT_NAME} PRIVATE BUILD_PLATFORM_JETSON)
+  target_link_libraries(${PROJECT_NAME} PUBLIC tensorrt_engine)
+  message(STATUS "Building dnnObjDetector for Jetson platform")
 endif()
 
 

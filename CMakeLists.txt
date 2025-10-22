@@ -13,6 +13,16 @@ set(CMAKE_INSTALL_PREFIX "${CMAKE_CURRENT_BINARY_DIR}/install")
 option(BUILD_PLATFORM_RK35XX "Build Platform RK35xx" OFF)
 option(BUILD_PLATFORM_JETSON "Build Platform Jetson" OFF)
 
+# Add global compile definitions based on platform
+if(BUILD_PLATFORM_RK35XX)
+    add_compile_definitions(BUILD_PLATFORM_RK35XX)
+    message(STATUS "=== Building for RK35XX platform ===")
+endif()
+
+if(BUILD_PLATFORM_JETSON)
+    add_compile_definitions(BUILD_PLATFORM_JETSON)
+    message(STATUS "=== Building for Jetson platform ===")
+endif()
 
 # 为不同的构建类型设置编译选项
 if(CMAKE_BUILD_TYPE MATCHES "Debug")
