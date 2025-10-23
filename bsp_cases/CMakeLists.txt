@@ -15,3 +15,7 @@ if(BUILD_PLATFORM_RK35XX)
     add_subdirectory(video_objDetect)
 endif()
 
+if(BUILD_PLATFORM_JETSON)
+    add_subdirectory(dnn_objDetect)
+endif()
+
