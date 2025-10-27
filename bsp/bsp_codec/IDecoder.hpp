@@ -90,6 +90,7 @@ public:
      * the IDecoder instance is to be created.
      * Supported values:
      * - "rkmpp" for Rockchip MPP decoder
+     * - "nvdec" for NVIDIA NVDEC decoder (Jetson platforms)
      *
      * @throws std::invalid_argument If an invalid codec platform is specified.
      * @return std::unique_ptr<IDecoder> A unique pointer to the created IDecoder instance.

@@ -7,8 +7,6 @@ set(CMAKE_CXX_STANDARD 17)
 set(ENC_PRJ_NAME bsp_enc)
 set(DEC_PRJ_NAME bsp_dec)
 
-# 定义选项以启用或禁用某些功能
-option(ENABLE_RK_MPP "Enable RK_MPP support" OFF)
 
 # 定义源文件列表
 set(ENC_SOURCES
@@ -16,9 +14,15 @@ set(ENC_SOURCES
 )
 
 # 根据选项条件性地添加源文件
-if(ENABLE_RK_MPP)
+if(BUILD_PLATFORM_RK35XX)
     list(APPEND ENC_SOURCES
         video/rkmppEnc.cpp
+    )
+endif()
+
+if(BUILD_PLATFORM_JETSON)
+    list(APPEND ENC_SOURCES
+        video/nvVideoEnc.cpp
     )
 endif()
 
@@ -53,9 +57,15 @@ set(DEC_SOURCES
     IDecoder.cpp
 )
 
-if(ENABLE_RK_MPP)
+if(BUILD_PLATFORM_RK35XX)
     list(APPEND DEC_SOURCES
         video/rkmppDec.cpp
+    )
+endif()
+
+if(BUILD_PLATFORM_JETSON)
+    list(APPEND DEC_SOURCES
+        video/nvVideoDec.cpp
     )
 endif()
 
@@ -79,14 +89,52 @@ install(FILES ${${DEC_PRJ_NAME}_PC} DESTINATION lib/pkgconfig)
 set_target_properties(${DEC_PRJ_NAME} PROPERTIES INSTALL_RPATH "$ORIGIN/../lib")
 target_link_libraries(${DEC_PRJ_NAME} PRIVATE bsp_shared)
 
-if(ENABLE_RK_MPP)
+if(BUILD_PLATFORM_RK35XX)
   if(DEFINED BSP_LIB_PATH)
     set(RK_MPP_LIB ${BSP_LIB_PATH}/librockchip_mpp.so)
   else()
     set(RK_MPP_LIB /usr/lib/librockchip_mpp.so)
   endif()
+  target_compile_definitions(${DEC_PRJ_NAME} PRIVATE BUILD_PLATFORM_RK35XX)
+  target_compile_definitions(${ENC_PRJ_NAME} PRIVATE BUILD_PLATFORM_RK35XX)
   target_link_libraries(${DEC_PRJ_NAME} PUBLIC ${RK_MPP_LIB})
   target_link_libraries(${ENC_PRJ_NAME} PUBLIC ${RK_MPP_LIB})
+endif()
+
+if(BUILD_PLATFORM_JETSON)
+  target_compile_definitions(${DEC_PRJ_NAME} PRIVATE BUILD_PLATFORM_JETSON)
+  # Add Jetson Multimedia API include path
+  target_include_directories(${DEC_PRJ_NAME} PRIVATE
+    /usr/src/jetson_multimedia_api/include
+  )
+
+  target_link_directories(${DEC_PRJ_NAME} PRIVATE
+  /usr/lib/aarch64-linux-gnu/tegra
+)
+  # Link against NvVideoDecoder and related libraries
+  target_link_libraries(${DEC_PRJ_NAME} PUBLIC
+    nvv4l2
+    nvbufsurface
+    nvbufsurftransform
+  )
+endif()
+
+if(BUILD_PLATFORM_JETSON)
+  target_compile_definitions(${ENC_PRJ_NAME} PRIVATE BUILD_PLATFORM_JETSON)
+  # Add Jetson Multimedia API include path
+  target_include_directories(${ENC_PRJ_NAME} PRIVATE
+    /usr/src/jetson_multimedia_api/include
+  )
+
+  target_link_directories(${ENC_PRJ_NAME} PRIVATE
+  /usr/lib/aarch64-linux-gnu/tegra
+)
+  # Link against NvVideoEncoder and related libraries
+  target_link_libraries(${ENC_PRJ_NAME} PUBLIC
+    nvv4l2
+    nvbufsurface
+    nvbufsurftransform
+  )
 endif()
 
 install(TARGETS ${DEC_PRJ_NAME}

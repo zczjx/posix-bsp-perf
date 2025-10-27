@@ -32,21 +32,18 @@ source /opt/tools_conf/.bashrc.rk3588s
 cmake .. -DBSP_PKG_CONFIG_PATH=/opt/cross_env/rk3588s/install/lib/pkgconfig:/opt/cross_env/rk3588s/install/share/pkgconfig \
     -DBSP_LIB_PATH=/opt/cross_env/rk3588s/install/lib \
     -DBUILD_PLATFORM_RK35XX=ON \
-    -DENABLE_RK_MPP=ON \
     -DBUILD_APP_DATA_RECORDER=ON \
     -DCMAKE_BUILD_TYPE=NoOptimize
 
 cmake .. -DBSP_PKG_CONFIG_PATH=/opt/cross_env/rk3588s/install/lib/pkgconfig:/opt/cross_env/rk3588s/install/share/pkgconfig \
     -DBSP_LIB_PATH=/opt/cross_env/rk3588s/install/lib \
-    -DBUILD_PLATFORM_RK35XX=ON \
-    -DENABLE_RK_MPP=ON \
+    -DBUILD_PLATFORM_RK35XX=ON
     -DBUILD_APP_DATA_RECORDER=ON \
     -DCMAKE_BUILD_TYPE=Debug
 
 cmake .. -DBSP_PKG_CONFIG_PATH=/opt/cross_env/rk3588s/install/lib/pkgconfig:/opt/cross_env/rk3588s/install/share/pkgconfig \
     -DBSP_LIB_PATH=/opt/cross_env/rk3588s/install/lib \
     -DBUILD_PLATFORM_RK35XX=ON \
-    -DENABLE_RK_MPP=ON \
     -DBUILD_APP_DATA_RECORDER=ON \
     -DCMAKE_BUILD_TYPE=Release
 

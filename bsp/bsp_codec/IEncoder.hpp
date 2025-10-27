@@ -46,9 +46,10 @@ public:
      * instance based on the specified codec platform.
      *
      * @param codecPlatform A string representing the codec platform for which
-     * the IDecoder instance is to be created.
+     * the IEncoder instance is to be created.
      * Supported values:
-     * - "rkmpp" for Rockchip MPP decoder
+     * - "rkmpp" for Rockchip MPP encoder
+     * - "nvenc" for NVIDIA NVENC encoder (Jetson platforms)
      *
      * @throws std::invalid_argument If an invalid codec platform is specified.
      * @return std::unique_ptr<IEncoder> A unique pointer to the created IEncoder instance.
