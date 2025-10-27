@@ -1,5 +1,6 @@
 # posix-bsp-perf
 bsp perf test for posix OS(such as Linux/QNX/Rtthread)
+[![Ask DeepWiki](https://deepwiki.com/badge.svg)](https://deepwiki.com/zczjx/posix-bsp-perf)
 
 ## Design doc
 
