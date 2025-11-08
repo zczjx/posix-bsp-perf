@@ -66,7 +66,6 @@ cmake .. -DBSP_PKG_CONFIG_PATH=/opt/cross_env/nvidia/install/lib/pkgconfig:/opt/
 cmake .. -DBSP_PKG_CONFIG_PATH=/opt/cross_env/nvidia/install/lib/pkgconfig:/opt/cross_env/nvidia/install/share/pkgconfig \
     -DBSP_LIB_PATH=/opt/cross_env/nvidia/install/lib \
     -DBUILD_PLATFORM_JETSON=ON \
-    -DBUILD_APP_DATA_RECORDER=ON \
     -DCMAKE_BUILD_TYPE=Debug
 
 cmake .. -DBSP_PKG_CONFIG_PATH=/opt/cross_env/nvidia/install/lib/pkgconfig:/opt/cross_env/nvidia/install/share/pkgconfig \

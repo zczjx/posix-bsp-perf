@@ -26,7 +26,7 @@ struct nvVideoDecParams
 class nvVideoDec : public IDecoder
 {
 public:
-    nvVideoDec();
+    nvVideoDec() = default;
     ~nvVideoDec();
 
     // Implement necessary methods from IDecoder
@@ -41,18 +41,19 @@ public:
 
 private:
     // Internal methods
+    int startDecoding();
     int setupDecoder();
     int queryAndSetCapture();
     void captureThreadFunc();
     void decoderThreadFunc();
     uint32_t getV4L2PixelFormat(const std::string& encoding);
-    
+
     // Decoder state
     NvVideoDecoder* m_dec{nullptr};
     nvVideoDecParams m_params{};
     decodeReadyCallback m_callback{nullptr};
     std::any m_userdata;
-    
+
     // Threading
     std::unique_ptr<std::thread> m_capture_thread;
     std::unique_ptr<std::thread> m_decoder_thread;
@@ -60,18 +61,18 @@ private:
     std::atomic<bool> m_got_error{false};
     std::atomic<bool> m_got_eos{false};
     std::atomic<bool> m_capture_plane_started{false};
-    
+
     // Buffer management
     int m_dmabuf_fds[32]{0};
     int m_num_capture_buffers{0};
     int m_dst_dma_fd{-1};
-    
+
     // Resolution
     uint32_t m_display_width{0};
     uint32_t m_display_height{0};
     uint32_t m_video_width{0};
     uint32_t m_video_height{0};
-    
+
     // Packet queue for decoding
     struct PacketInfo {
         std::vector<uint8_t> data;
@@ -80,10 +81,11 @@ private:
     std::queue<PacketInfo> m_packet_queue;
     std::mutex m_queue_mutex;
     std::condition_variable m_queue_cv;
-    
+
     // Synchronization
     std::mutex m_setup_mutex;
     std::condition_variable m_setup_cv;
+
 };
 
 } // namespace bsp_codec

@@ -13,9 +13,11 @@ endif()
 if(BUILD_PLATFORM_RK35XX)
     add_subdirectory(dnn_objDetect)
     add_subdirectory(video_objDetect)
+    add_subdirectory(video_dec_enc)
 endif()
 
 if(BUILD_PLATFORM_JETSON)
     add_subdirectory(dnn_objDetect)
+    add_subdirectory(video_dec_enc)
 endif()
 
