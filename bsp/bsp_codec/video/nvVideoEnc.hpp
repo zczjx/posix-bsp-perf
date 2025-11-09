@@ -14,6 +14,12 @@
 namespace bsp_codec
 {
 
+// Internal structure to pass both v4l2_buffer and NvBuffer between functions
+struct InternalBufferPair {
+    std::shared_ptr<struct v4l2_buffer> v4l2_buf;
+    NvBuffer* nvbuffer;
+};
+
 struct nvVideoEncParams
 {
     uint32_t width{0};
@@ -74,6 +80,9 @@ private:
     std::mutex m_encode_mutex;
     std::condition_variable m_encode_cv;
     bool m_ready_for_encode{false};
+
+    // Track how many buffers have been queued (for initial fill phase)
+    std::atomic<uint32_t> m_output_buffers_queued{0};
 };
 
 } // namespace bsp_codec
