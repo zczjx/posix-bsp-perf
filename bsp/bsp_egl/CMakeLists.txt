@@ -18,6 +18,7 @@ message(STATUS "Found X11: ${X11_LIBRARIES}")
 # 源文件
 set(BSP_EGL_SOURCES
     RenderEGL.cpp
+    Cpu2dGraphics.cpp
 )
 
 # 创建静态库
@@ -39,7 +40,9 @@ target_link_libraries(bsp_egl
 )
 
 # 安装头文件
-install(FILES RenderEGL.hpp
+install(FILES 
+    RenderEGL.hpp
+    Cpu2dGraphics.hpp
     DESTINATION ${CMAKE_INSTALL_PREFIX}/include/bsp_egl
 )
 
@@ -49,4 +52,6 @@ install(TARGETS bsp_egl
     LIBRARY DESTINATION ${CMAKE_INSTALL_PREFIX}/lib
 )
 
-message(STATUS "bsp_egl library configured (Pure EGL, no OpenGL ES)")
+message(STATUS "bsp_egl library configured")
+message(STATUS "  - RenderEGL: EGL/X11 window management")
+message(STATUS "  - Cpu2dGraphics: CPU-based 2D graphics")

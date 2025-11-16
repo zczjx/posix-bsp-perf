@@ -94,7 +94,7 @@ int RenderEGL::initX11(const WindowConfig& config)
     }
 
     int screen_num = DefaultScreen(m_x_display);
-    
+
     // 确定窗口尺寸
     if (config.fullscreen || (config.width == 0 || config.height == 0)) {
         m_width = DisplayWidth(m_x_display, screen_num);
@@ -240,12 +240,6 @@ void RenderEGL::cleanup()
     std::cout << "✅ RenderEGL cleaned up" << std::endl;
 }
 
-void RenderEGL::clear(const Color& color)
-{
-    uint32_t pixel = colorToUint32(color);
-    std::fill(m_framebuffer.begin(), m_framebuffer.end(), pixel);
-}
-
 void RenderEGL::swapBuffers()
 {
     // 将帧缓冲绘制到X11窗口
@@ -262,105 +256,67 @@ void RenderEGL::swapBuffers()
     XFlush(m_x_display);
 }
 
-void RenderEGL::fillRect(int x, int y, int width, int height, const Color& color)
+void RenderEGL::blitBuffer(const uint32_t* srcBuffer,
+                           uint32_t srcWidth,
+                           uint32_t srcHeight,
+                           int dstX,
+                           int dstY,
+                           uint32_t srcX,
+                           uint32_t srcY,
+                           uint32_t copyWidth,
+                           uint32_t copyHeight)
 {
-    // 边界检查
-    if (x >= static_cast<int>(m_width) || y >= static_cast<int>(m_height)) return;
-    if (x + width <= 0 || y + height <= 0) return;
-
-    // 裁剪到窗口范围
-    int x1 = std::max(0, x);
-    int y1 = std::max(0, y);
-    int x2 = std::min(static_cast<int>(m_width), x + width);
-    int y2 = std::min(static_cast<int>(m_height), y + height);
-
-    uint32_t pixel = colorToUint32(color);
-
-    // 填充矩形
-    for (int row = y1; row < y2; ++row) {
-        uint32_t* line = &m_framebuffer[row * m_width];
-        for (int col = x1; col < x2; ++col) {
-            if (color.a == 255) {
-                line[col] = pixel;
-            } else {
-                // Alpha混合
-                line[col] = blendColor(line[col], color);
-            }
-        }
-    }
-}
-
-void RenderEGL::fillRectGradient(int x, int y, int width, int height,
-                                  const Color& colorLeft, const Color& colorRight)
-{
-    // 边界检查
-    if (x >= static_cast<int>(m_width) || y >= static_cast<int>(m_height)) return;
-    if (x + width <= 0 || y + height <= 0) return;
-
-    // 裁剪到窗口范围
-    int x1 = std::max(0, x);
-    int y1 = std::max(0, y);
-    int x2 = std::min(static_cast<int>(m_width), x + width);
-    int y2 = std::min(static_cast<int>(m_height), y + height);
-
-    // 水平渐变
-    for (int row = y1; row < y2; ++row) {
-        uint32_t* line = &m_framebuffer[row * m_width];
-        for (int col = x1; col < x2; ++col) {
-            // 计算插值比例
-            float t = static_cast<float>(col - x) / width;
-            t = std::clamp(t, 0.0f, 1.0f);
-
-            // 插值颜色
-            Color c;
-            c.r = colorLeft.r + static_cast<uint8_t>((colorRight.r - colorLeft.r) * t);
-            c.g = colorLeft.g + static_cast<uint8_t>((colorRight.g - colorLeft.g) * t);
-            c.b = colorLeft.b + static_cast<uint8_t>((colorRight.b - colorLeft.b) * t);
-            c.a = colorLeft.a + static_cast<uint8_t>((colorRight.a - colorLeft.a) * t);
-
-            if (c.a == 255) {
-                line[col] = colorToUint32(c);
-            } else {
-                line[col] = blendColor(line[col], c);
-            }
-        }
-    }
-}
-
-void RenderEGL::setPixel(int x, int y, const Color& color)
-{
-    if (x < 0 || x >= static_cast<int>(m_width) || 
-        y < 0 || y >= static_cast<int>(m_height)) {
+    if (!srcBuffer) {
+        std::cerr << "blitBuffer: srcBuffer is null" << std::endl;
         return;
     }
 
-    uint32_t& pixel = m_framebuffer[y * m_width + x];
-    if (color.a == 255) {
-        pixel = colorToUint32(color);
-    } else {
-        pixel = blendColor(pixel, color);
+    if (!m_initialized) {
+        std::cerr << "blitBuffer: RenderEGL not initialized" << std::endl;
+        return;
     }
-}
 
-uint32_t RenderEGL::blendColor(uint32_t dst, const Color& src)
-{
-    if (src.a == 0) return dst;
-    if (src.a == 255) return colorToUint32(src);
+    // 如果copyWidth/copyHeight为0，使用完整尺寸
+    if (copyWidth == 0) copyWidth = srcWidth;
+    if (copyHeight == 0) copyHeight = srcHeight;
 
-    // 提取目标颜色分量
-    uint8_t dst_a = (dst >> 24) & 0xFF;
-    uint8_t dst_r = (dst >> 16) & 0xFF;
-    uint8_t dst_g = (dst >> 8) & 0xFF;
-    uint8_t dst_b = dst & 0xFF;
+    // 检查源矩形是否在源buffer范围内
+    if (srcX >= srcWidth || srcY >= srcHeight) {
+        return;
+    }
 
-    // Alpha混合
-    float alpha = src.a / 255.0f;
-    uint8_t out_r = src.r * alpha + dst_r * (1.0f - alpha);
-    uint8_t out_g = src.g * alpha + dst_g * (1.0f - alpha);
-    uint8_t out_b = src.b * alpha + dst_b * (1.0f - alpha);
-    uint8_t out_a = std::min(255, src.a + dst_a);
+    // 裁剪源矩形到源buffer边界
+    if (srcX + copyWidth > srcWidth) {
+        copyWidth = srcWidth - srcX;
+    }
+    if (srcY + copyHeight > srcHeight) {
+        copyHeight = srcHeight - srcY;
+    }
 
-    return (out_a << 24) | (out_r << 16) | (out_g << 8) | out_b;
+    // 裁剪目标矩形到framebuffer边界
+    int copyStartX = std::max(0, dstX);
+    int copyStartY = std::max(0, dstY);
+    int copyEndX = std::min(static_cast<int>(m_width), dstX + static_cast<int>(copyWidth));
+    int copyEndY = std::min(static_cast<int>(m_height), dstY + static_cast<int>(copyHeight));
+
+    if (copyStartX >= copyEndX || copyStartY >= copyEndY) {
+        return;  // 完全在framebuffer外
+    }
+
+    // 计算实际复制的尺寸
+    int actualCopyWidth = copyEndX - copyStartX;
+    int actualCopyHeight = copyEndY - copyStartY;
+
+    // 计算源偏移
+    uint32_t srcOffsetX = srcX + (copyStartX - dstX);
+    uint32_t srcOffsetY = srcY + (copyStartY - dstY);
+
+    // 快速内存复制（逐行复制）
+    for (int y = 0; y < actualCopyHeight; ++y) {
+        uint32_t* dstLine = &m_framebuffer[(copyStartY + y) * m_width + copyStartX];
+        const uint32_t* srcLine = &srcBuffer[(srcOffsetY + y) * srcWidth + srcOffsetX];
+        std::memcpy(dstLine, srcLine, actualCopyWidth * sizeof(uint32_t));
+    }
 }
 
 bool RenderEGL::processEvents()

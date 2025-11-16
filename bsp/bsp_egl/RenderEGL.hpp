@@ -28,7 +28,6 @@ SOFTWARE.
 #include <EGL/egl.h>
 #include <X11/Xlib.h>
 #include <X11/Xutil.h>
-#include <memory>
 #include <string>
 #include <functional>
 #include <cstdint>
@@ -38,8 +37,12 @@ namespace bsp_egl {
 
 /**
  * @brief 跨平台EGL渲染类，支持RK3588和Jetson Orin NX
- * 
- * 纯EGL封装，不依赖OpenGL ES，使用CPU直接绘制像素
+ *
+ * 职责：EGL上下文管理、X11窗口管理、framebuffer管理、显示输出
+ * 不包含2D绘图逻辑（请使用Cpu2dGraphics类）
+ * current support platform
+ *   RK3588: EGL/X11
+ *   Jetson Orin NX: EGL/X11
  */
 class RenderEGL {
 public:
@@ -53,30 +56,6 @@ public:
         uint32_t y_offset{0};       ///< 垂直偏移
         std::string title{"RenderEGL Window"};  ///< 窗口标题
         bool fullscreen{false};     ///< 是否全屏
-    };
-
-    /**
-     * @brief 颜色结构（RGBA）
-     */
-    struct Color {
-        uint8_t r{0};
-        uint8_t g{0};
-        uint8_t b{0};
-        uint8_t a{255};
-        
-        Color() = default;
-        Color(uint8_t red, uint8_t green, uint8_t blue, uint8_t alpha = 255)
-            : r(red), g(green), b(blue), a(alpha) {}
-            
-        // 从浮点数创建 [0.0, 1.0] -> [0, 255]
-        static Color fromFloat(float red, float green, float blue, float alpha = 1.0f) {
-            return Color(
-                static_cast<uint8_t>(red * 255),
-                static_cast<uint8_t>(green * 255),
-                static_cast<uint8_t>(blue * 255),
-                static_cast<uint8_t>(alpha * 255)
-            );
-        }
     };
 
     /**
@@ -120,45 +99,40 @@ public:
     bool isInitialized() const { return m_initialized; }
 
     /**
-     * @brief 清屏（填充单色）
-     * @param color 颜色
-     */
-    void clear(const Color& color);
-
-    /**
      * @brief 交换前后缓冲区（显示渲染结果）
      */
     void swapBuffers();
 
     /**
-     * @brief 绘制填充矩形
-     * @param x 左上角X坐标（像素）
-     * @param y 左上角Y坐标（像素）
-     * @param width 宽度（像素）
-     * @param height 高度（像素）
-     * @param color 填充颜色
+     * @brief 获取framebuffer引用
+     * @return framebuffer引用
+     * @note 可以用于Cpu2dGraphics进行2D绘图操作
      */
-    void fillRect(int x, int y, int width, int height, const Color& color);
+    std::vector<uint32_t>& getFramebuffer() { return m_framebuffer; }
 
     /**
-     * @brief 绘制渐变矩形（水平渐变）
-     * @param x 左上角X坐标（像素）
-     * @param y 左上角Y坐标（像素）
-     * @param width 宽度（像素）
-     * @param height 高度（像素）
-     * @param colorLeft 左边颜色
-     * @param colorRight 右边颜色
+     * @brief 将外部ARGB32格式的像素buffer贴图到framebuffer
+     * @param srcBuffer 源buffer指针（ARGB32格式）
+     * @param srcWidth 源buffer宽度
+     * @param srcHeight 源buffer高度
+     * @param dstX 目标X坐标（在framebuffer中的位置，默认0）
+     * @param dstY 目标Y坐标（在framebuffer中的位置，默认0）
+     * @param srcX 源矩形左上角X坐标（默认0）
+     * @param srcY 源矩形左上角Y坐标（默认0）
+     * @param copyWidth 复制宽度（0表示使用完整宽度）
+     * @param copyHeight 复制高度（0表示使用完整高度）
+     * @note 此方法直接操作framebuffer，适用于需要高性能批量贴图的场景
+     * @note 像素格式必须是ARGB32 (0xAARRGGBB)，与framebuffer格式一致
      */
-    void fillRectGradient(int x, int y, int width, int height, 
-                          const Color& colorLeft, const Color& colorRight);
-
-    /**
-     * @brief 设置单个像素
-     * @param x X坐标（像素）
-     * @param y Y坐标（像素）
-     * @param color 颜色
-     */
-    void setPixel(int x, int y, const Color& color);
+    void blitBuffer(const uint32_t* srcBuffer,
+                    uint32_t srcWidth,
+                    uint32_t srcHeight,
+                    int dstX = 0,
+                    int dstY = 0,
+                    uint32_t srcX = 0,
+                    uint32_t srcY = 0,
+                    uint32_t copyWidth = 0,
+                    uint32_t copyHeight = 0);
 
     /**
      * @brief 获取窗口宽度
@@ -214,46 +188,34 @@ private:
     XImage* m_x_image;
     GC m_gc;
     Atom m_wm_delete_window;
-    
+
     // EGL相关
     EGLDisplay m_egl_display;
-    
+
     // 窗口参数
     uint32_t m_width;
     uint32_t m_height;
-    
+
     // 帧缓冲（RGBA格式）
     std::vector<uint32_t> m_framebuffer;
-    
+
     // 状态
     bool m_initialized;
-    
+
     /**
      * @brief 初始化X11窗口
      */
     int initX11(const WindowConfig& config);
-    
+
     /**
      * @brief 初始化EGL
      */
     int initEGL();
-    
+
     /**
      * @brief 初始化帧缓冲
      */
     int initFramebuffer();
-    
-    /**
-     * @brief 混合颜色（考虑alpha）
-     */
-    uint32_t blendColor(uint32_t dst, const Color& src);
-    
-    /**
-     * @brief 颜色转uint32_t (ARGB格式)
-     */
-    inline uint32_t colorToUint32(const Color& color) {
-        return (color.a << 24) | (color.r << 16) | (color.g << 8) | color.b;
-    }
 };
 
 } // namespace bsp_egl

@@ -27,6 +27,7 @@ SOFTWARE.
 
 #include <framework/BasePerfCase.hpp>
 #include <bsp_egl/RenderEGL.hpp>
+#include <bsp_egl/Cpu2dGraphics.hpp>
 #include <shared/BspLogger.hpp>
 #include <memory>
 
@@ -36,8 +37,9 @@ namespace perf_cases {
 /**
  * @brief EGL渲染示例应用
  * 
- * 演示如何使用RenderEGL类进行跨平台的OpenGL ES渲染
- * 只使用RenderEGL提供的高层API，不直接调用GLES函数
+ * 演示如何使用RenderEGL和Cpu2dGraphics进行2D图形渲染
+ * - RenderEGL: 负责窗口管理和显示输出
+ * - Cpu2dGraphics: 负责2D绘图操作
  */
 class EglRenderApp : public common::BasePerfCase {
 public:
@@ -55,10 +57,16 @@ private:
 
 private:
     std::unique_ptr<bsp_egl::RenderEGL> m_render_egl;
+    std::unique_ptr<bsp_egl::Cpu2dGraphics> m_graphics;
 
     // 动画参数
     float m_time{0.0f};
     uint32_t m_frame_count{0};
+
+    // 彩虹参数
+    int m_rainbow_mode{0};           // 当前彩虹模式
+    float m_rainbow_switch_time{0.0f};  // 彩虹切换计时器
+    const float m_rainbow_duration{3.0f};  // 每种彩虹显示时长（秒）
 
     // 配置参数
     uint32_t m_window_width{800};
