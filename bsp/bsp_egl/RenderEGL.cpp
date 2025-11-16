@@ -23,7 +23,6 @@ SOFTWARE.
 */
 
 #include "RenderEGL.hpp"
-#include <X11/keysym.h>
 #include <iostream>
 #include <cstring>
 #include <chrono>
@@ -32,13 +31,43 @@ SOFTWARE.
 
 namespace bsp_egl {
 
+// 顶点着色器源码
+static const char* VERTEX_SHADER_SOURCE = R"(
+attribute vec2 a_position;
+attribute vec2 a_texcoord;
+varying vec2 v_texcoord;
+
+void main() {
+    gl_Position = vec4(a_position, 0.0, 1.0);
+    v_texcoord = a_texcoord;
+}
+)";
+
+// 片段着色器源码
+static const char* FRAGMENT_SHADER_SOURCE = R"(
+precision mediump float;
+varying vec2 v_texcoord;
+uniform sampler2D u_texture;
+
+void main() {
+    gl_FragColor = texture2D(u_texture, v_texcoord);
+}
+)";
+
 RenderEGL::RenderEGL()
     : m_x_display(nullptr)
     , m_x_window(0)
-    , m_x_image(nullptr)
-    , m_gc(0)
     , m_wm_delete_window(0)
     , m_egl_display(EGL_NO_DISPLAY)
+    , m_egl_surface(EGL_NO_SURFACE)
+    , m_egl_context(EGL_NO_CONTEXT)
+    , m_egl_config(nullptr)
+    , m_texture(0)
+    , m_shader_program(0)
+    , m_vbo(0)
+    , m_position_attr(0)
+    , m_texcoord_attr(0)
+    , m_texture_uniform(0)
     , m_width(0)
     , m_height(0)
     , m_initialized(false)
@@ -70,7 +99,14 @@ int RenderEGL::init(const WindowConfig& config)
         return -1;
     }
 
-    // 3. 初始化帧缓冲
+    // 3. 初始化OpenGL ES
+    if (initOpenGLES() != 0) {
+        std::cerr << "Failed to initialize OpenGL ES" << std::endl;
+        cleanup();
+        return -1;
+    }
+
+    // 4. 初始化帧缓冲
     if (initFramebuffer() != 0) {
         std::cerr << "Failed to initialize framebuffer" << std::endl;
         cleanup();
@@ -78,8 +114,9 @@ int RenderEGL::init(const WindowConfig& config)
     }
 
     m_initialized = true;
-    std::cout << "✅ RenderEGL initialized successfully (" 
-              << m_width << "x" << m_height << ")" << std::endl;
+    std::cout << "✅ RenderEGL initialized successfully (GPU accelerated)" << std::endl;
+    std::cout << "   Resolution: " << m_width << "x" << m_height << std::endl;
+    std::cout << "   Backend: EGL + OpenGL ES 2.0" << std::endl;
 
     return 0;
 }
@@ -137,9 +174,6 @@ int RenderEGL::initX11(const WindowConfig& config)
     m_wm_delete_window = XInternAtom(m_x_display, "WM_DELETE_WINDOW", False);
     XSetWMProtocols(m_x_display, m_x_window, &m_wm_delete_window, 1);
 
-    // 创建GC（图形上下文）
-    m_gc = XCreateGC(m_x_display, m_x_window, 0, nullptr);
-
     // 显示窗口
     XMapWindow(m_x_display, m_x_window);
     XFlush(m_x_display);
@@ -150,14 +184,14 @@ int RenderEGL::initX11(const WindowConfig& config)
 
 int RenderEGL::initEGL()
 {
-    // 获取EGL Display
+    // 1. 获取EGL Display
     m_egl_display = eglGetDisplay((EGLNativeDisplayType)m_x_display);
     if (m_egl_display == EGL_NO_DISPLAY) {
         std::cerr << "Cannot get EGL display" << std::endl;
         return -1;
     }
 
-    // 初始化EGL
+    // 2. 初始化EGL
     EGLint major, minor;
     if (!eglInitialize(m_egl_display, &major, &minor)) {
         std::cerr << "Cannot initialize EGL" << std::endl;
@@ -165,6 +199,182 @@ int RenderEGL::initEGL()
     }
     std::cout << "✅ EGL initialized: version " << major << "." << minor << std::endl;
 
+    // 3. 选择EGL配置
+    EGLint config_attribs[] = {
+        EGL_SURFACE_TYPE, EGL_WINDOW_BIT,
+        EGL_RENDERABLE_TYPE, EGL_OPENGL_ES2_BIT,
+        EGL_RED_SIZE, 8,
+        EGL_GREEN_SIZE, 8,
+        EGL_BLUE_SIZE, 8,
+        EGL_ALPHA_SIZE, 8,
+        EGL_DEPTH_SIZE, 0,
+        EGL_NONE
+    };
+
+    EGLint num_configs;
+    if (!eglChooseConfig(m_egl_display, config_attribs, &m_egl_config, 1, &num_configs) || 
+        num_configs == 0) {
+        std::cerr << "Cannot choose EGL config" << std::endl;
+        return -1;
+    }
+    std::cout << "✅ EGL config selected" << std::endl;
+
+    // 4. 创建EGL Surface
+    m_egl_surface = eglCreateWindowSurface(m_egl_display, m_egl_config, 
+                                          (EGLNativeWindowType)m_x_window, nullptr);
+    if (m_egl_surface == EGL_NO_SURFACE) {
+        std::cerr << "Cannot create EGL surface" << std::endl;
+        return -1;
+    }
+    std::cout << "✅ EGL surface created" << std::endl;
+
+    // 5. 创建EGL Context
+    EGLint context_attribs[] = {
+        EGL_CONTEXT_CLIENT_VERSION, 2,  // OpenGL ES 2.0
+        EGL_NONE
+    };
+    m_egl_context = eglCreateContext(m_egl_display, m_egl_config, 
+                                     EGL_NO_CONTEXT, context_attribs);
+    if (m_egl_context == EGL_NO_CONTEXT) {
+        std::cerr << "Cannot create EGL context" << std::endl;
+        return -1;
+    }
+    std::cout << "✅ EGL context created (OpenGL ES 2.0)" << std::endl;
+
+    // 6. 激活Context
+    if (!eglMakeCurrent(m_egl_display, m_egl_surface, m_egl_surface, m_egl_context)) {
+        std::cerr << "Cannot make EGL context current" << std::endl;
+        return -1;
+    }
+    std::cout << "✅ EGL context activated" << std::endl;
+
+    return 0;
+}
+
+GLuint RenderEGL::compileShader(GLenum type, const char* source)
+{
+    GLuint shader = glCreateShader(type);
+    glShaderSource(shader, 1, &source, nullptr);
+    glCompileShader(shader);
+
+    // 检查编译状态
+    GLint compiled = 0;
+    glGetShaderiv(shader, GL_COMPILE_STATUS, &compiled);
+    if (!compiled) {
+        GLint log_length = 0;
+        glGetShaderiv(shader, GL_INFO_LOG_LENGTH, &log_length);
+        if (log_length > 0) {
+            char* log = new char[log_length];
+            glGetShaderInfoLog(shader, log_length, nullptr, log);
+            std::cerr << "Shader compile error: " << log << std::endl;
+            delete[] log;
+        }
+        glDeleteShader(shader);
+        return 0;
+    }
+
+    return shader;
+}
+
+int RenderEGL::createShaderProgram()
+{
+    // 编译顶点着色器
+    GLuint vertex_shader = compileShader(GL_VERTEX_SHADER, VERTEX_SHADER_SOURCE);
+    if (vertex_shader == 0) {
+        std::cerr << "Failed to compile vertex shader" << std::endl;
+        return -1;
+    }
+
+    // 编译片段着色器
+    GLuint fragment_shader = compileShader(GL_FRAGMENT_SHADER, FRAGMENT_SHADER_SOURCE);
+    if (fragment_shader == 0) {
+        std::cerr << "Failed to compile fragment shader" << std::endl;
+        glDeleteShader(vertex_shader);
+        return -1;
+    }
+
+    // 创建程序并链接
+    m_shader_program = glCreateProgram();
+    glAttachShader(m_shader_program, vertex_shader);
+    glAttachShader(m_shader_program, fragment_shader);
+    glLinkProgram(m_shader_program);
+
+    // 检查链接状态
+    GLint linked = 0;
+    glGetProgramiv(m_shader_program, GL_LINK_STATUS, &linked);
+    if (!linked) {
+        GLint log_length = 0;
+        glGetProgramiv(m_shader_program, GL_INFO_LOG_LENGTH, &log_length);
+        if (log_length > 0) {
+            char* log = new char[log_length];
+            glGetProgramInfoLog(m_shader_program, log_length, nullptr, log);
+            std::cerr << "Program link error: " << log << std::endl;
+            delete[] log;
+        }
+        glDeleteProgram(m_shader_program);
+        m_shader_program = 0;
+        glDeleteShader(vertex_shader);
+        glDeleteShader(fragment_shader);
+        return -1;
+    }
+
+    // 着色器已经链接到程序，可以删除
+    glDeleteShader(vertex_shader);
+    glDeleteShader(fragment_shader);
+
+    // 获取属性和uniform位置
+    m_position_attr = glGetAttribLocation(m_shader_program, "a_position");
+    m_texcoord_attr = glGetAttribLocation(m_shader_program, "a_texcoord");
+    m_texture_uniform = glGetUniformLocation(m_shader_program, "u_texture");
+
+    return 0;
+}
+
+int RenderEGL::initOpenGLES()
+{
+    // 设置视口
+    glViewport(0, 0, m_width, m_height);
+
+    // 创建着色器程序
+    if (createShaderProgram() != 0) {
+        std::cerr << "Failed to create shader program" << std::endl;
+        return -1;
+    }
+    std::cout << "✅ Shader program created" << std::endl;
+
+    // 创建纹理
+    glGenTextures(1, &m_texture);
+    glBindTexture(GL_TEXTURE_2D, m_texture);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+    std::cout << "✅ Texture created" << std::endl;
+
+    // 创建全屏四边形顶点数据
+    // 顶点格式：x, y, u, v
+    float vertices[] = {
+        // 位置          // 纹理坐标
+        -1.0f, -1.0f,   0.0f, 1.0f,  // 左下
+         1.0f, -1.0f,   1.0f, 1.0f,  // 右下
+        -1.0f,  1.0f,   0.0f, 0.0f,  // 左上
+         1.0f,  1.0f,   1.0f, 0.0f,  // 右上
+    };
+
+    // 创建VBO
+    glGenBuffers(1, &m_vbo);
+    glBindBuffer(GL_ARRAY_BUFFER, m_vbo);
+    glBufferData(GL_ARRAY_BUFFER, sizeof(vertices), vertices, GL_STATIC_DRAW);
+    std::cout << "✅ VBO created" << std::endl;
+
+    // 禁用深度测试（2D渲染不需要）
+    glDisable(GL_DEPTH_TEST);
+
+    // 启用混合
+    glEnable(GL_BLEND);
+    glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+
+    std::cout << "✅ OpenGL ES initialized" << std::endl;
     return 0;
 }
 
@@ -172,28 +382,6 @@ int RenderEGL::initFramebuffer()
 {
     // 分配帧缓冲内存（ARGB格式，每像素4字节）
     m_framebuffer.resize(m_width * m_height, 0xFF000000);  // 默认黑色
-
-    // 创建XImage用于将帧缓冲绘制到窗口
-    Visual* visual = DefaultVisual(m_x_display, DefaultScreen(m_x_display));
-    int depth = DefaultDepth(m_x_display, DefaultScreen(m_x_display));
-
-    m_x_image = XCreateImage(
-        m_x_display,
-        visual,
-        depth,
-        ZPixmap,
-        0,
-        reinterpret_cast<char*>(m_framebuffer.data()),
-        m_width,
-        m_height,
-        32,  // bitmap_pad
-        m_width * 4  // bytes_per_line
-    );
-
-    if (!m_x_image) {
-        std::cerr << "Cannot create XImage" << std::endl;
-        return -1;
-    }
 
     std::cout << "✅ Framebuffer initialized: " << m_width * m_height * 4 
               << " bytes" << std::endl;
@@ -206,28 +394,42 @@ void RenderEGL::cleanup()
         return;
     }
 
-    // 清理XImage
-    if (m_x_image) {
-        m_x_image->data = nullptr;  // 防止XDestroyImage释放我们的framebuffer
-        XDestroyImage(m_x_image);
-        m_x_image = nullptr;
+    // 清理OpenGL ES资源
+    if (m_texture) {
+        glDeleteTextures(1, &m_texture);
+        m_texture = 0;
+    }
+    if (m_vbo) {
+        glDeleteBuffers(1, &m_vbo);
+        m_vbo = 0;
+    }
+    if (m_shader_program) {
+        glDeleteProgram(m_shader_program);
+        m_shader_program = 0;
     }
 
     // 清理帧缓冲
     m_framebuffer.clear();
 
     // 清理EGL
-    if (m_egl_display != EGL_NO_DISPLAY) {
+    if (m_egl_display != EGL_NO_DISPLAY)
+    {
+        eglMakeCurrent(m_egl_display, EGL_NO_SURFACE, EGL_NO_SURFACE, EGL_NO_CONTEXT);
+
+        if (m_egl_context != EGL_NO_CONTEXT) {
+            eglDestroyContext(m_egl_display, m_egl_context);
+            m_egl_context = EGL_NO_CONTEXT;
+        }
+        if (m_egl_surface != EGL_NO_SURFACE) {
+            eglDestroySurface(m_egl_display, m_egl_surface);
+            m_egl_surface = EGL_NO_SURFACE;
+        }
         eglTerminate(m_egl_display);
         m_egl_display = EGL_NO_DISPLAY;
     }
 
     // 清理X11
     if (m_x_display) {
-        if (m_gc) {
-            XFreeGC(m_x_display, m_gc);
-            m_gc = 0;
-        }
         if (m_x_window) {
             XDestroyWindow(m_x_display, m_x_window);
             m_x_window = 0;
@@ -240,20 +442,51 @@ void RenderEGL::cleanup()
     std::cout << "✅ RenderEGL cleaned up" << std::endl;
 }
 
+void RenderEGL::clear(float r, float g, float b, float a)
+{
+    glClearColor(r, g, b, a);
+    glClear(GL_COLOR_BUFFER_BIT);
+}
+
+void RenderEGL::renderFramebuffer()
+{
+    // 上传framebuffer数据到纹理
+    glBindTexture(GL_TEXTURE_2D, m_texture);
+    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, m_width, m_height, 0,
+                 GL_RGBA, GL_UNSIGNED_BYTE, m_framebuffer.data());
+
+    // 使用着色器程序
+    glUseProgram(m_shader_program);
+
+    // 绑定纹理
+    glActiveTexture(GL_TEXTURE0);
+    glBindTexture(GL_TEXTURE_2D, m_texture);
+    glUniform1i(m_texture_uniform, 0);
+
+    // 设置顶点属性
+    glBindBuffer(GL_ARRAY_BUFFER, m_vbo);
+    glEnableVertexAttribArray(m_position_attr);
+    glVertexAttribPointer(m_position_attr, 2, GL_FLOAT, GL_FALSE, 
+                         4 * sizeof(float), (void*)0);
+    glEnableVertexAttribArray(m_texcoord_attr);
+    glVertexAttribPointer(m_texcoord_attr, 2, GL_FLOAT, GL_FALSE,
+                         4 * sizeof(float), (void*)(2 * sizeof(float)));
+
+    // 绘制全屏四边形
+    glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
+
+    // 清理
+    glDisableVertexAttribArray(m_position_attr);
+    glDisableVertexAttribArray(m_texcoord_attr);
+}
+
 void RenderEGL::swapBuffers()
 {
-    // 将帧缓冲绘制到X11窗口
-    XPutImage(
-        m_x_display,
-        m_x_window,
-        m_gc,
-        m_x_image,
-        0, 0,      // src_x, src_y
-        0, 0,      // dest_x, dest_y
-        m_width,
-        m_height
-    );
-    XFlush(m_x_display);
+    // 渲染framebuffer到屏幕
+    renderFramebuffer();
+
+    // 交换EGL缓冲区
+    eglSwapBuffers(m_egl_display, m_egl_surface);
 }
 
 void RenderEGL::blitBuffer(const uint32_t* srcBuffer,
@@ -319,26 +552,6 @@ void RenderEGL::blitBuffer(const uint32_t* srcBuffer,
     }
 }
 
-bool RenderEGL::processEvents()
-{
-    while (XPending(m_x_display) > 0) {
-        XEvent event;
-        XNextEvent(m_x_display, &event);
-
-        if (event.type == ClientMessage) {
-            if (static_cast<Atom>(event.xclient.data.l[0]) == m_wm_delete_window) {
-                return false;  // 窗口关闭
-            }
-        } else if (event.type == KeyPress) {
-            KeySym key = XLookupKeysym(&event.xkey, 0);
-            if (key == XK_Escape || key == XK_q) {
-                return false;  // ESC或Q键退出
-            }
-        }
-    }
-    return true;
-}
-
 void RenderEGL::renderLoop(RenderCallback callback, uint32_t maxFrames, float fps)
 {
     if (!m_initialized) {
@@ -350,26 +563,22 @@ void RenderEGL::renderLoop(RenderCallback callback, uint32_t maxFrames, float fp
     auto last_time = std::chrono::steady_clock::now();
     uint32_t frame_count = 0;
 
-    std::cout << "🎨 Starting render loop (max_frames=" << maxFrames 
-              << ", fps=" << fps << ")" << std::endl;
+    std::cout << "🎨 Starting render loop (GPU accelerated)" << std::endl;
+    std::cout << "   Max frames: " << maxFrames << std::endl;
+    std::cout << "   Target FPS: " << fps << std::endl;
 
     while (maxFrames == 0 || frame_count < maxFrames) {
         auto current_time = std::chrono::steady_clock::now();
         float delta_time = std::chrono::duration<float>(current_time - last_time).count();
         last_time = current_time;
 
-        // 处理事件
-        if (!processEvents()) {
-            std::cout << "Received exit signal" << std::endl;
-            break;
-        }
-
         // 调用用户回调
-        if (callback) {
+        if (callback)
+        {
             callback(delta_time);
         }
 
-        // 交换缓冲区
+        // 交换缓冲区（GPU渲染）
         swapBuffers();
 
         frame_count++;
@@ -382,7 +591,7 @@ void RenderEGL::renderLoop(RenderCallback callback, uint32_t maxFrames, float fp
 
         // 每30帧打印一次进度
         if (frame_count % 30 == 0) {
-            std::cout << "📊 Rendered " << frame_count << " frames" << std::endl;
+            std::cout << "📊 Rendered " << frame_count << " frames (GPU)" << std::endl;
         }
     }
 

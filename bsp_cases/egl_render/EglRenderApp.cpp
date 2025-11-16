@@ -58,7 +58,7 @@ void EglRenderApp::onInit()
     bsp_egl::RenderEGL::WindowConfig config;
     config.width = m_window_width;
     config.height = m_window_height;
-    config.title = "EGL Render Demo - Pure CPU Drawing";
+    config.title = "EGL Render Demo - GPU Accelerated (OpenGL ES 2.0)";
     config.fullscreen = m_fullscreen;
 
     // 初始化EGL
@@ -69,13 +69,15 @@ void EglRenderApp::onInit()
     }
 
     // 创建Cpu2dGraphics实例（使用RenderEGL的framebuffer）
+    // 注意：虽然使用CPU绘图，但最终通过OpenGL ES上传纹理到GPU渲染，比纯CPU快很多
     m_graphics = std::make_unique<bsp_egl::Cpu2dGraphics>(
         m_render_egl->getFramebuffer(),
         m_render_egl->getWidth(),
         m_render_egl->getHeight()
     );
 
-    m_logger->printStdoutLog(bsp_perf::shared::BspLogger::LogLevel::Info, "EglRenderApp::onInit() completed successfully");
+    m_logger->printStdoutLog(bsp_perf::shared::BspLogger::LogLevel::Info, 
+        "EglRenderApp::onInit() completed successfully (GPU accelerated)");
 }
 
 void EglRenderApp::onProcess()

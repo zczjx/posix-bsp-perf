@@ -38,8 +38,11 @@ namespace perf_cases {
  * @brief EGL渲染示例应用
  * 
  * 演示如何使用RenderEGL和Cpu2dGraphics进行2D图形渲染
- * - RenderEGL: 负责窗口管理和显示输出
- * - Cpu2dGraphics: 负责2D绘图操作
+ * - RenderEGL: 负责窗口管理和GPU加速显示（EGL + OpenGL ES 2.0）
+ * - Cpu2dGraphics: 负责2D绘图操作（CPU绘制到framebuffer）
+ * - 最终显示: CPU绘制 → Framebuffer → OpenGL ES纹理 → GPU渲染到屏幕
+ * 
+ * 性能优势：虽然绘图在CPU，但显示通过GPU硬件加速，比纯CPU方案快得多
  */
 class EglRenderApp : public common::BasePerfCase {
 public:

@@ -5,14 +5,20 @@ project(bsp_egl VERSION 0.0.1 LANGUAGES CXX)
 # 查找依赖库
 find_package(X11 REQUIRED)
 
-# EGL库（不需要GLESv2）
-find_library(EGL_LIBRARY NAMES EGL)
+# EGL和OpenGL ES库
+find_library(EGL_LIBRARY NAMES EGL REQUIRED)
+find_library(GLES2_LIBRARY NAMES GLESv2 REQUIRED)
 
 if(NOT EGL_LIBRARY)
     message(FATAL_ERROR "EGL library not found")
 endif()
 
+if(NOT GLES2_LIBRARY)
+    message(FATAL_ERROR "GLESv2 library not found")
+endif()
+
 message(STATUS "Found EGL: ${EGL_LIBRARY}")
+message(STATUS "Found GLESv2: ${GLES2_LIBRARY}")
 message(STATUS "Found X11: ${X11_LIBRARIES}")
 
 # 源文件
@@ -32,10 +38,11 @@ target_include_directories(${PROJECT_NAME}
         ${X11_INCLUDE_DIR}
 )
 
-# 链接库（只需要EGL和X11，不需要GLESv2）
+# 链接库（EGL、OpenGL ES 2.0和X11）
 target_link_libraries(${PROJECT_NAME}
     PUBLIC
         ${EGL_LIBRARY}
+        ${GLES2_LIBRARY}
         ${X11_LIBRARIES}
 )
 
@@ -53,5 +60,5 @@ install(TARGETS ${PROJECT_NAME}
 )
 
 message(STATUS "${PROJECT_NAME} library configured")
-message(STATUS "  - RenderEGL: EGL/X11 window management")
+message(STATUS "  - RenderEGL: EGL + OpenGL ES 2.0 (GPU accelerated)")
 message(STATUS "  - Cpu2dGraphics: CPU-based 2D graphics")

@@ -56,6 +56,7 @@ int main(int argc, char* argv[])
         app.run(cycles);
 
         std::cout << "\n✅ EGL Render Demo completed successfully!" << std::endl;
+        std::cout << "   Backend: EGL + OpenGL ES 2.0 (GPU accelerated)" << std::endl;
         return 0;
 
     } catch (const std::exception& e) {
