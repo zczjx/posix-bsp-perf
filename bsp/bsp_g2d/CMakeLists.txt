@@ -13,24 +13,73 @@ set(SOURCES
   impl/IGraphics2D.cpp
 )
 
-option(ENABLE_RKRGA "Enable support for RKRGA" ON)
 
-if(ENABLE_RKRGA)
+if(BUILD_PLATFORM_RK35XX)
+  add_compile_definitions(BUILD_PLATFORM_RK35XX)
   list(APPEND SOURCES
     impl/rk_rga/rkrga.cpp
+  )
+endif()
+
+if(BUILD_PLATFORM_JETSON)
+  add_compile_definitions(BUILD_PLATFORM_JETSON)
+  list(APPEND SOURCES
+    impl/nv_vic/NvVicGraphics2D.cpp
   )
 endif()
 
 # Add the library target
 add_library(${PROJECT_NAME} SHARED ${SOURCES})
 
-if(ENABLE_RKRGA)
+if(BUILD_PLATFORM_RK35XX)
   if(DEFINED BSP_LIB_PATH)
     set(RKRGA_LIB ${BSP_LIB_PATH}/librga.so)
   else()
     set(RKRGA_LIB /usr/lib/librga.so)
   endif()
   target_link_libraries(${PROJECT_NAME} PUBLIC ${RKRGA_LIB})
+endif()
+
+if(BUILD_PLATFORM_JETSON)
+  # Find NVIDIA libraries for Jetson
+    # Default paths for Jetson platforms - try nvidia subdirectory first
+  find_library(NVBUFSURFACE_LIB nvbufsurface
+      PATHS
+      /usr/lib/aarch64-linux-gnu/nvidia
+      /usr/lib/aarch64-linux-gnu
+      /usr/lib
+      NO_DEFAULT_PATH
+  )
+  find_library(NVBUFSURFTRANSFORM_LIB nvbufsurftransform
+     PATHS
+      /usr/lib/aarch64-linux-gnu/nvidia
+      /usr/lib/aarch64-linux-gnu
+      /usr/lib
+    NO_DEFAULT_PATH
+  )
+
+
+  if(NVBUFSURFACE_LIB)
+    message(STATUS "Found nvbufsurface: ${NVBUFSURFACE_LIB}")
+    target_link_libraries(${PROJECT_NAME} PUBLIC ${NVBUFSURFACE_LIB})
+  else()
+    message(WARNING "nvbufsurface library not found, linking by name")
+    target_link_libraries(${PROJECT_NAME} PUBLIC nvbufsurface)
+  endif()
+
+  if(NVBUFSURFTRANSFORM_LIB)
+    message(STATUS "Found nvbufsurftransform: ${NVBUFSURFTRANSFORM_LIB}")
+    target_link_libraries(${PROJECT_NAME} PUBLIC ${NVBUFSURFTRANSFORM_LIB})
+  else()
+    message(WARNING "nvbufsurftransform library not found, linking by name")
+    target_link_libraries(${PROJECT_NAME} PUBLIC nvbufsurftransform)
+  endif()
+
+  # Add Jetson multimedia API include paths
+  target_include_directories(${PROJECT_NAME} PRIVATE
+    $<BUILD_INTERFACE:${CMAKE_SOURCE_DIR}/jetson_multimedia_api/include>
+    $<BUILD_INTERFACE:${CMAKE_SOURCE_DIR}/include>
+  )
 endif()
 
 # target_link_libraries(${PROJECT_NAME} PRIVATE bsp_shared)
