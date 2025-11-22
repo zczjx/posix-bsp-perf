@@ -3,6 +3,8 @@
 #include <iostream>
 #include <cstring>
 #include <unistd.h>
+#include <chrono>
+#include <thread>
 #include <nvbufsurface.h>
 #include <v4l2_nv_extensions.h>
 
@@ -260,6 +262,7 @@ void nvVideoEnc::captureThreadFunc()
 {
     std::cout << "nvVideoEnc::captureThreadFunc() started" << std::endl;
     
+    int loop_count = 0;
     while (!m_stop_thread)
     {
         struct v4l2_buffer v4l2_buf;
@@ -270,13 +273,21 @@ void nvVideoEnc::captureThreadFunc()
         memset(planes, 0, sizeof(planes));
         v4l2_buf.m.planes = planes;
         
-        // Dequeue buffer from capture plane (blocking)
-        int ret = m_encoder->capture_plane.dqBuffer(v4l2_buf, &buffer, nullptr, -1);
+        loop_count++;
+        if (loop_count % 10 == 1) {
+            std::cout << "[Encoder Capture Thread] Loop iteration " << loop_count << ", waiting for encoded frame..." << std::endl;
+        }
+        
+        // Dequeue buffer from capture plane with timeout (not blocking forever)
+        // Use 1000ms timeout to allow periodic status updates
+        int ret = m_encoder->capture_plane.dqBuffer(v4l2_buf, &buffer, nullptr, 1000);
         if (ret < 0) {
             if (errno == EAGAIN) {
+                // Timeout - encoder hasn't produced output yet
+                std::cout << "[Encoder Capture Thread] Timeout waiting for encoder output (1s), retrying..." << std::endl;
                 continue;
             }
-            std::cerr << "Error dequeueing buffer from capture plane" << std::endl;
+            std::cerr << "[Encoder Capture Thread] ERROR dequeueing buffer, errno=" << errno << std::endl;
             break;
         }
         
@@ -291,6 +302,7 @@ void nvVideoEnc::captureThreadFunc()
         
         // Call user callback if set
         if (m_callback && buffer->planes[0].bytesused > 0) {
+            std::cout << "[Encoder Capture Thread] Got encoded frame, size=" << buffer->planes[0].bytesused << std::endl;
             m_callback(m_userdata, (const char*)buffer->planes[0].data, buffer->planes[0].bytesused);
         }
         
@@ -300,6 +312,7 @@ void nvVideoEnc::captureThreadFunc()
             std::cerr << "Error queueing buffer back to capture plane" << std::endl;
             break;
         }
+        std::cout << "[Encoder Capture Thread] Buffer returned to capture plane" << std::endl;
     }
     
     std::cout << "nvVideoEnc::captureThreadFunc() exiting" << std::endl;
@@ -311,21 +324,21 @@ int nvVideoEnc::encode(EncodeInputBuffer& input_buf, EncodePacket& out_pkt)
         std::cerr << "Encoder not initialized" << std::endl;
         return -1;
     }
-    
+
     // Handle EOS
     if (out_pkt.pkt_eos) {
         std::cout << "nvVideoEnc::encode() sending EOS" << std::endl;
-        
+
         // If initial fill not done yet, wait for it
         while (m_output_buffers_queued < m_encoder->output_plane.getNumBuffers() && !m_eos_sent) {
             std::this_thread::sleep_for(std::chrono::milliseconds(10));
         }
-        
+
         // Dequeue a buffer from output plane
         struct v4l2_buffer v4l2_buf;
         struct v4l2_plane planes[MAX_PLANES];
         NvBuffer *buffer = nullptr;
-        
+
         memset(&v4l2_buf, 0, sizeof(v4l2_buf));
         memset(planes, 0, sizeof(planes));
         v4l2_buf.m.planes = planes;
@@ -365,11 +378,30 @@ int nvVideoEnc::encode(EncodeInputBuffer& input_buf, EncodePacket& out_pkt)
     bool is_initial_fill = (queued < m_encoder->output_plane.getNumBuffers());
     
     if (!is_initial_fill) {
-        // Dequeue buffer from output plane
-        int ret = m_encoder->output_plane.dqBuffer(v4l2_buf, &buffer, nullptr, 100);
-        if (ret < 0) {
-            std::cerr << "Error dequeueing buffer from output plane" << std::endl;
-            return -1;
+        // Dequeue buffer from output plane with retry logic
+        // IMPORTANT: timeout (EAGAIN) is not an error - it means encoder is busy
+        // We should retry until a buffer becomes available
+        int retry_count = 0;
+        while (true) {
+            int ret = m_encoder->output_plane.dqBuffer(v4l2_buf, &buffer, nullptr, 100);
+            if (ret == 0) {
+                // Success
+                std::cout << "[Encoder] Got output buffer index=" << v4l2_buf.index << std::endl;
+                break;
+            } else if (errno == EAGAIN) {
+                // Timeout - encoder is busy, retry
+                retry_count++;
+                if (retry_count % 10 == 0) {  // Log every 1 second
+                    std::cout << "[Encoder] Waiting for encoder to process frames (retry " << retry_count << ")..." << std::endl;
+                }
+                // Small sleep to avoid busy-waiting
+                std::this_thread::sleep_for(std::chrono::milliseconds(10));
+                continue;
+            } else {
+                // Real error
+                std::cerr << "[Encoder] ERROR: dqBuffer failed with errno=" << errno << std::endl;
+                return -1;
+            }
         }
     } else {
         // Initial fill: use Nth buffer directly
@@ -401,14 +433,8 @@ int nvVideoEnc::encode(EncodeInputBuffer& input_buf, EncodePacket& out_pkt)
             v4l2_buf.m.planes[i].bytesused = plane.bytesused;
         }
         
-        // Sync for device
-        for (uint32_t i = 0; i < buffer->n_planes; i++) {
-            NvBufSurface *nvbuf_surf = nullptr;
-            int ret = NvBufSurfaceFromFd(buffer->planes[i].fd, (void**)(&nvbuf_surf));
-            if (ret == 0 && nvbuf_surf) {
-                NvBufSurfaceSyncForDevice(nvbuf_surf, 0, i);
-            }
-        }
+        // Note: In V4L2_MEMORY_MMAP mode, cache coherency is handled by V4L2 driver
+        // No need for explicit NvBufSurface sync operations
     } else {
         std::cerr << "No input buffer address provided" << std::endl;
         return -1;
@@ -420,6 +446,7 @@ int nvVideoEnc::encode(EncodeInputBuffer& input_buf, EncodePacket& out_pkt)
         std::cerr << "Error queueing buffer to output plane" << std::endl;
         return -1;
     }
+    std::cout << "[Encoder] Buffer queued to output plane, index=" << v4l2_buf.index << std::endl;
     
     if (is_initial_fill) {
         m_output_buffers_queued++;

@@ -141,7 +141,7 @@ public:
      * - "fd": File descriptor
      * - "virtualaddr": Virtual address
      * - "physicaladdr": Physical address
-     * - "handle": Handle
+     * - "handle": Handle that managed by the graphics platform, virtualaddr must be nullptr
      * @param params The parameters for the G2D buffer.
      *
      * @return std::shared_ptr<G2DBuffer> A shared pointer to the created G2D buffer.

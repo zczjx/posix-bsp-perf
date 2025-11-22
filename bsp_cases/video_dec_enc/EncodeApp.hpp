@@ -93,7 +93,7 @@ private:
         cfg.height = height;
         cfg.hor_stride = width;  // 可以根据实际情况调整
         cfg.ver_stride = height; // 可以根据实际情况调整
-        
+
         int ret = m_encoder->setup(cfg);
         if (ret != 0)
         {

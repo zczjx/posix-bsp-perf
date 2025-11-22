@@ -15,9 +15,19 @@ namespace bsp_g2d
  * 
  * This class provides hardware-accelerated 2D graphics operations using
  * NVIDIA VIC (Video Image Compositor) engine. It supports:
- * - Color format conversion
+ * - Color format conversion (YUV formats and 32-bit RGB formats)
  * - Image scaling/resizing
  * - Image copying
+ * 
+ * ⚠️ IMPORTANT FORMAT LIMITATIONS:
+ * - VIC hardware does NOT support 24-bit RGB/BGR formats (RGB888/BGR888)
+ * - Only 32-bit RGB formats are supported (RGBA8888, BGRA8888, ARGB8888, etc.)
+ * - If you need RGB888/BGR888, use RGBA8888 instead or use GPU-based transformation
+ * 
+ * Supported color format conversions:
+ * - YUV formats: YUV420SP (NV12), YUV420P, YUV422, YUV444, etc.
+ * - 32-bit RGB: RGBA8888, BGRA8888, ARGB8888, ABGR8888
+ * - YUV ↔ 32-bit RGB conversions
  * 
  * Based on the nvbufsurface and nvbufsurftransform APIs.
  */

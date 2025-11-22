@@ -12,6 +12,10 @@ if(DEFINED BSP_PKG_CONFIG_PATH)
     message(STATUS "ENV{PKG_CONFIG_PATH}: $ENV{PKG_CONFIG_PATH}")
 endif()
 
+# Find msgpack package
+find_package(PkgConfig REQUIRED)
+pkg_check_modules(PC_MSGPACK REQUIRED msgpack)
+
 if(DEFINED BSP_LIB_PATH)
   set(OpenCV_DIR ${BSP_LIB_PATH}/cmake/opencv4)
 else()
@@ -49,6 +53,33 @@ install(TARGETS ${PLUGIN_NAME}
 
 # Optional: Install headers if needed
 install(FILES Resnet18TrafficCamNet.hpp
+  DESTINATION include/bsp_dnn/dnnObjDetector_plugins/resnet18
+)
+
+# Create the shared library for NvVic ResNet18 TrafficCamNet plugin (DecodeOutFrame support)
+set(NVVIC_PLUGIN_NAME nvvic_resnet18_trafficcamnet)
+
+add_library(${NVVIC_PLUGIN_NAME} SHARED
+    NvVicResnet18TrafficCamNet.cpp
+)
+
+target_include_directories(${NVVIC_PLUGIN_NAME} PRIVATE
+    $<BUILD_INTERFACE:${CMAKE_SOURCE_DIR}/bsp>
+    $<INSTALL_INTERFACE:include>
+    ${PC_MSGPACK_INCLUDE_DIRS}
+)
+
+# Link with bsp_g2d library for IGraphics2D support
+target_link_libraries(${NVVIC_PLUGIN_NAME} PRIVATE bsp_g2d)
+
+set_target_properties(${NVVIC_PLUGIN_NAME} PROPERTIES INSTALL_RPATH "$ORIGIN/../lib")
+
+install(TARGETS ${NVVIC_PLUGIN_NAME}
+  RUNTIME DESTINATION bin
+  LIBRARY DESTINATION lib
+)
+
+install(FILES NvVicResnet18TrafficCamNet.hpp
   DESTINATION include/bsp_dnn/dnnObjDetector_plugins/resnet18
 )
 

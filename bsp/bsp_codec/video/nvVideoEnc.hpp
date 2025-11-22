@@ -26,8 +26,8 @@ struct nvVideoEncParams
     uint32_t height{0};
     uint32_t fps{30};
     uint32_t bitrate{4 * 1024 * 1024}; // 4 Mbps default
-    uint32_t num_output_buffers{6};    // Number of buffers for the output plane (raw input)
-    uint32_t num_capture_buffers{6};   // Number of buffers for the capture plane (encoded output)
+    uint32_t num_output_buffers{10};    // Number of buffers for the output plane (raw input)
+    uint32_t num_capture_buffers{10};   // Number of buffers for the capture plane (encoded output)
     std::string encoding_type{"h264"};
     std::string frame_format{"YUV420SP"};
     uint32_t profile{0}; // 0 for default
