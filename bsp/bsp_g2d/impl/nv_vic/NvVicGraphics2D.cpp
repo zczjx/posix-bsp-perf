@@ -37,6 +37,7 @@ NvVicGraphics2D::~NvVicGraphics2D()
         }
     }
     m_bufferMap.clear();
+    m_mapInfo.clear();
     
     std::cout << "NvVicGraphics2D: Destroyed" << std::endl;
 }
@@ -44,7 +45,6 @@ NvVicGraphics2D::~NvVicGraphics2D()
 NvBufSurfaceColorFormat NvVicGraphics2D::mapFormatStringToNvFormat(const std::string& format)
 {
     // Map common formats to NvBufSurfaceColorFormat
-    // Based on transform_unit_sample and IGraphics2D format strings
     static const std::map<std::string, NvBufSurfaceColorFormat> formatMap = {
         // RGB formats (32-bit only, VIC does not support 24-bit RGB/BGR)
         {"RGBA8888", NVBUF_COLOR_FORMAT_RGBA},
@@ -54,8 +54,6 @@ NvBufSurfaceColorFormat NvVicGraphics2D::mapFormatStringToNvFormat(const std::st
         {"XRGB8888", NVBUF_COLOR_FORMAT_xRGB},
         {"ABGR8888", NVBUF_COLOR_FORMAT_RGBA},
         {"XBGR8888", NVBUF_COLOR_FORMAT_RGBA},
-        // Note: RGB888/BGR888 are NOT supported by VIC hardware
-        // Use RGBA8888 instead, or use GPU-based transformation
         
         // YUV 4:2:0 formats
         {"YCbCr_420_SP", NVBUF_COLOR_FORMAT_NV12},
@@ -83,10 +81,8 @@ NvBufSurfaceColorFormat NvVicGraphics2D::mapFormatStringToNvFormat(const std::st
 
 void NvVicGraphics2D::fillBytesPerPixel(NvBufSurfaceColorFormat pixel_format, int* bytes_per_pixel)
 {
-    // Reset array
     memset(bytes_per_pixel, 0, sizeof(int) * 4);
     
-    // Based on transform_unit_sample implementation
     switch (pixel_format)
     {
         case NVBUF_COLOR_FORMAT_NV12:
@@ -95,48 +91,138 @@ void NvVicGraphics2D::fillBytesPerPixel(NvBufSurfaceColorFormat pixel_format, in
         case NVBUF_COLOR_FORMAT_NV12_709:
         case NVBUF_COLOR_FORMAT_NV12_709_ER:
         case NVBUF_COLOR_FORMAT_NV12_2020:
-        {
             bytes_per_pixel[0] = 1;
             bytes_per_pixel[1] = 2;
             break;
-        }
         case NVBUF_COLOR_FORMAT_ARGB:
         case NVBUF_COLOR_FORMAT_xRGB:
         case NVBUF_COLOR_FORMAT_RGBA:
-        {
             bytes_per_pixel[0] = 4;
             break;
-        }
         case NVBUF_COLOR_FORMAT_YUV420:
         case NVBUF_COLOR_FORMAT_YVU420:
         case NVBUF_COLOR_FORMAT_YUV420_709:
-        {
             bytes_per_pixel[0] = 1;
             bytes_per_pixel[1] = 1;
             bytes_per_pixel[2] = 1;
             break;
-        }
         case NVBUF_COLOR_FORMAT_UYVY:
         case NVBUF_COLOR_FORMAT_UYVY_ER:
         case NVBUF_COLOR_FORMAT_UYVY_709:
         case NVBUF_COLOR_FORMAT_UYVY_709_ER:
         case NVBUF_COLOR_FORMAT_UYVY_2020:
-        {
             bytes_per_pixel[0] = 2;
             break;
-        }
         default:
             break;
     }
 }
 
-std::shared_ptr<IGraphics2D::G2DBuffer> NvVicGraphics2D::createG2DBuffer(
-    const std::string& g2dBufferMapType, 
-    G2DBufferParams& params)
+int NvVicGraphics2D::copyHostToNvBufSurface(void* host_ptr, size_t buffer_size, NvBufSurface* surf)
+{
+    if (!host_ptr || !surf || buffer_size == 0) {
+        return -1;
+    }
+
+    NvBufSurfaceColorFormat colorFormat = surf->surfaceList[0].colorFormat;
+    int bytes_per_pixel[4] = {0};
+    fillBytesPerPixel(colorFormat, bytes_per_pixel);
+    
+    unsigned int num_planes = surf->surfaceList[0].planeParams.num_planes;
+    size_t offset = 0;
+    
+    for (unsigned int plane = 0; plane < num_planes; ++plane) {
+        int ret = NvBufSurfaceMap(surf, 0, plane, NVBUF_MAP_READ_WRITE);
+        if (ret == 0) {
+            void* dst_addr = (void*)surf->surfaceList[0].mappedAddr.addr[plane];
+            uint8_t* src_addr = (uint8_t*)host_ptr + offset;
+            
+            unsigned int plane_height = surf->surfaceList[0].planeParams.height[plane];
+            unsigned int plane_width = surf->surfaceList[0].planeParams.width[plane];
+            unsigned int pitch = surf->surfaceList[0].planeParams.pitch[plane];
+            
+            // Copy line by line to handle pitch correctly
+            for (unsigned int i = 0; i < plane_height; ++i) {
+                size_t bytes_to_copy = plane_width * bytes_per_pixel[plane];
+                if (offset + bytes_to_copy <= buffer_size) {
+                    memcpy((uint8_t*)dst_addr + i * pitch, 
+                           src_addr + i * plane_width * bytes_per_pixel[plane], 
+                           bytes_to_copy);
+                }
+            }
+            
+            size_t plane_bytes = plane_height * plane_width * bytes_per_pixel[plane];
+            offset += plane_bytes;
+            
+            // Sync for device access (required for VIC)
+            NvBufSurfaceSyncForDevice(surf, 0, plane);
+            NvBufSurfaceUnMap(surf, 0, plane);
+        } else {
+            std::cerr << "NvVicGraphics2D: Failed to map plane " << plane << std::endl;
+            return -1;
+        }
+    }
+    
+    return 0;
+}
+
+int NvVicGraphics2D::copyNvBufSurfaceToHost(NvBufSurface* surf, void* host_ptr, size_t buffer_size)
+{
+    if (!surf || !host_ptr || buffer_size == 0) {
+        return -1;
+    }
+
+    NvBufSurfaceColorFormat colorFormat = surf->surfaceList[0].colorFormat;
+    int bytes_per_pixel[4] = {0};
+    fillBytesPerPixel(colorFormat, bytes_per_pixel);
+    
+    unsigned int num_planes = surf->surfaceList[0].planeParams.num_planes;
+    size_t offset = 0;
+    
+    for (unsigned int plane = 0; plane < num_planes; ++plane) {
+        int ret = NvBufSurfaceMap(surf, 0, plane, NVBUF_MAP_READ);
+        if (ret == 0) {
+            // Sync from device to CPU
+            NvBufSurfaceSyncForCpu(surf, 0, plane);
+            
+            void* src_addr = (void*)surf->surfaceList[0].mappedAddr.addr[plane];
+            uint8_t* dst_addr = (uint8_t*)host_ptr + offset;
+            
+            unsigned int plane_height = surf->surfaceList[0].planeParams.height[plane];
+            unsigned int plane_width = surf->surfaceList[0].planeParams.width[plane];
+            unsigned int pitch = surf->surfaceList[0].planeParams.pitch[plane];
+            
+            // Copy line by line from NvBufSurface to user buffer
+            for (unsigned int i = 0; i < plane_height; ++i) {
+                size_t bytes_to_copy = plane_width * bytes_per_pixel[plane];
+                if (offset + bytes_to_copy <= buffer_size) {
+                    memcpy(dst_addr + i * plane_width * bytes_per_pixel[plane],
+                           (uint8_t*)src_addr + i * pitch,
+                           bytes_to_copy);
+                }
+            }
+            
+            offset += plane_height * plane_width * bytes_per_pixel[plane];
+            
+            NvBufSurfaceUnMap(surf, 0, plane);
+        } else {
+            std::cerr << "NvVicGraphics2D: Failed to map plane " << plane << std::endl;
+            return -1;
+        }
+    }
+    
+    return 0;
+}
+
+// ========== New Interface Implementation ==========
+
+std::shared_ptr<IGraphics2D::G2DBuffer> NvVicGraphics2D::createBuffer(
+    BufferType type,
+    const G2DBufferParams& params)
 {
     auto g2dBuffer = std::make_shared<G2DBuffer>();
     g2dBuffer->g2dPlatform = "nvvic";
-    g2dBuffer->g2dBufferMapType = g2dBufferMapType;
+    g2dBuffer->bufferType = type;
     
     // Map format to NvBufSurfaceColorFormat
     NvBufSurfaceColorFormat colorFormat = mapFormatStringToNvFormat(params.format);
@@ -154,7 +240,6 @@ std::shared_ptr<IGraphics2D::G2DBuffer> NvVicGraphics2D::createG2DBuffer(
     allocParams.params.colorFormat = colorFormat;
     allocParams.memtag = NvBufSurfaceTag_VIDEO_CONVERT;
     
-    // Handle width_stride if provided
     if (params.width_stride > 0) {
         allocParams.params.width = params.width_stride;
     }
@@ -172,80 +257,214 @@ std::shared_ptr<IGraphics2D::G2DBuffer> NvVicGraphics2D::createG2DBuffer(
     {
         std::lock_guard<std::mutex> lock(m_mapMutex);
         m_bufferMap[g2dBuffer.get()] = nvbuf_surf;
+        m_mapInfo[g2dBuffer.get()] = {nullptr, false};
     }
     
-    // Set G2DBuffer properties
     g2dBuffer->g2dBufferHandle = nvbuf_surf;
-    g2dBuffer->rawBufferSize = params.rawBufferSize;
-    // 保存 virtual_addr 指针，以便后续写回数据
-    g2dBuffer->rawBuffer = static_cast<uint8_t*>(params.virtual_addr);
     
-    // If user provides virtual_addr, copy data to NvBufSurface
-    if (params.virtual_addr != nullptr && g2dBufferMapType == "virtualaddr") {
-        int bytes_per_pixel[4] = {0};
-        fillBytesPerPixel(colorFormat, bytes_per_pixel);
+    // Handle Mapped type
+    if (type == BufferType::Mapped) {
+        void* host_ptr = params.host_ptr;
+        size_t buf_size = params.buffer_size;
         
-        unsigned int num_planes = nvbuf_surf->surfaceList[0].planeParams.num_planes;
-        // 调试日志已关闭
-        // std::cout << "NvVicGraphics2D: Copying virtualaddr data to NvBufSurface" << std::endl;
+        // Support legacy field names
+        if (!host_ptr && params.virtual_addr) {
+            host_ptr = params.virtual_addr;
+        }
+        if (buf_size == 0 && params.rawBufferSize > 0) {
+            buf_size = params.rawBufferSize;
+        }
         
-        size_t offset = 0;
-        for (unsigned int plane = 0; plane < num_planes; ++plane) {
-            ret = NvBufSurfaceMap(nvbuf_surf, 0, plane, NVBUF_MAP_READ_WRITE);
-            if (ret == 0) {
-                void* dst_addr = (void*)nvbuf_surf->surfaceList[0].mappedAddr.addr[plane];
-                uint8_t* src_addr = (uint8_t*)params.virtual_addr + offset;
-                
-                unsigned int plane_height = nvbuf_surf->surfaceList[0].planeParams.height[plane];
-                unsigned int plane_width = nvbuf_surf->surfaceList[0].planeParams.width[plane];
-                unsigned int pitch = nvbuf_surf->surfaceList[0].planeParams.pitch[plane];
-                
-                // Copy line by line to handle pitch correctly
-                size_t lines_copied = 0;
-                for (unsigned int i = 0; i < plane_height; ++i) {
-                    size_t bytes_to_copy = plane_width * bytes_per_pixel[plane];
-                    if (offset + bytes_to_copy <= params.rawBufferSize) {
-                        memcpy((uint8_t*)dst_addr + i * pitch, src_addr + i * plane_width * bytes_per_pixel[plane], bytes_to_copy);
-                        lines_copied++;
-                    } else {
-                        std::cerr << "NvVicGraphics2D: WARNING: Skipping line " << i << " of plane " << plane 
-                                  << " (would exceed rawBufferSize: " << (offset + bytes_to_copy) << " > " << params.rawBufferSize << ")" << std::endl;
-                    }
-                }
-                
-                size_t plane_bytes = plane_height * plane_width * bytes_per_pixel[plane];
-                offset += plane_bytes;
-                
-                // Sync for device access (required for VIC)
-                NvBufSurfaceSyncForDevice(nvbuf_surf, 0, plane);
-                NvBufSurfaceUnMap(nvbuf_surf, 0, plane);
-            } else {
-                std::cerr << "NvVicGraphics2D: Failed to map plane " << plane << ", ret=" << ret << std::endl;
+        if (host_ptr && buf_size > 0) {
+            // Copy initial data to NvBufSurface
+            ret = copyHostToNvBufSurface(host_ptr, buf_size, nvbuf_surf);
+            if (ret != 0) {
+                std::cerr << "NvVicGraphics2D: Failed to copy host data to NvBufSurface" << std::endl;
             }
+            
+            // Store host pointer for future sync operations
+            g2dBuffer->host_ptr = static_cast<uint8_t*>(host_ptr);
+            g2dBuffer->buffer_size = buf_size;
         }
     }
     
-    std::cout << "NvVicGraphics2D: Created buffer " << params.width << "x" << params.height 
+    std::cout << "NvVicGraphics2D: Created " << (type == BufferType::Hardware ? "Hardware" : "Mapped")
+              << " buffer " << params.width << "x" << params.height 
               << " format: " << params.format << std::endl;
     
     return g2dBuffer;
 }
 
-void NvVicGraphics2D::releaseG2DBuffer(std::shared_ptr<G2DBuffer> g2dBuffer)
+void NvVicGraphics2D::releaseBuffer(std::shared_ptr<G2DBuffer> buffer)
 {
-    if (!g2dBuffer) return;
+    if (!buffer) return;
     
     std::lock_guard<std::mutex> lock(m_mapMutex);
     
-    auto it = m_bufferMap.find(g2dBuffer.get());
+    auto it = m_bufferMap.find(buffer.get());
     if (it != m_bufferMap.end()) {
         if (it->second) {
             NvBufSurfaceDestroy(it->second);
         }
         m_bufferMap.erase(it);
-        std::cout << "NvVicGraphics2D: Released buffer" << std::endl;
+    }
+    
+    auto it_map = m_mapInfo.find(buffer.get());
+    if (it_map != m_mapInfo.end()) {
+        m_mapInfo.erase(it_map);
+    }
+    
+    std::cout << "NvVicGraphics2D: Released buffer" << std::endl;
+}
+
+int NvVicGraphics2D::syncBuffer(
+    std::shared_ptr<G2DBuffer> buffer,
+    SyncDirection direction)
+{
+    if (!buffer || buffer->bufferType != BufferType::Mapped) {
+        std::cerr << "NvVicGraphics2D: syncBuffer only works with Mapped buffers" << std::endl;
+        return -1;
+    }
+    
+    if (!buffer->host_ptr || buffer->buffer_size == 0) {
+        std::cerr << "NvVicGraphics2D: Invalid host pointer or buffer size" << std::endl;
+        return -1;
+    }
+    
+    NvBufSurface* surf = getNvBufSurface(buffer);
+    if (!surf) {
+        std::cerr << "NvVicGraphics2D: Failed to get NvBufSurface" << std::endl;
+        return -1;
+    }
+    
+    int ret = 0;
+    
+    if (direction == SyncDirection::CpuToDevice || 
+        direction == SyncDirection::Bidirectional) {
+        // CPU → Device: Copy host_ptr to NvBufSurface
+        ret = copyHostToNvBufSurface(buffer->host_ptr, buffer->buffer_size, surf);
+        if (ret != 0) {
+            std::cerr << "NvVicGraphics2D: Failed to sync CPU to Device" << std::endl;
+            return -1;
+        }
+        std::cout << "NvVicGraphics2D: Synced CPU → Device" << std::endl;
+    }
+    
+    if (direction == SyncDirection::DeviceToCpu || 
+        direction == SyncDirection::Bidirectional) {
+        // Device → CPU: Copy NvBufSurface to host_ptr
+        ret = copyNvBufSurfaceToHost(surf, buffer->host_ptr, buffer->buffer_size);
+        if (ret != 0) {
+            std::cerr << "NvVicGraphics2D: Failed to sync Device to CPU" << std::endl;
+            return -1;
+        }
+        std::cout << "NvVicGraphics2D: Synced Device → CPU" << std::endl;
+    }
+    
+    return 0;
+}
+
+void* NvVicGraphics2D::mapBuffer(
+    std::shared_ptr<G2DBuffer> buffer,
+    const std::string& access_mode)
+{
+    if (!buffer || buffer->bufferType != BufferType::Hardware) {
+        std::cerr << "NvVicGraphics2D: mapBuffer only works with Hardware buffers" << std::endl;
+        return nullptr;
+    }
+    
+    NvBufSurface* surf = getNvBufSurface(buffer);
+    if (!surf) {
+        return nullptr;
+    }
+    
+    std::lock_guard<std::mutex> lock(m_mapMutex);
+    
+    auto it = m_mapInfo.find(buffer.get());
+    if (it != m_mapInfo.end() && it->second.is_mapped) {
+        std::cerr << "NvVicGraphics2D: Buffer already mapped" << std::endl;
+        return it->second.mapped_addr;
+    }
+    
+    // Determine map flags
+    NvBufSurfaceMemMapFlags map_flags = NVBUF_MAP_READ_WRITE;
+    if (access_mode == "read") {
+        map_flags = NVBUF_MAP_READ;
+    } else if (access_mode == "write") {
+        map_flags = NVBUF_MAP_WRITE;
+    }
+    
+    // Map plane 0 (for simplicity, only map first plane)
+    int ret = NvBufSurfaceMap(surf, 0, 0, map_flags);
+    if (ret != 0) {
+        std::cerr << "NvVicGraphics2D: Failed to map buffer" << std::endl;
+        return nullptr;
+    }
+    
+    void* mapped_addr = (void*)surf->surfaceList[0].mappedAddr.addr[0];
+    m_mapInfo[buffer.get()] = {mapped_addr, true};
+    
+    return mapped_addr;
+}
+
+void NvVicGraphics2D::unmapBuffer(std::shared_ptr<G2DBuffer> buffer)
+{
+    if (!buffer) return;
+    
+    NvBufSurface* surf = getNvBufSurface(buffer);
+    if (!surf) return;
+    
+    std::lock_guard<std::mutex> lock(m_mapMutex);
+    
+    auto it = m_mapInfo.find(buffer.get());
+    if (it != m_mapInfo.end() && it->second.is_mapped) {
+        NvBufSurfaceUnMap(surf, 0, 0);
+        it->second.is_mapped = false;
+        it->second.mapped_addr = nullptr;
     }
 }
+
+bool NvVicGraphics2D::queryCapability(const std::string& capability) const
+{
+    if (capability == "hardware_draw") return false;
+    if (capability == "zero_copy_cpu_access") return false;
+    if (capability == "requires_explicit_sync") return true;
+    return false;
+}
+
+std::string NvVicGraphics2D::getPlatformName() const
+{
+    return "nvvic";
+}
+
+// ========== Legacy Interface Implementation ==========
+
+std::shared_ptr<IGraphics2D::G2DBuffer> NvVicGraphics2D::createG2DBuffer(
+    const std::string& g2dBufferMapType, 
+    G2DBufferParams& params)
+{
+    // Convert legacy parameters to new interface
+    BufferType type = BufferType::Hardware;
+    if (g2dBufferMapType == "virtualaddr") {
+        type = BufferType::Mapped;
+        if (!params.host_ptr && params.virtual_addr) {
+            params.host_ptr = params.virtual_addr;
+        }
+        if (params.buffer_size == 0 && params.rawBufferSize > 0) {
+            params.buffer_size = params.rawBufferSize;
+        }
+    }
+    
+    auto buffer = createBuffer(type, params);
+    return buffer;
+}
+
+void NvVicGraphics2D::releaseG2DBuffer(std::shared_ptr<G2DBuffer> g2dBuffer)
+{
+    releaseBuffer(g2dBuffer);
+}
+
+// ========== Helper Methods ==========
 
 NvBufSurface* NvVicGraphics2D::getNvBufSurface(std::shared_ptr<G2DBuffer> g2dBuffer)
 {
@@ -271,7 +490,6 @@ int NvVicGraphics2D::performTransform(
         return -1;
     }
     
-    // Perform the transformation using VIC
     int ret = NvBufSurfTransform(src, dst, &transform_params);
     if (ret != 0) {
         std::cerr << "NvVicGraphics2D: Transform failed with error: " << ret << std::endl;
@@ -280,6 +498,8 @@ int NvVicGraphics2D::performTransform(
     
     return 0;
 }
+
+// ========== Image Operations ==========
 
 int NvVicGraphics2D::imageResize(std::shared_ptr<G2DBuffer> src, std::shared_ptr<G2DBuffer> dst)
 {
@@ -291,7 +511,6 @@ int NvVicGraphics2D::imageResize(std::shared_ptr<G2DBuffer> src, std::shared_ptr
         return -1;
     }
     
-    // Setup transform parameters for resize
     NvBufSurfTransformRect src_rect = {0};
     NvBufSurfTransformRect dst_rect = {0};
     
@@ -327,55 +546,10 @@ int NvVicGraphics2D::imageCopy(std::shared_ptr<G2DBuffer> src, std::shared_ptr<G
         return -1;
     }
 
-    // 调试日志已关闭（检测成功后）
-    // 如需调试，取消注释下面的代码
-
-    // Use NvBufSurfaceCopy for direct copy
     int ret = NvBufSurfaceCopy(src_surf, dst_surf);
     if (ret != 0) {
         std::cerr << "NvVicGraphics2D: Copy failed with error: " << ret << std::endl;
         return -1;
-    }
-
-    // ⚠️ 关键修复：如果目标是 virtualaddr 类型，需要将数据从 NvBufSurface 复制回用户缓冲区
-    // 这在 createG2DBuffer 的反向操作中是缺失的
-    if (dst->g2dBufferMapType == "virtualaddr" && dst->rawBuffer != nullptr) {
-        // Map, sync, and copy data back to host buffer
-        NvBufSurfaceColorFormat colorFormat = dst_surf->surfaceList[0].colorFormat;
-        int bytes_per_pixel[4] = {0};
-        fillBytesPerPixel(colorFormat, bytes_per_pixel);
-
-        unsigned int num_planes = dst_surf->surfaceList[0].planeParams.num_planes;
-
-        size_t offset = 0;
-        for (unsigned int plane = 0; plane < num_planes; ++plane) {
-            ret = NvBufSurfaceMap(dst_surf, 0, plane, NVBUF_MAP_READ);
-            if (ret == 0) {
-                // Sync from device to CPU
-                NvBufSurfaceSyncForCpu(dst_surf, 0, plane);
-
-                void* src_addr = (void*)dst_surf->surfaceList[0].mappedAddr.addr[plane];
-                uint8_t* dst_addr = dst->rawBuffer + offset;
-
-                unsigned int plane_height = dst_surf->surfaceList[0].planeParams.height[plane];
-                unsigned int plane_width = dst_surf->surfaceList[0].planeParams.width[plane];
-                unsigned int pitch = dst_surf->surfaceList[0].planeParams.pitch[plane];
-
-                // Copy line by line from NvBufSurface to user buffer
-                for (unsigned int i = 0; i < plane_height; ++i) {
-                    size_t bytes_to_copy = plane_width * bytes_per_pixel[plane];
-                    memcpy(dst_addr + i * plane_width * bytes_per_pixel[plane],
-                           (uint8_t*)src_addr + i * pitch,
-                           bytes_to_copy);
-                }
-
-                offset += plane_height * plane_width * bytes_per_pixel[plane];
-
-                NvBufSurfaceUnMap(dst_surf, 0, plane);
-            } else {
-                std::cerr << "NvVicGraphics2D: Failed to map plane " << plane << ", ret=" << ret << std::endl;
-            }
-        }
     }
 
     std::cout << "NvVicGraphics2D: Image copied successfully" << std::endl;
@@ -389,9 +563,7 @@ int NvVicGraphics2D::imageDrawRectangle(
     int thickness)
 {
     std::cerr << "NvVicGraphics2D: imageDrawRectangle not supported by VIC hardware" << std::endl;
-    std::cerr << "NvVicGraphics2D: VIC is designed for format conversion, scaling, and compositing, not primitive drawing" << std::endl;
-    // VIC doesn't support drawing primitives
-    // This would require CPU-based implementation or using another API (like Cairo or OpenCV)
+    std::cerr << "NvVicGraphics2D: VIC is designed for format conversion, scaling, and compositing" << std::endl;
     return -1;
 }
 
@@ -409,7 +581,6 @@ int NvVicGraphics2D::imageCvtColor(
         return -1;
     }
     
-    // Verify format compatibility
     NvBufSurfaceColorFormat src_nv_format = mapFormatStringToNvFormat(src_format);
     NvBufSurfaceColorFormat dst_nv_format = mapFormatStringToNvFormat(dst_format);
     
@@ -419,7 +590,6 @@ int NvVicGraphics2D::imageCvtColor(
         return -1;
     }
     
-    // Setup transform parameters for color conversion
     NvBufSurfTransformRect src_rect = {0};
     NvBufSurfTransformRect dst_rect = {0};
     
@@ -446,4 +616,3 @@ int NvVicGraphics2D::imageCvtColor(
 }
 
 } // namespace bsp_g2d
-

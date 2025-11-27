@@ -9,6 +9,7 @@
 #include <bsp_codec/IDecoder.hpp>
 #include <bsp_codec/IEncoder.hpp>
 #include <bsp_g2d/IGraphics2D.hpp>
+#include <bsp_g2d/BufferHelper.hpp>
 #include <memory>
 #include <string>
 #include <iostream>
@@ -458,7 +459,7 @@ private:
     std::atomic<bool> m_inference_running{false};
     static constexpr size_t MAX_QUEUE_SIZE = 30;  // 最大队列长度
 
-    // 推理线程函数
+    // 推理线程函数（使用新的 IGraphics2D API）
     void inferenceThreadFunc()
     {
         std::cout << "[Inference Thread] Starting, m_inference_running=" << m_inference_running << std::endl;
@@ -466,36 +467,29 @@ private:
             "VideoDetectApp::inferenceThreadFunc() Inference thread started");
 
         int loop_count = 0;
-        // 🔧 关键修复：继续处理直到队列为空（不要因为 m_inference_running=false 就退出）
+        // 继续处理直到队列为空
         while (true)
         {
             loop_count++;
             if (loop_count % 10 == 1) {
                 std::cout << "[Inference Thread] Loop " << loop_count << ", waiting for frames..." << std::endl;
             }
-            
+
             FrameTask task;
             bool has_task = false;
             {
                 std::unique_lock<std::mutex> lock(m_queue_mutex);
-                std::cout << "[Inference Thread] Before wait, queue size=" << m_frame_queue.size() 
-                          << ", m_inference_running=" << m_inference_running << std::endl;
-                
+
                 // 等待队列中有任务
-                m_queue_cv.wait(lock, [this] { 
-                    bool should_wake = !m_frame_queue.empty() || !m_inference_running;
-                    return should_wake;
+                m_queue_cv.wait(lock, [this] {
+                    return !m_frame_queue.empty() || !m_inference_running;
                 });
-                
-                std::cout << "[Inference Thread] After wait, queue size=" << m_frame_queue.size() 
-                          << ", m_inference_running=" << m_inference_running << std::endl;
-                
+
                 if (!m_frame_queue.empty())
                 {
                     task = std::move(m_frame_queue.front());
                     m_frame_queue.pop();
                     has_task = true;
-                    std::cout << "[Inference Thread] Got frame from queue, new size=" << m_frame_queue.size() << std::endl;
                 }
                 else if (!m_inference_running)
                 {
@@ -506,17 +500,16 @@ private:
                 else
                 {
                     // 假唤醒，继续等待
-                    std::cout << "[Inference Thread] Spurious wakeup, continuing..." << std::endl;
                     continue;
                 }
             }
             m_queue_cv.notify_all();  // 通知可能等待的 decoder（队列有空间了）
 
             if (!has_task) {
-                continue;  // 应该不会到这里，但为了安全
+                continue;
             }
 
-            // ⚠️ 等待编码器就绪（第一帧会创建编码器）
+            // 等待编码器就绪（第一帧会创建编码器）
             int wait_count = 0;
             while (m_encoder == nullptr)
             {
@@ -550,18 +543,14 @@ private:
             frame->valid_data_size = task.frame_data.size();
             frame->eos_flag = task.eos_flag;
 
-            // 执行 DNN 推理（异步，不阻塞解码器）
+            // 执行 DNN 推理
             auto objDetectOutput = dnnInference(frame);
 
-            // 🔍 调试：打印检测结果数量
-            std::cout << "[Inference Thread] Frame " << m_frame_count.load() 
-                      << " detected " << objDetectOutput.size() << " objects" << std::endl;
-            for (const auto& item : objDetectOutput)
+            // 打印检测结果数量
+            if (m_frame_count % 30 == 0)
             {
-                std::cout << "  - " << item.label << " @ (" 
-                          << item.bbox.left << "," << item.bbox.top << ")-(" 
-                          << item.bbox.right << "," << item.bbox.bottom 
-                          << ") score=" << item.score << std::endl;
+                std::cout << "[Inference Thread] Frame " << m_frame_count.load() 
+                          << " detected " << objDetectOutput.size() << " objects" << std::endl;
             }
 
             // 修复 stride 为 0 的问题
@@ -572,220 +561,160 @@ private:
                                          static_cast<size_t>(frame->height_stride) : 
                                          static_cast<size_t>(frame->height);
 
-            // ⚠️ 关键修复：YUV → RGBA 也需要使用 handle + imageCopy 模式
-            // 步骤1: 创建输入 YUV420 帧的 G2DBuffer（virtualaddr 模式）
-            IGraphics2D::G2DBufferParams dec_out_g2d_params = {
-                .virtual_addr = task.frame_data.data(),
-                .rawBufferSize = task.frame_data.size(),  // ⚠️ 关键：必须设置！
-                .width = static_cast<size_t>(task.width),
-                .height = static_cast<size_t>(task.height),
-                .width_stride = input_width_stride,
-                .height_stride = input_height_stride,
-                .format = task.format,
-            };
-            std::shared_ptr<IGraphics2D::G2DBuffer> g2d_dec_out_buf = m_g2d->createG2DBuffer("virtualaddr", dec_out_g2d_params);
+            // ========== 🎯 使用新的 IGraphics2D API ==========
 
-            // 步骤2: 创建 RGBA8888 handle buffer（让 NvVic 管理，用于接收转换结果）
-            size_t rgba_buffer_size = frame->width * frame->height * 4;  // RGBA8888: 4 字节/像素
+            // 步骤1: 创建输入 YUV420 帧的 G2DBuffer（virtualaddr 模式，旧接口兼容）
+            IGraphics2D::G2DBufferParams dec_out_params;
+            dec_out_params.host_ptr = task.frame_data.data();
+            dec_out_params.buffer_size = task.frame_data.size();
+            dec_out_params.width = static_cast<size_t>(task.width);
+            dec_out_params.height = static_cast<size_t>(task.height);
+            dec_out_params.width_stride = input_width_stride;
+            dec_out_params.height_stride = input_height_stride;
+            dec_out_params.format = task.format;
+
+            auto yuv_in_buf = m_g2d->createBuffer(IGraphics2D::BufferType::Mapped, dec_out_params);
+            if (!yuv_in_buf)
+            {
+                m_logger->printStdoutLog(bsp_perf::shared::BspLogger::LogLevel::Error,
+                    "Failed to create YUV input buffer");
+                continue;
+            }
+
+            // 步骤2: 创建或复用 RGBA Mapped 缓冲区（CPU 和硬件都可以访问）
+            size_t rgba_buffer_size = task.width * task.height * 4;  // RGBA8888: 4 字节/像素
             if (m_rgba_buf.size() != rgba_buffer_size)
             {
                 m_rgba_buf.resize(rgba_buffer_size);
             }
 
-            IGraphics2D::G2DBufferParams rgba_handle_params = {
-                .virtual_addr = nullptr,  // ⚠️ handle 模式，必须是 nullptr
-                .rawBufferSize = rgba_buffer_size,
-                .width = static_cast<size_t>(frame->width),
-                .height = static_cast<size_t>(frame->height),
-                .width_stride = static_cast<size_t>(frame->width),
-                .height_stride = static_cast<size_t>(frame->height),
-                .format = "RGBA8888",
-            };
-            std::shared_ptr<IGraphics2D::G2DBuffer> rgba_handle_buf = m_g2d->createG2DBuffer("handle", rgba_handle_params);
+            IGraphics2D::G2DBufferParams rgba_params;
+            rgba_params.host_ptr = m_rgba_buf.data();
+            rgba_params.buffer_size = rgba_buffer_size;
+            rgba_params.width = static_cast<size_t>(task.width);
+            rgba_params.height = static_cast<size_t>(task.height);
+            rgba_params.width_stride = static_cast<size_t>(task.width);
+            rgba_params.height_stride = static_cast<size_t>(task.height);
+            rgba_params.format = "RGBA8888";
 
-            // 步骤3: 执行 YUV420 到 RGBA8888 的转换（转换到 handle buffer）
-            int ret = m_g2d->imageCvtColor(g2d_dec_out_buf, rgba_handle_buf, task.format, "RGBA8888");
+            auto rgba_mapped_buf = m_g2d->createBuffer(IGraphics2D::BufferType::Mapped, rgba_params);
+            if (!rgba_mapped_buf)
+            {
+                m_logger->printStdoutLog(bsp_perf::shared::BspLogger::LogLevel::Error,
+                    "Failed to create RGBA mapped buffer");
+                m_g2d->releaseBuffer(yuv_in_buf);
+                continue;
+            }
+
+            // 步骤3: 硬件加速颜色转换 YUV → RGBA
+            int ret = m_g2d->imageCvtColor(yuv_in_buf, rgba_mapped_buf, task.format, "RGBA8888");
             if (ret != 0)
             {
                 m_logger->printStdoutLog(bsp_perf::shared::BspLogger::LogLevel::Error,
-                    "VideoDetectApp::inferenceThreadFunc() YUV to RGBA conversion failed: {}", ret);
-                m_g2d->releaseG2DBuffer(rgba_handle_buf);
-                m_g2d->releaseG2DBuffer(g2d_dec_out_buf);
+                    "YUV to RGBA conversion failed: {}", ret);
+                m_g2d->releaseBuffer(rgba_mapped_buf);
+                m_g2d->releaseBuffer(yuv_in_buf);
                 continue;
             }
 
-            std::cout << "[Inference Thread] YUV to RGBA conversion succeeded" << std::endl;
-
-            // 步骤4: 从 handle buffer 复制到 host buffer（供 OpenCV 使用）
-            IGraphics2D::G2DBufferParams rgba_host_params = {
-                .virtual_addr = m_rgba_buf.data(),
-                .rawBufferSize = rgba_buffer_size,
-                .width = static_cast<size_t>(task.width),
-                .height = static_cast<size_t>(task.height),
-                .width_stride = static_cast<size_t>(task.width),
-                .height_stride = static_cast<size_t>(task.height),
-                .format = "RGBA8888",
-            };
-            std::shared_ptr<IGraphics2D::G2DBuffer> rgba_host_buf = m_g2d->createG2DBuffer("virtualaddr", rgba_host_params);
-            if (!rgba_host_buf)
+            // 步骤4: 使用 BufferSync RAII 自动管理同步 + OpenCV 绘制
             {
-                m_logger->printStdoutLog(bsp_perf::shared::BspLogger::LogLevel::Error,
-                    "VideoDetectApp::inferenceThreadFunc() Failed to create RGBA host buffer");
-                m_g2d->releaseG2DBuffer(rgba_handle_buf);
-                m_g2d->releaseG2DBuffer(g2d_dec_out_buf);
-                continue;
-            }
-            
-            ret = m_g2d->imageCopy(rgba_handle_buf, rgba_host_buf);
-            if (ret != 0)
-            {
-                m_logger->printStdoutLog(bsp_perf::shared::BspLogger::LogLevel::Error,
-                    "VideoDetectApp::inferenceThreadFunc() RGBA copy to host failed: {}", ret);
-                m_g2d->releaseG2DBuffer(rgba_host_buf);
-                m_g2d->releaseG2DBuffer(rgba_handle_buf);
-                m_g2d->releaseG2DBuffer(g2d_dec_out_buf);
-                continue;
-            }
+                // ✨ 进入作用域：自动 Device → CPU
+                // ✨ 退出作用域：自动 CPU → Device
+                bsp_g2d::BufferSyncGuard sync(
+                    m_g2d.get(),
+                    rgba_mapped_buf,
+                    IGraphics2D::SyncDirection::Bidirectional);
 
-            std::cout << "[Inference Thread] RGBA copied to host buffer for drawing" << std::endl;
+                // 在这个作用域内，m_rgba_buf 的数据已经同步到 CPU，可以安全使用
+                cv::Mat cvRGBAImage(task.height, task.width, CV_8UC4, m_rgba_buf.data());
 
-            // 步骤5: 使用 OpenCV 在 RGBA8888 图像上画 bbox
-            cv::Mat cvRGBAImage(task.height, task.width, CV_8UC4, m_rgba_buf.data());
-
-            int i = 1 + (std::rand() % m_colors_list.size());
-
-            for (const auto& item : objDetectOutput)
-            {
-                if (m_labelColorMap.find(item.label) == m_labelColorMap.end())
+                // 绘制检测框
+                int i = 1 + (std::rand() % m_colors_list.size());
+                for (const auto& item : objDetectOutput)
                 {
-                    m_labelColorMap[item.label] = m_colors_list[i % m_colors_list.size()];
-                    i++;
+                    if (m_labelColorMap.find(item.label) == m_labelColorMap.end())
+                    {
+                        m_labelColorMap[item.label] = m_colors_list[i % m_colors_list.size()];
+                        i++;
+                    }
+                    cv::rectangle(cvRGBAImage, 
+                                 cv::Point(item.bbox.left, item.bbox.top), 
+                                 cv::Point(item.bbox.right, item.bbox.bottom),
+                                 m_labelColorMap[item.label], 2);
+                    cv::putText(cvRGBAImage, item.label, 
+                               cv::Point(item.bbox.left, item.bbox.top + 12), 
+                               cv::FONT_HERSHEY_COMPLEX, 0.4, 
+                               cv::Scalar(255, 255, 255, 255));
                 }
-                cv::rectangle(cvRGBAImage, cv::Point(item.bbox.left, item.bbox.top), cv::Point(item.bbox.right, item.bbox.bottom),
-                    m_labelColorMap[item.label], 2);
-                cv::putText(cvRGBAImage, item.label, cv::Point(item.bbox.left, item.bbox.top + 12), cv::FONT_HERSHEY_COMPLEX, 0.4, cv::Scalar(255, 255, 255, 255));
-            }
+            } // 退出作用域：自动同步 CPU → Device
 
-            std::cout << "[Inference Thread] Drew " << objDetectOutput.size() << " detection boxes" << std::endl;
-
-            // 步骤6: 将画好框的 RGBA 数据复制回 handle buffer
-            // ⚠️ 关键修复：必须重新创建 rgba_host_buf，让 createG2DBuffer 将修改后的 m_rgba_buf 复制到 NvBufSurface
-            // 因为 OpenCV 修改的是 m_rgba_buf 内存，而 imageCopy 需要从 NvBufSurface 读取
-            // 先释放旧的 rgba_host_buf
-            m_g2d->releaseG2DBuffer(rgba_host_buf);
-            
-            // 重新创建 rgba_host_buf，createG2DBuffer 会自动将画好框的 m_rgba_buf 复制到 NvBufSurface
-            rgba_host_buf = m_g2d->createG2DBuffer("virtualaddr", rgba_host_params);
-            if (!rgba_host_buf)
+            if (m_frame_count % 30 == 0)
             {
-                m_logger->printStdoutLog(bsp_perf::shared::BspLogger::LogLevel::Error,
-                    "VideoDetectApp::inferenceThreadFunc() Failed to recreate RGBA host buffer after drawing");
-                m_g2d->releaseG2DBuffer(rgba_handle_buf);
-                m_g2d->releaseG2DBuffer(g2d_dec_out_buf);
-                continue;
+                std::cout << "[Inference Thread] Drew " << objDetectOutput.size() << " detection boxes" << std::endl;
             }
-            
-            // 现在复制回 handle buffer（此时 NvBufSurface 中有画好框的数据）
-            ret = m_g2d->imageCopy(rgba_host_buf, rgba_handle_buf);
-            if (ret != 0)
-            {
-                m_logger->printStdoutLog(bsp_perf::shared::BspLogger::LogLevel::Error,
-                    "VideoDetectApp::inferenceThreadFunc() RGBA copy back to handle failed: {}", ret);
-                m_g2d->releaseG2DBuffer(rgba_host_buf);
-                m_g2d->releaseG2DBuffer(rgba_handle_buf);
-                m_g2d->releaseG2DBuffer(g2d_dec_out_buf);
-                continue;
-            }
-            
-            std::cout << "[Inference Thread] RGBA copied back to handle buffer" << std::endl;
 
-            // ⚠️ 立即释放 rgba_host_buf，减少资源占用
-            m_g2d->releaseG2DBuffer(rgba_host_buf);
-
-            // 步骤6: 创建 YUV420 handle buffer（让 NvVic 管理，用于接收转换结果）
+            // 步骤5: 创建或复用 YUV420 输出缓冲区
             size_t yuv420_buffer_size = task.width * task.height * 3 / 2;
             if (m_yuv420_buf.size() != yuv420_buffer_size)
             {
                 m_yuv420_buf.resize(yuv420_buffer_size);
             }
 
-            IGraphics2D::G2DBufferParams yuv420_handle_params = {
-                .virtual_addr = nullptr,  // ⚠️ handle 模式，必须是 nullptr
-                .rawBufferSize = yuv420_buffer_size,
-                .width = static_cast<size_t>(task.width),
-                .height = static_cast<size_t>(task.height),
-                .width_stride = input_width_stride,
-                .height_stride = input_height_stride,
-                .format = task.format,
-            };
-            std::shared_ptr<IGraphics2D::G2DBuffer> yuv420_handle_buf = m_g2d->createG2DBuffer("handle", yuv420_handle_params);
+            IGraphics2D::G2DBufferParams yuv_out_params;
+            yuv_out_params.host_ptr = m_yuv420_buf.data();
+            yuv_out_params.buffer_size = yuv420_buffer_size;
+            yuv_out_params.width = static_cast<size_t>(task.width);
+            yuv_out_params.height = static_cast<size_t>(task.height);
+            yuv_out_params.width_stride = input_width_stride;
+            yuv_out_params.height_stride = input_height_stride;
+            yuv_out_params.format = task.format;
 
-            // 步骤7: 将画好框的 RGBA8888 转换回 YUV420（从 handle buffer 转换到 handle buffer）
-            ret = m_g2d->imageCvtColor(rgba_handle_buf, yuv420_handle_buf, "RGBA8888", task.format);
+            auto yuv_out_buf = m_g2d->createBuffer(IGraphics2D::BufferType::Mapped, yuv_out_params);
+            if (!yuv_out_buf)
+            {
+                m_logger->printStdoutLog(bsp_perf::shared::BspLogger::LogLevel::Error,
+                    "Failed to create YUV output buffer");
+                m_g2d->releaseBuffer(rgba_mapped_buf);
+                m_g2d->releaseBuffer(yuv_in_buf);
+                continue;
+            }
+
+            // 步骤6: 硬件加速颜色转换 RGBA → YUV（画好框的数据已经在 rgba_mapped_buf 中）
+            ret = m_g2d->imageCvtColor(rgba_mapped_buf, yuv_out_buf, "RGBA8888", task.format);
             if (ret != 0)
             {
                 m_logger->printStdoutLog(bsp_perf::shared::BspLogger::LogLevel::Error,
-                    "VideoDetectApp::inferenceThreadFunc() RGBA to YUV conversion failed: {}", ret);
-                m_g2d->releaseG2DBuffer(yuv420_handle_buf);
-                m_g2d->releaseG2DBuffer(rgba_handle_buf);
-                m_g2d->releaseG2DBuffer(g2d_dec_out_buf);
+                    "RGBA to YUV conversion failed: {}", ret);
+                m_g2d->releaseBuffer(yuv_out_buf);
+                m_g2d->releaseBuffer(rgba_mapped_buf);
+                m_g2d->releaseBuffer(yuv_in_buf);
                 continue;
             }
 
-            std::cout << "[Inference Thread] RGBA to YUV conversion succeeded" << std::endl;
-
-            // 步骤8: ⚠️ 关键！将 YUV 数据从 handle buffer 复制到用户 buffer（供编码器使用）
-            IGraphics2D::G2DBufferParams yuv420_host_params = {
-                .virtual_addr = m_yuv420_buf.data(),
-                .rawBufferSize = yuv420_buffer_size,
-                .width = static_cast<size_t>(task.width),
-                .height = static_cast<size_t>(task.height),
-                .width_stride = input_width_stride,
-                .height_stride = input_height_stride,
-                .format = task.format,
-            };
-            std::shared_ptr<IGraphics2D::G2DBuffer> yuv420_host_buf = m_g2d->createG2DBuffer("virtualaddr", yuv420_host_params);
-            if (!yuv420_host_buf)
-            {
-                m_logger->printStdoutLog(bsp_perf::shared::BspLogger::LogLevel::Error,
-                    "VideoDetectApp::inferenceThreadFunc() Failed to create YUV host buffer");
-                m_g2d->releaseG2DBuffer(yuv420_handle_buf);
-                m_g2d->releaseG2DBuffer(rgba_handle_buf);
-                m_g2d->releaseG2DBuffer(g2d_dec_out_buf);
-                continue;
-            }
-
-            ret = m_g2d->imageCopy(yuv420_handle_buf, yuv420_host_buf);
+            // 步骤7: 同步 YUV 数据到 CPU（供编码器使用）
+            ret = m_g2d->syncBuffer(yuv_out_buf, IGraphics2D::SyncDirection::DeviceToCpu);
             if (ret != 0)
             {
-                m_logger->printStdoutLog(bsp_perf::shared::BspLogger::LogLevel::Error,
-                    "VideoDetectApp::inferenceThreadFunc() YUV copy to host failed: {}", ret);
-                m_g2d->releaseG2DBuffer(yuv420_host_buf);
-                m_g2d->releaseG2DBuffer(yuv420_handle_buf);
-                m_g2d->releaseG2DBuffer(rgba_handle_buf);
-                m_g2d->releaseG2DBuffer(g2d_dec_out_buf);
-                continue;
+                m_logger->printStdoutLog(bsp_perf::shared::BspLogger::LogLevel::Warn,
+                    "YUV sync to CPU returned {}, continuing anyway", ret);
             }
 
-            std::cout << "[Inference Thread] YUV copied to host buffer for encoder" << std::endl;
+            // 释放所有 G2D buffers
+            m_g2d->releaseBuffer(yuv_out_buf);
+            m_g2d->releaseBuffer(rgba_mapped_buf);
+            m_g2d->releaseBuffer(yuv_in_buf);
 
-            // 步骤9: 释放所有 G2D buffers（避免资源泄漏）
-            // ⚠️ 关键优化：按创建的逆序释放，并立即释放不再使用的 buffer
-            m_g2d->releaseG2DBuffer(yuv420_host_buf);
-            m_g2d->releaseG2DBuffer(yuv420_handle_buf);
-            m_g2d->releaseG2DBuffer(rgba_handle_buf);
-            m_g2d->releaseG2DBuffer(g2d_dec_out_buf);
-
-            // 获取编码器输入缓冲区
+            // 步骤8: 发送到编码器
             std::shared_ptr<EncodeInputBuffer> enc_in_buf = m_encoder->getInputBuffer();
             if (!enc_in_buf)
             {
                 m_logger->printStdoutLog(bsp_perf::shared::BspLogger::LogLevel::Error,
-                    "VideoDetectApp::inferenceThreadFunc() Failed to get input buffer");
+                    "Failed to get input buffer");
                 continue;
             }
 
-            // 将画好 bbox 的 YUV420 数据传给编码器进行压缩编码
+            // 将画好 bbox 的 YUV420 数据传给编码器
             enc_in_buf->input_buf_addr = m_yuv420_buf.data();
 
             // 准备编码输出包
@@ -801,7 +730,7 @@ private:
             if (encode_ret != 0)
             {
                 m_logger->printStdoutLog(bsp_perf::shared::BspLogger::LogLevel::Error, 
-                    "VideoDetectApp::inferenceThreadFunc() encode failed, ret: {}", encode_ret);
+                    "encode failed, ret: {}", encode_ret);
                 continue;
             }
 
@@ -809,15 +738,14 @@ private:
             if (m_frame_count % 30 == 0)
             {
                 m_logger->printStdoutLog(bsp_perf::shared::BspLogger::LogLevel::Info, 
-                    "VideoDetectApp::inferenceThreadFunc() Processed {} frames", m_frame_count.load());
+                    "Processed {} frames", m_frame_count.load());
             }
         }
 
-        // 🛑 所有帧处理完毕，发送EOS给编码器
+        // 所有帧处理完毕，发送EOS给编码器
         std::cout << "[Inference Thread] All frames processed, sending EOS to encoder" << std::endl;
         m_logger->printStdoutLog(bsp_perf::shared::BspLogger::LogLevel::Info, 
-            "VideoDetectApp::inferenceThreadFunc() All frames processed ({}), sending EOS to encoder", 
-            m_frame_count.load());
+            "All frames processed ({}), sending EOS to encoder", m_frame_count.load());
 
         if (m_encoder)
         {
@@ -831,19 +759,15 @@ private:
                 eosPkt.encode_pkt.resize(eosPkt.max_size);
                 int ret = m_encoder->encode(*inputBuf, eosPkt);
                 std::cout << "[Inference Thread] EOS sent to encoder, ret=" << ret << std::endl;
-                m_logger->printStdoutLog(bsp_perf::shared::BspLogger::LogLevel::Info, 
-                    "VideoDetectApp::inferenceThreadFunc() EOS sent to encoder, ret: {}", ret);
             }
             else
             {
                 std::cout << "[Inference Thread] ERROR: Failed to get input buffer for EOS" << std::endl;
-                m_logger->printStdoutLog(bsp_perf::shared::BspLogger::LogLevel::Error, 
-                    "VideoDetectApp::inferenceThreadFunc() Failed to get input buffer for EOS");
             }
         }
 
         m_logger->printStdoutLog(bsp_perf::shared::BspLogger::LogLevel::Info, 
-            "VideoDetectApp::inferenceThreadFunc() Inference thread exiting, processed {} frames", m_frame_count.load());
+            "Inference thread exiting, processed {} frames", m_frame_count.load());
     }
 };
 

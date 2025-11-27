@@ -90,8 +90,6 @@ private:
         {"Y8", RK_FORMAT_Y8},
         {"UNKNOWN", RK_FORMAT_UNKNOWN}
     };
-
-
 };
 
 class rkrga : public IGraphics2D
@@ -104,10 +102,37 @@ public:
     rkrga& operator=(rkrga&&) = delete;
     ~rkrga() = default;
 
-    std::shared_ptr<IGraphics2D::G2DBuffer> createG2DBuffer(const std::string& g2dBufferMapType, G2DBufferParams& params) override;
+    // ========== New Interface ==========
+    
+    std::shared_ptr<G2DBuffer> createBuffer(
+        BufferType type,
+        const G2DBufferParams& params) override;
 
+    void releaseBuffer(std::shared_ptr<G2DBuffer> buffer) override;
+
+    int syncBuffer(
+        std::shared_ptr<G2DBuffer> buffer,
+        SyncDirection direction) override;
+
+    void* mapBuffer(
+        std::shared_ptr<G2DBuffer> buffer,
+        const std::string& access_mode = "readwrite") override;
+
+    void unmapBuffer(std::shared_ptr<G2DBuffer> buffer) override;
+
+    bool queryCapability(const std::string& capability) const override;
+
+    std::string getPlatformName() const override;
+
+    // ========== Legacy Interface (for backward compatibility) ==========
+
+    std::shared_ptr<IGraphics2D::G2DBuffer> createG2DBuffer(
+        const std::string& g2dBufferMapType, 
+        G2DBufferParams& params) override;
 
     void releaseG2DBuffer(std::shared_ptr<G2DBuffer> g2dBuffer) override;
+
+    // ========== Image Operations ==========
 
     int imageCopy(std::shared_ptr<G2DBuffer> src, std::shared_ptr<G2DBuffer> dst) override;
 
@@ -117,7 +142,6 @@ public:
 
     int imageCvtColor(std::shared_ptr<G2DBuffer> src, std::shared_ptr<G2DBuffer> dst,
                     const std::string& src_format, const std::string& dst_format) override;
-
 };
 
 } // namespace bsp_g2d

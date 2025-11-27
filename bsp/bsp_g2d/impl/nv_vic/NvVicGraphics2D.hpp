@@ -37,73 +37,48 @@ public:
     NvVicGraphics2D();
     virtual ~NvVicGraphics2D();
 
-    /**
-     * @brief Creates a G2D buffer for NV VIC operations.
-     * 
-     * @param g2dBufferMapType The type of G2D buffer mapping ("fd", "virtualaddr", "physicaladdr", "handle")
-     * @param params The parameters for the G2D buffer
-     * @return std::shared_ptr<G2DBuffer> A shared pointer to the created G2D buffer
-     */
+    // ========== New Interface ==========
+    
+    std::shared_ptr<G2DBuffer> createBuffer(
+        BufferType type,
+        const G2DBufferParams& params) override;
+
+    void releaseBuffer(std::shared_ptr<G2DBuffer> buffer) override;
+
+    int syncBuffer(
+        std::shared_ptr<G2DBuffer> buffer,
+        SyncDirection direction) override;
+
+    void* mapBuffer(
+        std::shared_ptr<G2DBuffer> buffer,
+        const std::string& access_mode = "readwrite") override;
+
+    void unmapBuffer(std::shared_ptr<G2DBuffer> buffer) override;
+
+    bool queryCapability(const std::string& capability) const override;
+
+    std::string getPlatformName() const override;
+
+    // ========== Legacy Interface (for backward compatibility) ==========
+
     std::shared_ptr<G2DBuffer> createG2DBuffer(
         const std::string& g2dBufferMapType, 
         G2DBufferParams& params) override;
 
-    /**
-     * @brief Releases a G2D buffer.
-     * 
-     * @param g2dBuffer The G2D buffer to release
-     */
     void releaseG2DBuffer(std::shared_ptr<G2DBuffer> g2dBuffer) override;
 
-    /**
-     * @brief Resizes an image using NV VIC hardware acceleration.
-     * 
-     * @param src Source G2D buffer
-     * @param dst Destination G2D buffer (can have different dimensions)
-     * @return int 0 on success, negative on error
-     */
+    // ========== Image Operations ==========
+
     int imageResize(std::shared_ptr<G2DBuffer> src, std::shared_ptr<G2DBuffer> dst) override;
 
-    /**
-     * @brief Copies an image using NV VIC.
-     * 
-     * @param src Source G2D buffer
-     * @param dst Destination G2D buffer
-     * @return int 0 on success, negative on error
-     */
     int imageCopy(std::shared_ptr<G2DBuffer> src, std::shared_ptr<G2DBuffer> dst) override;
 
-    /**
-     * @brief Draws a rectangle on the image.
-     * 
-     * Note: VIC hardware does not support drawing primitives directly.
-     * This function is not implemented and will return an error.
-     * 
-     * @param dst Destination G2D buffer
-     * @param rect Rectangle coordinates
-     * @param color Color in RGBA format
-     * @param thickness Line thickness
-     * @return int -1 (not supported)
-     */
     int imageDrawRectangle(
         std::shared_ptr<G2DBuffer> dst, 
         ImageRect& rect, 
         uint32_t color, 
         int thickness) override;
 
-    /**
-     * @brief Converts color format using NV VIC hardware acceleration.
-     * 
-     * Supported conversions include:
-     * - YUV <-> RGB variants
-     * - Different YUV formats (NV12, YUV420, etc.)
-     * 
-     * @param src Source G2D buffer
-     * @param dst Destination G2D buffer
-     * @param src_format Source format string (must match params.format)
-     * @param dst_format Destination format string (must match params.format)
-     * @return int 0 on success, negative on error
-     */
     int imageCvtColor(
         std::shared_ptr<G2DBuffer> src, 
         std::shared_ptr<G2DBuffer> dst,
@@ -113,27 +88,16 @@ public:
 private:
     /**
      * @brief Maps format string to NvBufSurfaceColorFormat.
-     * 
-     * @param format Format string from G2DBufferParams
-     * @return NvBufSurfaceColorFormat Corresponding NvBufSurfaceColorFormat
      */
     NvBufSurfaceColorFormat mapFormatStringToNvFormat(const std::string& format);
 
     /**
      * @brief Gets NvBufSurface from G2DBuffer.
-     * 
-     * @param g2dBuffer Input G2D buffer
-     * @return NvBufSurface* Pointer to NvBufSurface
      */
     NvBufSurface* getNvBufSurface(std::shared_ptr<G2DBuffer> g2dBuffer);
 
     /**
      * @brief Performs NV VIC transformation.
-     * 
-     * @param src Source NvBufSurface
-     * @param dst Destination NvBufSurface
-     * @param transform_params Transform parameters
-     * @return int 0 on success, negative on error
      */
     int performTransform(
         NvBufSurface* src, 
@@ -142,15 +106,29 @@ private:
 
     /**
      * @brief Fills bytes per pixel array for a given format.
-     * 
-     * @param pixel_format NvBufSurfaceColorFormat
-     * @param bytes_per_pixel Output array for bytes per pixel per plane
      */
     void fillBytesPerPixel(NvBufSurfaceColorFormat pixel_format, int* bytes_per_pixel);
+
+    /**
+     * @brief Copy data from host pointer to NvBufSurface.
+     */
+    int copyHostToNvBufSurface(void* host_ptr, size_t buffer_size, NvBufSurface* surf);
+
+    /**
+     * @brief Copy data from NvBufSurface to host pointer.
+     */
+    int copyNvBufSurfaceToHost(NvBufSurface* surf, void* host_ptr, size_t buffer_size);
 
     // Store NvBufSurface pointers for each G2DBuffer
     std::map<void*, NvBufSurface*> m_bufferMap;
     std::mutex m_mapMutex;
+    
+    // Store map state for Hardware buffers
+    struct MapInfo {
+        void* mapped_addr;
+        bool is_mapped;
+    };
+    std::map<void*, MapInfo> m_mapInfo;
     
     // VIC session initialized flag
     bool m_sessionInitialized;
@@ -159,4 +137,3 @@ private:
 } // namespace bsp_g2d
 
 #endif // __NV_VIC_GRAPHICS2D_HPP__
-

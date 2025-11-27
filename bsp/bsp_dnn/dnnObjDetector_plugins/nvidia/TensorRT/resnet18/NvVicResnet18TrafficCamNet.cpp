@@ -36,155 +36,94 @@ int NvVicResnet18TrafficCamNet::preProcess(ObjDetectParams& params, ObjDetectInp
         return -1;
     }
 
-    // 步骤1: 计算缩放比例（保持宽高比的letterbox）
-    float scaleWidth = static_cast<float>(params.model_input_width) / yuv420_frame->width;
-    float scaleHeight = static_cast<float>(params.model_input_height) / yuv420_frame->height;
-
-    std::cout << "[NvVicResnet18TrafficCamNet] Input frame: " 
-              << yuv420_frame->width << "x" << yuv420_frame->height << std::endl;
-    std::cout << "[NvVicResnet18TrafficCamNet] Model input: " 
-              << params.model_input_width << "x" << params.model_input_height << std::endl;
-    std::cout << "[NvVicResnet18TrafficCamNet] Scale: W=" << scaleWidth 
-              << ", H=" << scaleHeight << std::endl;
-
-    // 使用最小缩放比例以保持宽高比
-    float minScale = std::min(scaleWidth, scaleHeight);
-    params.scale_width = minScale;
-    params.scale_height = minScale;
-
-    // 计算缩放后的尺寸
-    int newWidth = static_cast<int>(yuv420_frame->width * minScale);
-    int newHeight = static_cast<int>(yuv420_frame->height * minScale);
-
-    // 计算letterbox padding
-    int padLeft = (params.model_input_width - newWidth) / 2;
-    int padTop = (params.model_input_height - newHeight) / 2;
-    int padRight = params.model_input_width - newWidth - padLeft;
-    int padBottom = params.model_input_height - newHeight - padTop;
-
-    params.pads.left = padLeft;
-    params.pads.top = padTop;
-    params.pads.right = padRight;
-    params.pads.bottom = padBottom;
-
-    std::cout << "[NvVicResnet18TrafficCamNet] Scaled size: " << newWidth << "x" << newHeight 
-              << ", Padding: L=" << padLeft << " R=" << padRight 
-              << " T=" << padTop << " B=" << padBottom << std::endl;
-
-    // 步骤2: 使用 nvvic 进行 YUV420SP 到 RGBA8888 的转换和缩放
-    // 创建输入 YUV420 帧的 G2DBuffer
-    // 注意：如果stride为0，使用width/height作为默认值
-    size_t input_width_stride = yuv420_frame->width_stride > 0 ? 
-                                static_cast<size_t>(yuv420_frame->width_stride) : 
-                                static_cast<size_t>(yuv420_frame->width);
-    size_t input_height_stride = yuv420_frame->height_stride > 0 ? 
-                                 static_cast<size_t>(yuv420_frame->height_stride) : 
-                                 static_cast<size_t>(yuv420_frame->height);
-    
-    IGraphics2D::G2DBufferParams yuv420_params = {
-        .virtual_addr = yuv420_frame->virt_addr,
-        .rawBufferSize = yuv420_frame->valid_data_size,  // ⚠️ 关键修复：必须设置！
-        .width = static_cast<size_t>(yuv420_frame->width),
-        .height = static_cast<size_t>(yuv420_frame->height),
-        .width_stride = input_width_stride,
-        .height_stride = input_height_stride,
-        .format = yuv420_frame->format,
-    };
-    std::shared_ptr<IGraphics2D::G2DBuffer> yuv420_g2d_buf = 
-        m_g2d->createG2DBuffer("virtualaddr", yuv420_params);
-
-    // 创建输出 RGBA8888 帧的 G2DBuffer
-    // ⚠️ 关键修复：不使用 virtualaddr 模式，让 nvvic 自己分配和管理缓冲区
-    // virtualaddr 模式下，nvvic 不会自动将转换结果写回用户提供的缓冲区
-    size_t rgba_buffer_size = params.model_input_width * params.model_input_height * 4;
-    if (m_rgb_buffer.size() != rgba_buffer_size)
-    {
-        m_rgb_buffer.resize(rgba_buffer_size);
-    }
-    
-    IGraphics2D::G2DBufferParams rgba_params = {
-        .virtual_addr = nullptr,  // 不提供 virtual_addr，让 nvvic 自己管理
-        .rawBufferSize = rgba_buffer_size,
-        .width = static_cast<size_t>(params.model_input_width),
-        .height = static_cast<size_t>(params.model_input_height),
-        .width_stride = static_cast<size_t>(params.model_input_width),
-        .height_stride = static_cast<size_t>(params.model_input_height),
-        .format = "RGBA8888",
-    };
-    std::shared_ptr<IGraphics2D::G2DBuffer> rgba_g2d_buf = 
-        m_g2d->createG2DBuffer("handle", rgba_params);
-
-    std::cout << "[NvVicResnet18TrafficCamNet] Resizing from " 
-              << yuv420_frame->width << "x" << yuv420_frame->height 
-              << " to " << params.model_input_width << "x" << params.model_input_height << std::endl;
-
-    // 调试日志已关闭（检测成功后）
-
-    // 执行 YUV420SP 到 RGBA8888 的转换和缩放
-    int ret = m_g2d->imageResize(yuv420_g2d_buf, rgba_g2d_buf);
-    if (ret != 0)
-    {
-        std::cerr << "[NvVicResnet18TrafficCamNet] Error: imageResize failed with code " << ret << std::endl;
-        return ret;
-    }
-
-    // ⚠️ 关键修复：通过 IGraphics2D API 将转换后的数据复制到 m_rgb_buffer
-    // 创建一个 virtualaddr 类型的 G2DBuffer 指向 m_rgb_buffer（用于接收数据）
-    IGraphics2D::G2DBufferParams host_rgba_params = {
-        .virtual_addr = m_rgb_buffer.data(),
-        .rawBufferSize = rgba_buffer_size,
-        .width = static_cast<size_t>(params.model_input_width),
-        .height = static_cast<size_t>(params.model_input_height),
-        .width_stride = static_cast<size_t>(params.model_input_width),
-        .height_stride = static_cast<size_t>(params.model_input_height),
-        .format = "RGBA8888",
-    };
-    std::shared_ptr<IGraphics2D::G2DBuffer> host_rgba_buf =
-        m_g2d->createG2DBuffer("virtualaddr", host_rgba_params);
-
-    if (!host_rgba_buf)
-    {
-        std::cerr << "[NvVicResnet18TrafficCamNet] Error: Failed to create host RGBA buffer" << std::endl;
-        return -1;
-    }
-
-    // 使用 imageCopy 从 nvvic 管理的缓冲区复制到用户缓冲区
-    // nvvic 的 imageCopy 内部会处理 NvBufSurface 的 map/unmap/sync
-    ret = m_g2d->imageCopy(rgba_g2d_buf, host_rgba_buf);
-    if (ret != 0)
-    {
-        std::cerr << "[NvVicResnet18TrafficCamNet] Error: imageCopy failed with code " << ret << std::endl;
-        m_g2d->releaseG2DBuffer(host_rgba_buf);
-        return ret;
-    }
-
-    // 释放临时缓冲区
-    m_g2d->releaseG2DBuffer(host_rgba_buf);
-
-    std::cout << "[NvVicResnet18TrafficCamNet] Copied RGBA data to host buffer via IGraphics2D API" << std::endl;
-
-    // ⚠️ 重要：释放所有 G2DBuffer 以避免资源泄漏
-    m_g2d->releaseG2DBuffer(rgba_g2d_buf);
-    m_g2d->releaseG2DBuffer(yuv420_g2d_buf);
-
-    std::cout << "[NvVicResnet18TrafficCamNet] Released all G2D buffers" << std::endl;
-
-    // 更新 scale 参数（因为直接拉伸了）
+    // 计算缩放参数（直接拉伸，不保持宽高比）
     params.scale_width = static_cast<float>(params.model_input_width) / yuv420_frame->width;
     params.scale_height = static_cast<float>(params.model_input_height) / yuv420_frame->height;
     params.pads.left = 0;
     params.pads.top = 0;
     params.pads.right = 0;
     params.pads.bottom = 0;
+
+    std::cout << "[NvVicResnet18TrafficCamNet] Input: " << yuv420_frame->width << "x" << yuv420_frame->height 
+              << " → Model: " << params.model_input_width << "x" << params.model_input_height 
+              << ", Scale: " << params.scale_width << "x" << params.scale_height << std::endl;
+
+    // ========== 使用新的 IGraphics2D API ==========
     
-    std::cout << "[NvVicResnet18TrafficCamNet] Actual scale: W=" << params.scale_width 
-              << ", H=" << params.scale_height << std::endl;
+    // 修复 stride 为 0 的问题
+    size_t input_width_stride = yuv420_frame->width_stride > 0 ? 
+                                static_cast<size_t>(yuv420_frame->width_stride) : 
+                                static_cast<size_t>(yuv420_frame->width);
+    size_t input_height_stride = yuv420_frame->height_stride > 0 ? 
+                                 static_cast<size_t>(yuv420_frame->height_stride) : 
+                                 static_cast<size_t>(yuv420_frame->height);
 
-    // 步骤3: 归一化并转换为CHW planar格式 (float32)
-    // ResNet18 TrafficCamNet使用 scale_factor = 1/255
-    const float scaleFactor = 0.00392156862745098f;
+    // 步骤1: 创建输入 YUV420 帧的 Mapped 缓冲区
+    IGraphics2D::G2DBufferParams yuv420_params;
+    yuv420_params.host_ptr = yuv420_frame->virt_addr;
+    yuv420_params.buffer_size = yuv420_frame->valid_data_size;
+    yuv420_params.width = static_cast<size_t>(yuv420_frame->width);
+    yuv420_params.height = static_cast<size_t>(yuv420_frame->height);
+    yuv420_params.width_stride = input_width_stride;
+    yuv420_params.height_stride = input_height_stride;
+    yuv420_params.format = yuv420_frame->format;
+    
+    auto yuv420_g2d_buf = m_g2d->createBuffer(IGraphics2D::BufferType::Mapped, yuv420_params);
+    if (!yuv420_g2d_buf)
+    {
+        std::cerr << "[NvVicResnet18TrafficCamNet] Error: Failed to create YUV420 G2D buffer" << std::endl;
+        return -1;
+    }
 
-    // 调试日志已关闭
+    // 步骤2: 创建输出 RGBA8888 帧的 Mapped 缓冲区
+    size_t rgba_buffer_size = params.model_input_width * params.model_input_height * 4;
+    if (m_rgb_buffer.size() != rgba_buffer_size)
+    {
+        m_rgb_buffer.resize(rgba_buffer_size);
+    }
+
+    IGraphics2D::G2DBufferParams rgba_params;
+    rgba_params.host_ptr = m_rgb_buffer.data();
+    rgba_params.buffer_size = rgba_buffer_size;
+    rgba_params.width = static_cast<size_t>(params.model_input_width);
+    rgba_params.height = static_cast<size_t>(params.model_input_height);
+    rgba_params.width_stride = static_cast<size_t>(params.model_input_width);
+    rgba_params.height_stride = static_cast<size_t>(params.model_input_height);
+    rgba_params.format = "RGBA8888";
+    
+    auto rgba_g2d_buf = m_g2d->createBuffer(IGraphics2D::BufferType::Mapped, rgba_params);
+    if (!rgba_g2d_buf)
+    {
+        std::cerr << "[NvVicResnet18TrafficCamNet] Error: Failed to create RGBA G2D buffer" << std::endl;
+        m_g2d->releaseBuffer(yuv420_g2d_buf);
+        return -1;
+    }
+
+    // 步骤3: 硬件加速：YUV → RGBA + Resize
+    int ret = m_g2d->imageResize(yuv420_g2d_buf, rgba_g2d_buf);
+    if (ret != 0)
+    {
+        std::cerr << "[NvVicResnet18TrafficCamNet] Error: imageResize failed with code " << ret << std::endl;
+        m_g2d->releaseBuffer(rgba_g2d_buf);
+        m_g2d->releaseBuffer(yuv420_g2d_buf);
+        return ret;
+    }
+
+    // 步骤4: 同步 Device → CPU（VIC 需要显式同步）
+    ret = m_g2d->syncBuffer(rgba_g2d_buf, IGraphics2D::SyncDirection::DeviceToCpu);
+    if (ret != 0)
+    {
+        std::cerr << "[NvVicResnet18TrafficCamNet] Warning: syncBuffer returned " << ret << ", continuing anyway" << std::endl;
+    }
+
+    // 释放 G2D 缓冲区
+    m_g2d->releaseBuffer(rgba_g2d_buf);
+    m_g2d->releaseBuffer(yuv420_g2d_buf);
+
+    std::cout << "[NvVicResnet18TrafficCamNet] Hardware conversion completed" << std::endl;
+
+    // 步骤5: 归一化并转换为 CHW planar 格式 (float32)
+    const float scaleFactor = 0.00392156862745098f; // 1/255
 
     // 分配输出缓冲区 (CHW格式的float32数据)
     size_t totalSize = params.model_input_width * params.model_input_height * params.model_input_channel;
@@ -202,8 +141,8 @@ int NvVicResnet18TrafficCamNet::preProcess(ObjDetectParams& params, ObjDetectInp
         outputData.buf.resize(outputData.size);
     }
 
-    // 转换为CHW planar格式并归一化
-    // 注意：输入是RGBA格式（4通道），需要提取RGB三个通道
+    // 转换为 CHW planar 格式并归一化
+    // 注意：输入是 RGBA 格式（4通道），需要提取 RGB 三个通道
     float* floatPtr = reinterpret_cast<float*>(outputData.buf.data());
     const uint8_t* rgbaPtr = m_rgb_buffer.data();
 
@@ -212,7 +151,7 @@ int NvVicResnet18TrafficCamNet::preProcess(ObjDetectParams& params, ObjDetectInp
     
     if (USE_BGR_ORDER)
     {
-        // BGR 顺序：通道映射 [2,1,0] -> [R,G,B]
+        // BGR 顺序：通道映射 [2,1,0] → [R,G,B]
         for (int c = 0; c < 3; c++)
         {
             int srcChannel = 2 - c;  // 反转：B=2, G=1, R=0
@@ -244,7 +183,7 @@ int NvVicResnet18TrafficCamNet::preProcess(ObjDetectParams& params, ObjDetectInp
         }
     }
 
-    // 调试日志已关闭
+    std::cout << "[NvVicResnet18TrafficCamNet] Preprocessing completed successfully" << std::endl;
 
     return 0;
 }
