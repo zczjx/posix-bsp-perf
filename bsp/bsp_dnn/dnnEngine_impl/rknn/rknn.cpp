@@ -10,10 +10,10 @@ rknn::rknn():
 rknn::~rknn()
 {
 
-    if (m_params.m_outputs.size() > 0)
-    {
-        rknn_outputs_release(m_params.m_rknnCtx, m_params.m_io_num.n_output, m_params.m_outputs.data());
-    }
+    // if (m_params.m_outputs.size() > 0)
+    // {
+    //     rknn_outputs_release(m_params.m_rknnCtx, m_params.m_io_num.n_output, m_params.m_outputs.data());
+    // }
 
     if (m_params.m_rknnCtx)
     {

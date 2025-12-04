@@ -5,20 +5,12 @@
 #include <NvVideoEncoder.h>
 #include <NvBuffer.h>
 #include <NvBufSurface.h>
-#include <thread>
 #include <mutex>
-#include <condition_variable>
 #include <atomic>
 #include <linux/videodev2.h>
 
 namespace bsp_codec
 {
-
-// Internal structure to pass both v4l2_buffer and NvBuffer between functions
-struct InternalBufferPair {
-    std::shared_ptr<struct v4l2_buffer> v4l2_buf;
-    NvBuffer* nvbuffer;
-};
 
 struct nvVideoEncParams
 {
@@ -56,18 +48,16 @@ public:
     size_t getFrameSize() override;
 
 private:
-    void captureThreadFunc();
     int setupOutputPlane();
     int setupCapturePlane();
     uint32_t getV4L2PixelFormat(const std::string& format);
+    void releaseInputBufferToPool(void* addr);  // Release buffer back to pool
 
     nvVideoEncParams m_params{};
     NvVideoEncoder *m_encoder{nullptr};
     encodeReadyCallback m_callback{nullptr};
     std::any m_userdata;
 
-    std::thread m_capture_thread;
-    std::atomic<bool> m_stop_thread{false};
     std::atomic<bool> m_eos_sent{false};
 
     // For managing DMA-BUF file descriptors
@@ -77,12 +67,20 @@ private:
     size_t m_frame_size{0};
     std::string m_encoder_header; // Store SPS/PPS
 
-    std::mutex m_encode_mutex;
-    std::condition_variable m_encode_cv;
-    bool m_ready_for_encode{false};
-
     // Track how many buffers have been queued (for initial fill phase)
     std::atomic<uint32_t> m_output_buffers_queued{0};
+
+    // Buffer pool for unified memory management
+    struct InputBufferInfo
+    {
+        std::shared_ptr<uint8_t> buffer;     // Allocated buffer
+        std::shared_ptr<EncodeInputBuffer> input_buf;  // Associated EncodeInputBuffer
+        bool in_use{false};
+    };
+
+    std::vector<InputBufferInfo> m_input_buffer_pool;
+    std::mutex m_buffer_pool_mutex;
+    size_t m_buffer_pool_size{4};  // Default pool size
 };
 
 } // namespace bsp_codec

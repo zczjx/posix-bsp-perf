@@ -158,8 +158,9 @@ private:
                 break;
             }
 
-            // 设置输入数据指针
-            inputBuf->input_buf_addr = data_ptr + offset;
+            // 拷贝输入数据到编码器缓冲区
+            // 新的统一API：编码器分配并管理内存，用户拷贝数据到 input_buf_addr
+            memcpy(inputBuf->input_buf_addr, data_ptr + offset, m_frame_size);
 
             // 准备输出包
             EncodePacket outPkt;

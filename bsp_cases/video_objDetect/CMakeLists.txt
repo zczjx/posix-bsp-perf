@@ -13,6 +13,14 @@ find_package(OpenCV REQUIRED)
 
 add_executable(${PROJECT_NAME} main.cpp)
 
+if(BUILD_PLATFORM_RK35XX)
+  target_compile_definitions(${PROJECT_NAME} PRIVATE BUILD_PLATFORM_RK35XX)
+endif()
+
+if(BUILD_PLATFORM_JETSON)
+  target_compile_definitions(${PROJECT_NAME} PRIVATE BUILD_PLATFORM_JETSON)
+endif()
+
 set_target_properties(${PROJECT_NAME} PROPERTIES INSTALL_RPATH "$ORIGIN/../lib")
 
 target_include_directories(${PROJECT_NAME} PUBLIC ${OpenCV_INCLUDE_DIRS})

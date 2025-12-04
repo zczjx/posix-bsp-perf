@@ -35,7 +35,7 @@ int RGArknnYolov5::preProcess(ObjDetectParams& params, ObjDetectInput& inputData
     }
 
     // ========== 使用新的 IGraphics2D API ==========
-    
+
     // 创建输入 YUV420 帧的 Mapped 缓冲区
     IGraphics2D::G2DBufferParams yuv420_params;
     yuv420_params.host_ptr = yuv420_frame->virt_addr;
@@ -45,7 +45,7 @@ int RGArknnYolov5::preProcess(ObjDetectParams& params, ObjDetectInput& inputData
     yuv420_params.width_stride = yuv420_frame->width_stride;
     yuv420_params.height_stride = yuv420_frame->height_stride;
     yuv420_params.format = yuv420_frame->format;
-    
+
     auto yuv420_g2d_buf = m_g2d->createBuffer(IGraphics2D::BufferType::Mapped, yuv420_params);
     if (!yuv420_g2d_buf)
     {
@@ -61,7 +61,7 @@ int RGArknnYolov5::preProcess(ObjDetectParams& params, ObjDetectInput& inputData
     rgb888_params.width_stride = params.model_input_width;
     rgb888_params.height_stride = params.model_input_height;
     rgb888_params.format = "RGB888";
-    
+
     auto rgb888_g2d_buf = m_g2d->createBuffer(IGraphics2D::BufferType::Mapped, rgb888_params);
     if (!rgb888_g2d_buf)
     {
@@ -94,10 +94,10 @@ int RGArknnYolov5::preProcess(ObjDetectParams& params, ObjDetectInput& inputData
         outputData.buf.resize(outputData.size);
     }
     outputData.dataType = "UINT8";
-    
+
     // RGA 零拷贝：m_rknn_input_buf 已经包含转换后的数据
     std::memcpy(outputData.buf.data(), m_rknn_input_buf.data(), outputData.size);
-    
+
     return 0;
 }
 

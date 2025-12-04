@@ -38,7 +38,7 @@ public:
     virtual ~NvVicGraphics2D();
 
     // ========== New Interface ==========
-    
+
     std::shared_ptr<G2DBuffer> createBuffer(
         BufferType type,
         const G2DBufferParams& params) override;
@@ -58,14 +58,6 @@ public:
     bool queryCapability(const std::string& capability) const override;
 
     std::string getPlatformName() const override;
-
-    // ========== Legacy Interface (for backward compatibility) ==========
-
-    std::shared_ptr<G2DBuffer> createG2DBuffer(
-        const std::string& g2dBufferMapType, 
-        G2DBufferParams& params) override;
-
-    void releaseG2DBuffer(std::shared_ptr<G2DBuffer> g2dBuffer) override;
 
     // ========== Image Operations ==========
 

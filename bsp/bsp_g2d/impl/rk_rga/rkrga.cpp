@@ -18,26 +18,27 @@ std::shared_ptr<IGraphics2D::G2DBuffer> rkrga::createBuffer(
     std::shared_ptr<G2DBuffer> g2dBuffer = std::make_shared<G2DBuffer>();
     g2dBuffer->g2dPlatform = "rkrga";
     g2dBuffer->bufferType = type;
-    
+
     int rga_format = rgaPixelFormat::getInstance().strToRgaPixFormat(params.format);
-    
-    if (type == BufferType::Hardware) {
+
+    if (type == BufferType::Hardware)
+    {
         // Hardware buffer: use fd or handle
         if (params.fd >= 0) {
             g2dBuffer->g2dBufferHandle = wrapbuffer_fd_t(
-                params.fd, 
-                params.width, 
-                params.height, 
-                params.width_stride > 0 ? params.width_stride : params.width, 
-                params.height_stride > 0 ? params.height_stride : params.height, 
+                params.fd,
+                params.width,
+                params.height,
+                params.width_stride > 0 ? params.width_stride : params.width,
+                params.height_stride > 0 ? params.height_stride : params.height,
                 rga_format);
         } else if (params.handle.has_value()) {
             rga_buffer_handle_t handle = std::any_cast<rga_buffer_handle_t>(params.handle);
             if (handle != NULL) {
                 g2dBuffer->g2dBufferHandle = wrapbuffer_handle_t(
-                    handle, 
-                    params.width, 
-                    params.height, 
+                    handle,
+                    params.width,
+                    params.height,
                     params.width_stride > 0 ? params.width_stride : params.width, 
                     params.height_stride > 0 ? params.height_stride : params.height, 
                     rga_format);
@@ -48,38 +49,26 @@ std::shared_ptr<IGraphics2D::G2DBuffer> rkrga::createBuffer(
             std::cerr << "rkrga: Hardware buffer requires fd or handle" << std::endl;
             return nullptr;
         }
-    } else if (type == BufferType::Mapped) {
-        // Mapped buffer: use virtualaddr
-        void* host_ptr = params.host_ptr;
-        size_t buf_size = params.buffer_size;
-        
-        // Support legacy field names
-        if (!host_ptr && params.virtual_addr) {
-            host_ptr = params.virtual_addr;
-        }
-        if (buf_size == 0 && params.rawBufferSize > 0) {
-            buf_size = params.rawBufferSize;
-        }
-        
-        if (host_ptr == nullptr) {
+    }
+    else if (type == BufferType::Mapped)
+    {
+        if (params.host_ptr == nullptr)
+        {
             std::cerr << "rkrga: Mapped buffer requires host_ptr" << std::endl;
             return nullptr;
         }
-        
-        g2dBuffer->host_ptr = static_cast<uint8_t*>(host_ptr);
-        g2dBuffer->buffer_size = buf_size;
-        
+
+        g2dBuffer->host_ptr = static_cast<uint8_t*>(params.host_ptr);
+        g2dBuffer->buffer_size = params.buffer_size;
         g2dBuffer->g2dBufferHandle = wrapbuffer_virtualaddr_t(
-            host_ptr, 
-            params.width, 
-            params.height, 
-            params.width_stride > 0 ? params.width_stride : params.width, 
-            params.height_stride > 0 ? params.height_stride : params.height, 
-            rga_format);
-    } else {
+            params.host_ptr, params.width, params.height,
+            params.width_stride, params.height_stride, rga_format);
+    }
+    else
+    {
         return nullptr;
     }
-    
+
     return g2dBuffer;
 }
 
@@ -88,16 +77,12 @@ void rkrga::releaseBuffer(std::shared_ptr<G2DBuffer> buffer)
     if (buffer == nullptr) {
         return;
     }
-    
     // RGA buffers don't need explicit cleanup for wrapped buffers
     // The user is responsible for managing the underlying memory
-    
     buffer.reset();
 }
 
-int rkrga::syncBuffer(
-    std::shared_ptr<G2DBuffer> buffer,
-    SyncDirection direction)
+int rkrga::syncBuffer(std::shared_ptr<G2DBuffer> buffer, SyncDirection direction)
 {
     // RGA with virtualaddr doesn't need explicit sync
     // The driver handles cache coherency automatically
@@ -113,7 +98,7 @@ void* rkrga::mapBuffer(
         std::cerr << "rkrga: mapBuffer only works with Hardware buffers" << std::endl;
         return nullptr;
     }
-    
+
     // For RGA, mapping hardware buffers is not commonly supported in the same way as VIC
     // This would require platform-specific implementation
     std::cerr << "rkrga: mapBuffer not implemented for RGA hardware buffers" << std::endl;
@@ -138,37 +123,6 @@ std::string rkrga::getPlatformName() const
     return "rkrga";
 }
 
-// ========== Legacy Interface Implementation ==========
-
-std::shared_ptr<IGraphics2D::G2DBuffer> rkrga::createG2DBuffer(
-    const std::string& g2dBufferMapType, 
-    G2DBufferParams& params)
-{
-    // Convert legacy parameters to new interface
-    BufferType type = BufferType::Hardware;
-    
-    if (g2dBufferMapType == "virtualaddr") {
-        type = BufferType::Mapped;
-        if (!params.host_ptr && params.virtual_addr) {
-            params.host_ptr = params.virtual_addr;
-        }
-        if (params.buffer_size == 0 && params.rawBufferSize > 0) {
-            params.buffer_size = params.rawBufferSize;
-        }
-    } else if (g2dBufferMapType == "fd" || g2dBufferMapType == "handle" || 
-               g2dBufferMapType == "physicaladdr") {
-        type = BufferType::Hardware;
-    }
-    
-    auto buffer = createBuffer(type, params);
-    return buffer;
-}
-
-void rkrga::releaseG2DBuffer(std::shared_ptr<G2DBuffer> g2dBuffer)
-{
-    releaseBuffer(g2dBuffer);
-}
-
 // ========== Image Operations ==========
 
 int rkrga::imageResize(std::shared_ptr<G2DBuffer> src, std::shared_ptr<G2DBuffer> dst)
@@ -189,12 +143,31 @@ int rkrga::imageResize(std::shared_ptr<G2DBuffer> src, std::shared_ptr<G2DBuffer
         std::cerr << "imcheck failed" << std::endl;
         return ret;
     }
-    return imresize(std::any_cast<rga_buffer_t>(src->g2dBufferHandle), std::any_cast<rga_buffer_t>(dst->g2dBufferHandle));
+
+    ret = imresize(std::any_cast<rga_buffer_t>(src->g2dBufferHandle), std::any_cast<rga_buffer_t>(dst->g2dBufferHandle));
+    if (ret == IM_STATUS_SUCCESS)
+    {
+        return 0;
+    }
+    else
+    {
+        std::cerr << "imageResize imresize failed ret: " << ret << std::endl;
+        return -1;
+    }
 }
 
 int rkrga::imageCopy(std::shared_ptr<G2DBuffer> src, std::shared_ptr<G2DBuffer> dst)
 {
-    return imcopy(std::any_cast<rga_buffer_t>(src->g2dBufferHandle), std::any_cast<rga_buffer_t>(dst->g2dBufferHandle));
+    int ret = imcopy(std::any_cast<rga_buffer_t>(src->g2dBufferHandle), std::any_cast<rga_buffer_t>(dst->g2dBufferHandle));
+    if (ret == IM_STATUS_SUCCESS)
+    {
+        return 0;
+    }
+    else
+    {
+        std::cerr << "imageCopy imcopy failed ret: " << ret << std::endl;
+        return -1;
+    }
 }
 
 int rkrga::imageDrawRectangle(std::shared_ptr<G2DBuffer> dst, ImageRect& rect, uint32_t color, int thickness)
@@ -219,7 +192,17 @@ int rkrga::imageDrawRectangle(std::shared_ptr<G2DBuffer> dst, ImageRect& rect, u
         std::cerr << "imageDrawRectangle imcheck failed" << std::endl;
         return ret;
     }
-    return imrectangle(std::any_cast<rga_buffer_t>(dst->g2dBufferHandle), dst_rect, color, thickness);
+    ret = imrectangle(std::any_cast<rga_buffer_t>(dst->g2dBufferHandle), dst_rect, color, thickness);
+
+    if (ret == IM_STATUS_SUCCESS)
+    {
+        return 0;
+    }
+    else
+    {
+        std::cerr << "imageDrawRectangle imrectangle failed ret: " << ret << std::endl;
+        return -1;
+    }
 }
 
 int rkrga::imageCvtColor(std::shared_ptr<G2DBuffer> src, std::shared_ptr<G2DBuffer> dst,
@@ -244,8 +227,18 @@ int rkrga::imageCvtColor(std::shared_ptr<G2DBuffer> src, std::shared_ptr<G2DBuff
         return ret;
     }
 
-    return imcvtcolor(std::any_cast<rga_buffer_t>(src->g2dBufferHandle), std::any_cast<rga_buffer_t>(dst->g2dBufferHandle),
+    ret = imcvtcolor(std::any_cast<rga_buffer_t>(src->g2dBufferHandle), std::any_cast<rga_buffer_t>(dst->g2dBufferHandle),
                 src_rga_format, dst_rga_format);
+
+    if (ret == IM_STATUS_SUCCESS)
+    {
+        return 0;
+    }
+    else
+    {
+        std::cerr << "imageCvtColor imcvtcolor failed ret: " << ret << std::endl;
+        return -1;
+    }
 }
 
 } // namespace bsp_g2d

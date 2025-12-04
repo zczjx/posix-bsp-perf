@@ -184,14 +184,14 @@ int NvVicGraphics2D::copyNvBufSurfaceToHost(NvBufSurface* surf, void* host_ptr, 
         if (ret == 0) {
             // Sync from device to CPU
             NvBufSurfaceSyncForCpu(surf, 0, plane);
-            
+
             void* src_addr = (void*)surf->surfaceList[0].mappedAddr.addr[plane];
             uint8_t* dst_addr = (uint8_t*)host_ptr + offset;
-            
+
             unsigned int plane_height = surf->surfaceList[0].planeParams.height[plane];
             unsigned int plane_width = surf->surfaceList[0].planeParams.width[plane];
             unsigned int pitch = surf->surfaceList[0].planeParams.pitch[plane];
-            
+
             // Copy line by line from NvBufSurface to user buffer
             for (unsigned int i = 0; i < plane_height; ++i) {
                 size_t bytes_to_copy = plane_width * bytes_per_pixel[plane];
@@ -201,16 +201,16 @@ int NvVicGraphics2D::copyNvBufSurfaceToHost(NvBufSurface* surf, void* host_ptr, 
                            bytes_to_copy);
                 }
             }
-            
+
             offset += plane_height * plane_width * bytes_per_pixel[plane];
-            
+
             NvBufSurfaceUnMap(surf, 0, plane);
         } else {
             std::cerr << "NvVicGraphics2D: Failed to map plane " << plane << std::endl;
             return -1;
         }
     }
-    
+
     return 0;
 }
 
@@ -223,14 +223,14 @@ std::shared_ptr<IGraphics2D::G2DBuffer> NvVicGraphics2D::createBuffer(
     auto g2dBuffer = std::make_shared<G2DBuffer>();
     g2dBuffer->g2dPlatform = "nvvic";
     g2dBuffer->bufferType = type;
-    
+
     // Map format to NvBufSurfaceColorFormat
     NvBufSurfaceColorFormat colorFormat = mapFormatStringToNvFormat(params.format);
     if (colorFormat == NVBUF_COLOR_FORMAT_INVALID) {
         std::cerr << "NvVicGraphics2D: Invalid color format: " << params.format << std::endl;
         return nullptr;
     }
-    
+
     // Create NvBufSurface with proper parameters
     NvBufSurfaceAllocateParams allocParams = {{0}};
     allocParams.params.width = params.width;
@@ -239,59 +239,57 @@ std::shared_ptr<IGraphics2D::G2DBuffer> NvVicGraphics2D::createBuffer(
     allocParams.params.memType = NVBUF_MEM_SURFACE_ARRAY;
     allocParams.params.colorFormat = colorFormat;
     allocParams.memtag = NvBufSurfaceTag_VIDEO_CONVERT;
-    
+
     if (params.width_stride > 0) {
         allocParams.params.width = params.width_stride;
     }
-    
+
     NvBufSurface* nvbuf_surf = nullptr;
     int ret = NvBufSurfaceAllocate(&nvbuf_surf, 1, &allocParams);
     if (ret != 0 || !nvbuf_surf) {
         std::cerr << "NvVicGraphics2D: Failed to allocate NvBufSurface: " << ret << std::endl;
         return nullptr;
     }
-    
+
     nvbuf_surf->numFilled = 1;
-    
+
     // Store the mapping
     {
         std::lock_guard<std::mutex> lock(m_mapMutex);
         m_bufferMap[g2dBuffer.get()] = nvbuf_surf;
         m_mapInfo[g2dBuffer.get()] = {nullptr, false};
     }
-    
+
     g2dBuffer->g2dBufferHandle = nvbuf_surf;
-    
+
     // Handle Mapped type
-    if (type == BufferType::Mapped) {
-        void* host_ptr = params.host_ptr;
-        size_t buf_size = params.buffer_size;
-        
-        // Support legacy field names
-        if (!host_ptr && params.virtual_addr) {
-            host_ptr = params.virtual_addr;
+    if (type == BufferType::Mapped)
+    {
+        if (params.host_ptr == nullptr)
+        {
+            std::cerr << "NvVicGraphics2D: Mapped buffer requires host_ptr" << std::endl;
+            return nullptr;
         }
-        if (buf_size == 0 && params.rawBufferSize > 0) {
-            buf_size = params.rawBufferSize;
-        }
-        
-        if (host_ptr && buf_size > 0) {
+
+        if (params.host_ptr && params.buffer_size > 0)
+        {
             // Copy initial data to NvBufSurface
-            ret = copyHostToNvBufSurface(host_ptr, buf_size, nvbuf_surf);
-            if (ret != 0) {
+            ret = copyHostToNvBufSurface(params.host_ptr, params.buffer_size, nvbuf_surf);
+            if (ret != 0)
+            {
                 std::cerr << "NvVicGraphics2D: Failed to copy host data to NvBufSurface" << std::endl;
+                return nullptr;
             }
-            
             // Store host pointer for future sync operations
-            g2dBuffer->host_ptr = static_cast<uint8_t*>(host_ptr);
-            g2dBuffer->buffer_size = buf_size;
+            g2dBuffer->host_ptr = static_cast<uint8_t*>(params.host_ptr);
+            g2dBuffer->buffer_size = params.buffer_size;
         }
     }
-    
+
     std::cout << "NvVicGraphics2D: Created " << (type == BufferType::Hardware ? "Hardware" : "Mapped")
-              << " buffer " << params.width << "x" << params.height 
+              << " buffer " << params.width << "x" << params.height
               << " format: " << params.format << std::endl;
-    
+
     return g2dBuffer;
 }
 
@@ -437,51 +435,24 @@ std::string NvVicGraphics2D::getPlatformName() const
     return "nvvic";
 }
 
-// ========== Legacy Interface Implementation ==========
-
-std::shared_ptr<IGraphics2D::G2DBuffer> NvVicGraphics2D::createG2DBuffer(
-    const std::string& g2dBufferMapType, 
-    G2DBufferParams& params)
-{
-    // Convert legacy parameters to new interface
-    BufferType type = BufferType::Hardware;
-    if (g2dBufferMapType == "virtualaddr") {
-        type = BufferType::Mapped;
-        if (!params.host_ptr && params.virtual_addr) {
-            params.host_ptr = params.virtual_addr;
-        }
-        if (params.buffer_size == 0 && params.rawBufferSize > 0) {
-            params.buffer_size = params.rawBufferSize;
-        }
-    }
-    
-    auto buffer = createBuffer(type, params);
-    return buffer;
-}
-
-void NvVicGraphics2D::releaseG2DBuffer(std::shared_ptr<G2DBuffer> g2dBuffer)
-{
-    releaseBuffer(g2dBuffer);
-}
-
 // ========== Helper Methods ==========
 
 NvBufSurface* NvVicGraphics2D::getNvBufSurface(std::shared_ptr<G2DBuffer> g2dBuffer)
 {
     if (!g2dBuffer) return nullptr;
-    
+
     std::lock_guard<std::mutex> lock(m_mapMutex);
-    
+
     auto it = m_bufferMap.find(g2dBuffer.get());
     if (it != m_bufferMap.end()) {
         return it->second;
     }
-    
+
     return nullptr;
 }
 
 int NvVicGraphics2D::performTransform(
-    NvBufSurface* src, 
+    NvBufSurface* src,
     NvBufSurface* dst,
     NvBufSurfTransformParams& transform_params)
 {
@@ -489,13 +460,13 @@ int NvVicGraphics2D::performTransform(
         std::cerr << "NvVicGraphics2D: Invalid source or destination buffer" << std::endl;
         return -1;
     }
-    
+
     int ret = NvBufSurfTransform(src, dst, &transform_params);
     if (ret != 0) {
         std::cerr << "NvVicGraphics2D: Transform failed with error: " << ret << std::endl;
         return -1;
     }
-    
+
     return 0;
 }
 

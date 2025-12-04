@@ -20,7 +20,7 @@ public:
     static std::unique_ptr<IGraphics2D> create(const std::string& g2dPlatform);
 
     // ========== Buffer Types ==========
-    
+
     /**
      * @brief 缓冲区类型枚举
      * 
@@ -75,11 +75,6 @@ public:
         // ===== Mapped 类型专用 =====
         void* host_ptr{nullptr};  // 用户提供的 CPU 可访问内存
         size_t buffer_size{0};    // host_ptr 的大小
-
-        // ===== 兼容旧接口（废弃） =====
-        void* virtual_addr{nullptr};   // 向后兼容，等同于 host_ptr
-        void* physical_addr{nullptr};  // 向后兼容
-        size_t rawBufferSize{0};       // 向后兼容，等同于 buffer_size
     };
 
     /**
@@ -200,25 +195,8 @@ public:
      * @return "rkrga", "nvvic"
      */
     virtual std::string getPlatformName() const = 0;
-
-    // ========== Legacy Interface (Deprecated but kept for compatibility) ==========
-    
-    /**
-     * @brief 创建 G2D 缓冲区（旧接口，向后兼容）
-     * @deprecated 使用 createBuffer() 代替
-     */
-    virtual std::shared_ptr<G2DBuffer> createG2DBuffer(
-        const std::string& g2dBufferMapType, 
-        G2DBufferParams& params) = 0;
-
-    /**
-     * @brief 释放 G2D 缓冲区（旧接口，向后兼容）
-     * @deprecated 使用 releaseBuffer() 代替
-     */
-    virtual void releaseG2DBuffer(std::shared_ptr<G2DBuffer> g2dBuffer) = 0;
-
     // ========== Image Operations ==========
-    
+
     /**
      * @brief 图像缩放
      * @param src 源缓冲区（Hardware 或 Mapped）

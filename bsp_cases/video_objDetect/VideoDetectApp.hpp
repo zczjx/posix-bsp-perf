@@ -77,7 +77,7 @@ private:
         // 🚀 启动异步推理线程
         m_inference_running = true;
         m_inference_thread = std::thread(&VideoDetectApp::inferenceThreadFunc, this);
-        m_logger->printStdoutLog(bsp_perf::shared::BspLogger::LogLevel::Info, 
+        m_logger->printStdoutLog(bsp_perf::shared::BspLogger::LogLevel::Info,
             "VideoDetectApp::onInit() Inference thread started");
     }
 
@@ -117,7 +117,7 @@ private:
         // 等待解码器处理完所有帧（解码是异步的）
         m_logger->printStdoutLog(bsp_perf::shared::BspLogger::LogLevel::Info, 
             "VideoDetectApp::onProcess() All data sent to decoder, waiting for decoding to complete...");
-        
+
         // 🚀 关键：等待解码完成并入队
         // DNN推理慢会导致队列满，decoder callback阻塞，需要等待足够长的时间
         // 循环等待，直到队列稳定且推理线程处理速度跟上
@@ -127,7 +127,7 @@ private:
         {
             std::this_thread::sleep_for(std::chrono::milliseconds(500));
             size_t current_count = m_frame_count.load();
-            
+
             if (current_count == last_frame_count)
             {
                 stable_count++;
@@ -224,37 +224,6 @@ private:
             m_encoded_frame_count.load());
     }
 
-    void onEncodeReady(std::any userdata, const char* data, int size)
-    {
-        std::cout << "[onEncodeReady] CALLED with size=" << size << ", m_encoded_frame_count=" << m_encoded_frame_count.load() << std::endl;
-        if (data && size > 0 && m_out_fp)
-        {
-            std::lock_guard<std::mutex> lock(m_file_mutex);
-            size_t written = fwrite(data, 1, size, m_out_fp.get());
-
-            if (written != (size_t)size)
-            {
-                m_logger->printStdoutLog(bsp_perf::shared::BspLogger::LogLevel::Error,
-                    "VideoDetectApp::onEncodeReady() Write failed, expected: {}, written: {}", size, written);
-                return;
-            }
-
-            m_encoded_frame_count++;
-            std::cout << "zczjx--> onEncodeReady, m_encoded_frame_count: " << m_encoded_frame_count.load() << " (submitted: " << m_frame_count.load() << ")" << std::endl;
-            // Log progress every 30 frames
-            if (m_encoded_frame_count % 30 == 0)
-            {
-                m_logger->printStdoutLog(bsp_perf::shared::BspLogger::LogLevel::Info,
-                    "VideoDetectApp::onEncodeReady() Encoded frame {}, size: {} bytes",
-                    m_encoded_frame_count.load(), size);
-            }
-        }
-        else
-        {
-            std::cout << "[onEncodeReady] WARNING: Invalid data or file pointer!" << std::endl;
-        }
-    }
-
 private:
     void loadVideoFile(std::string& videoPath)
     {
@@ -290,7 +259,8 @@ private:
                 // 修复 stride 为 0 的问题：当 stride 为 0 时，使用 width/height 作为默认值
                 int hor_stride = (frame->width_stride > 0) ? frame->width_stride : frame->width;
                 int ver_stride = (frame->height_stride > 0) ? frame->height_stride : frame->height;
-                EncodeConfig enc_cfg = {
+                EncodeConfig enc_cfg =
+                {
                     .encodingType = "h264",
                     .frameFormat = "YUV420SP",
                     .fps = 30,
@@ -299,24 +269,17 @@ private:
                     .hor_stride = hor_stride,
                     .ver_stride = ver_stride,
                 };
-                int ret = m_encoder->setup(enc_cfg);
-                m_logger->printStdoutLog(bsp_perf::shared::BspLogger::LogLevel::Info, 
-                    "VideoDetectApp encoder setup ret: {}, width: {}, height: {}, hor_stride: {}, ver_stride: {}", 
-                    ret, frame->width, frame->height, hor_stride, ver_stride);
-                // 设置编码完成回调（参考 EncodeApp.hpp）
-                m_encoder->setEncodeReadyCallback(
-                    [this](std::any userdata, const char* data, int size) {
-                        this->onEncodeReady(userdata, data, size);
-                    },
-                    std::any(this)
-                );
 
+                int ret = m_encoder->setup(enc_cfg);
+                m_logger->printStdoutLog(bsp_perf::shared::BspLogger::LogLevel::Info,
+                    "VideoDetectApp encoder setup ret: {}, width: {}, height: {}, hor_stride: {}, ver_stride: {}",
+                    ret, frame->width, frame->height, hor_stride, ver_stride);
                 // 获取并写入编码器头部（如 SPS/PPS）
                 std::string enc_header;
                 m_encoder->getEncoderHeader(enc_header);
                 if (!enc_header.empty())
                 {
-                    m_logger->printStdoutLog(bsp_perf::shared::BspLogger::LogLevel::Info, 
+                    m_logger->printStdoutLog(bsp_perf::shared::BspLogger::LogLevel::Info,
                         "VideoDetectApp::onProcess() Write encoder header enc_header.size(): {}", enc_header.size());
                     fwrite(enc_header.c_str(), 1, enc_header.size(), m_out_fp.get());
                     fflush(m_out_fp.get());
@@ -547,23 +510,20 @@ private:
             auto objDetectOutput = dnnInference(frame);
 
             // 打印检测结果数量
-            if (m_frame_count % 30 == 0)
-            {
-                std::cout << "[Inference Thread] Frame " << m_frame_count.load() 
-                          << " detected " << objDetectOutput.size() << " objects" << std::endl;
-            }
 
-            // 修复 stride 为 0 的问题
-            size_t input_width_stride = frame->width_stride > 0 ? 
-                                        static_cast<size_t>(frame->width_stride) : 
+            std::cout << "[Inference Thread] Frame " << m_frame_count.load()
+                          << " detected " << objDetectOutput.size() << " objects" << std::endl;
+
+            // // 修复 stride 为 0 的问题
+            size_t input_width_stride = frame->width_stride > 0 ?
+                                        static_cast<size_t>(frame->width_stride) :
                                         static_cast<size_t>(frame->width);
-            size_t input_height_stride = frame->height_stride > 0 ? 
-                                         static_cast<size_t>(frame->height_stride) : 
+            size_t input_height_stride = frame->height_stride > 0 ?
+                                         static_cast<size_t>(frame->height_stride) :
                                          static_cast<size_t>(frame->height);
 
-            // ========== 🎯 使用新的 IGraphics2D API ==========
 
-            // 步骤1: 创建输入 YUV420 帧的 G2DBuffer（virtualaddr 模式，旧接口兼容）
+            // // 步骤1: 创建输入 YUV420 帧的 G2DBuffer
             IGraphics2D::G2DBufferParams dec_out_params;
             dec_out_params.host_ptr = task.frame_data.data();
             dec_out_params.buffer_size = task.frame_data.size();
@@ -581,7 +541,7 @@ private:
                 continue;
             }
 
-            // 步骤2: 创建或复用 RGBA Mapped 缓冲区（CPU 和硬件都可以访问）
+            // // 步骤2: 创建或复用 RGBA Mapped 缓冲区（CPU 和硬件都可以访问）
             size_t rgba_buffer_size = task.width * task.height * 4;  // RGBA8888: 4 字节/像素
             if (m_rgba_buf.size() != rgba_buffer_size)
             {
@@ -606,8 +566,10 @@ private:
                 continue;
             }
 
-            // 步骤3: 硬件加速颜色转换 YUV → RGBA
+            // // 步骤3: 硬件加速颜色转换 YUV → RGBA
+
             int ret = m_g2d->imageCvtColor(yuv_in_buf, rgba_mapped_buf, task.format, "RGBA8888");
+
             if (ret != 0)
             {
                 m_logger->printStdoutLog(bsp_perf::shared::BspLogger::LogLevel::Error,
@@ -638,13 +600,13 @@ private:
                         m_labelColorMap[item.label] = m_colors_list[i % m_colors_list.size()];
                         i++;
                     }
-                    cv::rectangle(cvRGBAImage, 
-                                 cv::Point(item.bbox.left, item.bbox.top), 
+                    cv::rectangle(cvRGBAImage,
+                                 cv::Point(item.bbox.left, item.bbox.top),
                                  cv::Point(item.bbox.right, item.bbox.bottom),
                                  m_labelColorMap[item.label], 2);
-                    cv::putText(cvRGBAImage, item.label, 
-                               cv::Point(item.bbox.left, item.bbox.top + 12), 
-                               cv::FONT_HERSHEY_COMPLEX, 0.4, 
+                    cv::putText(cvRGBAImage, item.label,
+                               cv::Point(item.bbox.left, item.bbox.top + 12),
+                               cv::FONT_HERSHEY_COMPLEX, 0.4,
                                cv::Scalar(255, 255, 255, 255));
                 }
             } // 退出作用域：自动同步 CPU → Device
@@ -680,8 +642,9 @@ private:
                 continue;
             }
 
-            // 步骤6: 硬件加速颜色转换 RGBA → YUV（画好框的数据已经在 rgba_mapped_buf 中）
+            // // 步骤6: 硬件加速颜色转换 RGBA → YUV（画好框的数据已经在 rgba_mapped_buf 中）
             ret = m_g2d->imageCvtColor(rgba_mapped_buf, yuv_out_buf, "RGBA8888", task.format);
+
             if (ret != 0)
             {
                 m_logger->printStdoutLog(bsp_perf::shared::BspLogger::LogLevel::Error,
@@ -715,7 +678,8 @@ private:
             }
 
             // 将画好 bbox 的 YUV420 数据传给编码器
-            enc_in_buf->input_buf_addr = m_yuv420_buf.data();
+            std::memcpy(enc_in_buf->input_buf_addr, m_yuv420_buf.data(), m_yuv420_buf.size());
+            // enc_in_buf->input_buf_addr = task.frame_data.data();//m_yuv420_buf.data();
 
             // 准备编码输出包
             EncodePacket enc_pkt = {
@@ -726,20 +690,13 @@ private:
             enc_pkt.encode_pkt.resize(enc_pkt.max_size);
 
             // 执行编码
-            int encode_ret = m_encoder->encode(*enc_in_buf, enc_pkt);
-            if (encode_ret != 0)
-            {
-                m_logger->printStdoutLog(bsp_perf::shared::BspLogger::LogLevel::Error, 
-                    "encode failed, ret: {}", encode_ret);
-                continue;
-            }
-
+            auto encode_len = m_encoder->encode(*enc_in_buf, enc_pkt);
+            m_logger->printStdoutLog(bsp_perf::shared::BspLogger::LogLevel::Info, "VideoDetectApp::onProcess() encode_len: {}", encode_len);
+            fwrite(enc_pkt.encode_pkt.data(), 1, enc_pkt.pkt_len, m_out_fp.get());
+            m_logger->printStdoutLog(bsp_perf::shared::BspLogger::LogLevel::Info, "VideoDetectApp::onProcess() Write encoded pkt: {}", m_frame_count);
             m_frame_count++;
-            if (m_frame_count % 30 == 0)
-            {
-                m_logger->printStdoutLog(bsp_perf::shared::BspLogger::LogLevel::Info, 
+            m_logger->printStdoutLog(bsp_perf::shared::BspLogger::LogLevel::Info,
                     "Processed {} frames", m_frame_count.load());
-            }
         }
 
         // 所有帧处理完毕，发送EOS给编码器
@@ -757,8 +714,9 @@ private:
                 eosPkt.pkt_eos = 1;  // EOS标志
                 eosPkt.pkt_len = 0;
                 eosPkt.encode_pkt.resize(eosPkt.max_size);
-                int ret = m_encoder->encode(*inputBuf, eosPkt);
-                std::cout << "[Inference Thread] EOS sent to encoder, ret=" << ret << std::endl;
+                m_encoder->encode(*inputBuf, eosPkt);
+                fwrite(eosPkt.encode_pkt.data(), 1, eosPkt.pkt_len, m_out_fp.get());
+                std::cout << "[Inference Thread] EOS sent to encoder, encode_pkt_len=" << eosPkt.pkt_len << std::endl;
             }
             else
             {
@@ -766,11 +724,10 @@ private:
             }
         }
 
-        m_logger->printStdoutLog(bsp_perf::shared::BspLogger::LogLevel::Info, 
+        m_logger->printStdoutLog(bsp_perf::shared::BspLogger::LogLevel::Info,
             "Inference thread exiting, processed {} frames", m_frame_count.load());
     }
 };
-
 
 } // namespace perf_cases
 } // namespace bsp_perf
