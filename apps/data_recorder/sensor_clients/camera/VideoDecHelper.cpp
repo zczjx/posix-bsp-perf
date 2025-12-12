@@ -102,16 +102,16 @@ int VideoDecHelper::sendToDecoder(std::shared_ptr<VideoDecHelper::RtpBuffer> rtp
 std::shared_ptr<DecodeOutFrame> VideoDecHelper::convertPixelFormat(std::shared_ptr<DecodeOutFrame> frame)
 {
     IGraphics2D::G2DBufferParams in_g2d_params = {
-        .virtual_addr = frame->virt_addr,
-        .rawBufferSize = frame->valid_data_size,
-        .width = frame->width,
-        .height = frame->height,
-        .width_stride = frame->width_stride,
-        .height_stride = frame->height_stride,
+        .width = static_cast<size_t>(frame->width),
+        .height = static_cast<size_t>(frame->height),
+        .width_stride = static_cast<size_t>(frame->width_stride),
+        .height_stride = static_cast<size_t>(frame->height_stride),
         .format = frame->format,
+        .host_ptr = frame->virt_addr,
+        .buffer_size = frame->valid_data_size,
     };
 
-    auto in_g2d_buf = m_g2d->createG2DBuffer("virtualaddr", in_g2d_params);
+    auto in_g2d_buf = m_g2d->createBuffer(IGraphics2D::BufferType::Mapped, in_g2d_params);
 
     size_t out_data_size = frame->width * frame->height * bsp_g2d::BytesPerPixel::getInstance().getBytesPerPixel(m_out_pixel_format);
 
@@ -133,16 +133,16 @@ std::shared_ptr<DecodeOutFrame> VideoDecHelper::convertPixelFormat(std::shared_p
 
 
     IGraphics2D::G2DBufferParams out_g2d_params = {
-    .virtual_addr = out_frame->virt_addr,
-    .rawBufferSize = out_frame->valid_data_size,
-    .width = out_frame->width,
-    .height = out_frame->height,
-    .width_stride = out_frame->width_stride,
-    .height_stride = out_frame->height_stride,
-    .format = m_out_pixel_format,
+        .width = static_cast<size_t>(out_frame->width),
+        .height = static_cast<size_t>(out_frame->height),
+        .width_stride = static_cast<size_t>(out_frame->width_stride),
+        .height_stride = static_cast<size_t>(out_frame->height_stride),
+        .format = m_out_pixel_format,
+        .host_ptr = out_frame->virt_addr,
+        .buffer_size = out_frame->valid_data_size,
     };
 
-    auto out_g2d_buf = m_g2d->createG2DBuffer("virtualaddr", out_g2d_params);
+    auto out_g2d_buf = m_g2d->createBuffer(IGraphics2D::BufferType::Mapped, out_g2d_params);
     m_g2d->imageCvtColor(in_g2d_buf, out_g2d_buf, in_g2d_params.format, out_g2d_params.format);
 
     return out_frame;

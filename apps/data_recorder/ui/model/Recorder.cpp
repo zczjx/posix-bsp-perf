@@ -93,29 +93,29 @@ int Recorder::convertImageFormat(uint8_t* input_data, int width, int height, std
     std::shared_ptr<EncodeInputBuffer> output_buf, std::string out_format)
 {
     IGraphics2D::G2DBufferParams rgb888_g2d_buf_params = {
-        .virtual_addr = input_data,
-        .rawBufferSize = width * height * 3,
-        .width = width,
-        .height = height,
-        .width_stride = width,
-        .height_stride = height,
+        .width = static_cast<size_t>(width),
+        .height = static_cast<size_t>(height),
+        .width_stride = static_cast<size_t>(width),
+        .height_stride = static_cast<size_t>(height),
         .format = input_format,
+        .host_ptr = input_data,
+        .buffer_size = static_cast<size_t>(width * height * 3),
     };
 
-    auto in_g2d_buf = m_g2d->createG2DBuffer("virtualaddr", rgb888_g2d_buf_params);
+    auto in_g2d_buf = m_g2d->createBuffer(IGraphics2D::BufferType::Mapped, rgb888_g2d_buf_params);
 
 
     IGraphics2D::G2DBufferParams yuv420_g2d_buf_params = {
-        .virtual_addr = output_buf->input_buf_addr,
-        .rawBufferSize = width * height * 3 / 2,
-        .width = width,
-        .height = height,
-        .width_stride = width,
-        .height_stride = height,
+        .width = static_cast<size_t>(width),
+        .height = static_cast<size_t>(height),
+        .width_stride = static_cast<size_t>(width),
+        .height_stride = static_cast<size_t>(height),
         .format = out_format,
+        .host_ptr = output_buf->input_buf_addr,
+        .buffer_size = static_cast<size_t>(width * height * 3 / 2),
     };
 
-    auto out_g2d_buf = m_g2d->createG2DBuffer("virtualaddr", yuv420_g2d_buf_params);
+    auto out_g2d_buf = m_g2d->createBuffer(IGraphics2D::BufferType::Mapped, yuv420_g2d_buf_params);
 
     m_g2d->imageCvtColor(in_g2d_buf, out_g2d_buf, input_format, out_format);
 
