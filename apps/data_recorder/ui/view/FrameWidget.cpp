@@ -32,8 +32,15 @@ void FrameWidget::setFrame(const uint8_t* data, int width, int height, std::stri
     }
 
     // 拷贝数据到 QImage 内部 buffer
-    // memcpy(m_img.bits(), data, width * height * 3);
-    memcpy(m_img.bits(), data, width * height * 4);
+    if (format.compare("RGB888") == 0)
+    {
+        memcpy(m_img.bits(), data, width * height * 3);
+    }
+    else if (format.compare("RGBA8888") == 0)
+    {
+        memcpy(m_img.bits(), data, width * height * 4);
+    }
+
     update();
 }
 
