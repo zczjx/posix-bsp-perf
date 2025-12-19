@@ -27,11 +27,11 @@ void GuiController::setupConnections()
     connect(m_video_frame_widget.get(), &VideoFrameWidget::recordStatusChanged, this, &GuiController::onRecordStatusChanged);
 }
 
-int GuiController::updateFrameRecord(uint8_t* data, int width, int height)
+int GuiController::updateFrameRecord(uint8_t* data, int width, int height, const QString& format)
 {
     if (m_record_enabled)
     {
-        m_recorder->writeRecordFrame(data, width, height);
+        m_recorder->writeRecordFrame(data, width, height, format.toStdString());
     }
     return 0;
 }
@@ -49,21 +49,23 @@ void GuiController::runLoop()
     m_app->exec();
 }
 
-void GuiController::onRawCameraFrameUpdated(uint8_t* data, int width, int height)
+void GuiController::onRawCameraFrameUpdated(uint8_t* data, int width, int height, const QString& format)
 {
     if (m_video_frame_widget->getCurrentDataSource() == VideoFrameWidget::RawCamera)
     {
-        m_video_frame_widget->setFrame(data, width, height);
-        updateFrameRecord(data, width, height);
+        std::cout << "GuiController::onRawCameraFrameUpdated() width: " << width << " height: " << height << std::endl;
+        m_video_frame_widget->setFrame(data, width, height, format.toStdString());
+        updateFrameRecord(data, width, height, format);
     }
 }
 
-void GuiController::onObjectsDetectionFrameUpdated(uint8_t* data, int width, int height)
+void GuiController::onObjectsDetectionFrameUpdated(uint8_t* data, int width, int height, const QString& format)
 {
     if (m_video_frame_widget->getCurrentDataSource() == VideoFrameWidget::ObjectsDetection)
     {
-        m_video_frame_widget->setFrame(data, width, height);
-        updateFrameRecord(data, width, height);
+        std::cout << "GuiController::onObjectsDetectionFrameUpdated() width: " << width << " height: " << height << std::endl;
+        m_video_frame_widget->setFrame(data, width, height, format.toStdString());
+        updateFrameRecord(data, width, height, format);
     }
 }
 

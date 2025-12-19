@@ -179,12 +179,12 @@ private:
     void onRelease() override
     {
         // 推理线程已经在 onProcess() 中join了，这里只需要清理资源
-        m_logger->printStdoutLog(bsp_perf::shared::BspLogger::LogLevel::Info, 
+        m_logger->printStdoutLog(bsp_perf::shared::BspLogger::LogLevel::Info,
             "VideoDetectApp::onRelease() Starting cleanup, inference thread already joined");
 
-        m_logger->printStdoutLog(bsp_perf::shared::BspLogger::LogLevel::Info, 
+        m_logger->printStdoutLog(bsp_perf::shared::BspLogger::LogLevel::Info,
             "VideoDetectApp::onRelease() Waiting for encoding to finish...");
-        m_logger->printStdoutLog(bsp_perf::shared::BspLogger::LogLevel::Info, 
+        m_logger->printStdoutLog(bsp_perf::shared::BspLogger::LogLevel::Info,
             "Total frames submitted: {}, encoded: {}", m_frame_count.load(), m_encoded_frame_count.load());
         // 等待所有帧编码完成
         // 增加等待时间，确保编码器有足够时间处理 EOS 和刷新缓冲区
@@ -193,13 +193,13 @@ private:
             std::this_thread::sleep_for(std::chrono::milliseconds(500));
             if (m_encoded_frame_count >= m_frame_count)
             {
-                m_logger->printStdoutLog(bsp_perf::shared::BspLogger::LogLevel::Info, 
+                m_logger->printStdoutLog(bsp_perf::shared::BspLogger::LogLevel::Info,
                     "All frames encoded: {}/{}", m_encoded_frame_count.load(), m_frame_count.load());
                 break;
             }
             if (i % 2 == 0)
             {
-                m_logger->printStdoutLog(bsp_perf::shared::BspLogger::LogLevel::Debug, 
+                m_logger->printStdoutLog(bsp_perf::shared::BspLogger::LogLevel::Debug,
                     "Waiting... encoded: {}/{}", m_encoded_frame_count.load(), m_frame_count.load());
             }
         }
@@ -210,7 +210,8 @@ private:
             m_logger->printStdoutLog(bsp_perf::shared::BspLogger::LogLevel::Info, 
                 "VideoDetectApp::onRelease() Output video file closed");
         }
-
+        m_decoder->tearDown();
+        m_encoder->tearDown();
         // 先销毁编码器，再销毁其他资源
         m_encoder.reset();
         m_logger->printStdoutLog(bsp_perf::shared::BspLogger::LogLevel::Info, 

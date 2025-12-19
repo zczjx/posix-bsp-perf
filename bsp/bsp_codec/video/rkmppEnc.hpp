@@ -68,7 +68,7 @@ public:
 
     int getEncoderHeader(std::string& headBuf) override;
 
-    int reset() override;
+    int tearDown() override;
 
     std::shared_ptr<EncodeInputBuffer> getInputBuffer() override;
 

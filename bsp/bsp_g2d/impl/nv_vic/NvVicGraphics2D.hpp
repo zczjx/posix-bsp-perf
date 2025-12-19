@@ -65,17 +65,11 @@ public:
 
     int imageCopy(std::shared_ptr<G2DBuffer> src, std::shared_ptr<G2DBuffer> dst) override;
 
-    int imageDrawRectangle(
-        std::shared_ptr<G2DBuffer> dst, 
-        ImageRect& rect, 
-        uint32_t color, 
-        int thickness) override;
+    int imageDrawRectangle(std::shared_ptr<G2DBuffer> dst, ImageRect& rect,
+            uint32_t color, int thickness) override;
 
-    int imageCvtColor(
-        std::shared_ptr<G2DBuffer> src, 
-        std::shared_ptr<G2DBuffer> dst,
-        const std::string& src_format, 
-        const std::string& dst_format) override;
+    int imageCvtColor(std::shared_ptr<G2DBuffer> src, std::shared_ptr<G2DBuffer> dst,
+            const std::string& src_format, const std::string& dst_format) override;
 
 private:
     /**
@@ -91,10 +85,7 @@ private:
     /**
      * @brief Performs NV VIC transformation.
      */
-    int performTransform(
-        NvBufSurface* src, 
-        NvBufSurface* dst,
-        NvBufSurfTransformParams& transform_params);
+    int performTransform(NvBufSurface* src, NvBufSurface* dst, NvBufSurfTransformParams& transform_params);
 
     /**
      * @brief Fills bytes per pixel array for a given format.

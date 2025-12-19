@@ -14,18 +14,26 @@ void FrameWidget::setFrame(const QImage& img)
     update();
 }
 
-void FrameWidget::setFrame(const uint8_t* data, int width, int height)
+void FrameWidget::setFrame(const uint8_t* data, int width, int height, std::string format)
 {
     QMutexLocker locker(&m_mutex);
 
     if (!m_img_initialized || m_img.width() != width || m_img.height() != height)
     {
-        m_img = QImage(width, height, QImage::Format_RGB888);
+        if (format.compare("RGB888") == 0)
+        {
+            m_img = QImage(width, height, QImage::Format_RGB888);
+        }
+        else if (format.compare("RGBA8888") == 0)
+        {
+            m_img = QImage(width, height, QImage::Format_RGBA8888);
+        }
         m_img_initialized = true;
     }
 
     // 拷贝数据到 QImage 内部 buffer
-    memcpy(m_img.bits(), data, width * height * 3);
+    // memcpy(m_img.bits(), data, width * height * 3);
+    memcpy(m_img.bits(), data, width * height * 4);
     update();
 }
 

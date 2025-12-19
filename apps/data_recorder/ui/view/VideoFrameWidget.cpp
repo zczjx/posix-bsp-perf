@@ -24,9 +24,9 @@ void VideoFrameWidget::setFrame(const QImage& image)
     m_ui->frameWidget->setFrame(image);
 }
 
-void VideoFrameWidget::setFrame(const uint8_t* data, int width, int height)
+void VideoFrameWidget::setFrame(const uint8_t* data, int width, int height, std::string format)
 {
-    m_ui->frameWidget->setFrame(data, width, height);
+    m_ui->frameWidget->setFrame(data, width, height, format);
 }
 
 void VideoFrameWidget::onDataSourceChanged(const QString& text)

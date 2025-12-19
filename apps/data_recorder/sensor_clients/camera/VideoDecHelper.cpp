@@ -1,5 +1,6 @@
 #include "VideoDecHelper.hpp"
 #include <bsp_g2d/BytesPerPixel.hpp>
+#include <bsp_g2d/BufferHelper.hpp>
 #include <stdexcept>
 #include <iostream>
 #include <thread>
@@ -123,6 +124,7 @@ std::shared_ptr<DecodeOutFrame> VideoDecHelper::convertPixelFormat(std::shared_p
         }
         delete frame;
     });
+
     out_frame->width = frame->width;
     out_frame->height = frame->height;
     out_frame->format = m_out_pixel_format;
@@ -130,7 +132,6 @@ std::shared_ptr<DecodeOutFrame> VideoDecHelper::convertPixelFormat(std::shared_p
     out_frame->valid_data_size = out_data_size;
     out_frame->width_stride = frame->width;
     out_frame->height_stride = frame->height;
-
 
     IGraphics2D::G2DBufferParams out_g2d_params = {
         .width = static_cast<size_t>(out_frame->width),
@@ -144,6 +145,16 @@ std::shared_ptr<DecodeOutFrame> VideoDecHelper::convertPixelFormat(std::shared_p
 
     auto out_g2d_buf = m_g2d->createBuffer(IGraphics2D::BufferType::Mapped, out_g2d_params);
     m_g2d->imageCvtColor(in_g2d_buf, out_g2d_buf, in_g2d_params.format, out_g2d_params.format);
+
+    {
+        bsp_g2d::BufferSyncGuard sync(
+            m_g2d.get(),
+            out_g2d_buf,
+            IGraphics2D::SyncDirection::Bidirectional);
+    }
+    // 显式释放 G2D buffer 资源，防止 NvBufSurface 泄漏
+    m_g2d->releaseBuffer(in_g2d_buf);
+    m_g2d->releaseBuffer(out_g2d_buf);
 
     return out_frame;
 }

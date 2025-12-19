@@ -150,6 +150,7 @@ void ObjDetector::publishObjDetectResults(const std::vector<bsp_dnn::ObjDetectOu
     }
     msg_buffer.clear();
     msgpack::pack(msg_buffer, objDetectMsg);
+    std::cout << "ObjDetector::publishObjDetectResults() publish data size: " << msg_buffer.size() << std::endl;
     m_output_shmem_port->publishData(reinterpret_cast<const uint8_t*>(msg_buffer.data()),
                                             msg_buffer.size(), frame->virt_addr,
                                             objDetectMsg.original_frame.slot_index , objDetectMsg.original_frame.data_size);
@@ -180,6 +181,7 @@ void ObjDetector::inferenceLoop()
         }
         else
         {
+            std::cout << "ObjDetector::inferenceLoop() runDnnInference format: " << inference_frame->format << std::endl;
             std::vector<bsp_dnn::ObjDetectOutputBox> output_boxes = runDnnInference(inference_frame);
             for (const auto& output_box : output_boxes)
             {

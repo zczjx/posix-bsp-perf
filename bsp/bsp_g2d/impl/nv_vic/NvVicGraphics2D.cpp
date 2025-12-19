@@ -296,22 +296,26 @@ std::shared_ptr<IGraphics2D::G2DBuffer> NvVicGraphics2D::createBuffer(
 void NvVicGraphics2D::releaseBuffer(std::shared_ptr<G2DBuffer> buffer)
 {
     if (!buffer) return;
-    
+
     std::lock_guard<std::mutex> lock(m_mapMutex);
-    
+
     auto it = m_bufferMap.find(buffer.get());
-    if (it != m_bufferMap.end()) {
-        if (it->second) {
+    if (it != m_bufferMap.end())
+    {
+        if (it->second)
+        {
             NvBufSurfaceDestroy(it->second);
         }
         m_bufferMap.erase(it);
     }
-    
+
     auto it_map = m_mapInfo.find(buffer.get());
-    if (it_map != m_mapInfo.end()) {
+
+    if (it_map != m_mapInfo.end())
+    {
         m_mapInfo.erase(it_map);
     }
-    
+
     std::cout << "NvVicGraphics2D: Released buffer" << std::endl;
 }
 
@@ -451,18 +455,18 @@ NvBufSurface* NvVicGraphics2D::getNvBufSurface(std::shared_ptr<G2DBuffer> g2dBuf
     return nullptr;
 }
 
-int NvVicGraphics2D::performTransform(
-    NvBufSurface* src,
-    NvBufSurface* dst,
-    NvBufSurfTransformParams& transform_params)
+int NvVicGraphics2D::performTransform(NvBufSurface* src, NvBufSurface* dst, NvBufSurfTransformParams& transform_params)
 {
-    if (!src || !dst) {
+    if (!src || !dst)
+    {
         std::cerr << "NvVicGraphics2D: Invalid source or destination buffer" << std::endl;
         return -1;
     }
 
     int ret = NvBufSurfTransform(src, dst, &transform_params);
-    if (ret != 0) {
+
+    if (ret != 0)
+    {
         std::cerr << "NvVicGraphics2D: Transform failed with error: " << ret << std::endl;
         return -1;
     }
@@ -538,51 +542,49 @@ int NvVicGraphics2D::imageDrawRectangle(
     return -1;
 }
 
-int NvVicGraphics2D::imageCvtColor(
-    std::shared_ptr<G2DBuffer> src, 
-    std::shared_ptr<G2DBuffer> dst,
-    const std::string& src_format, 
-    const std::string& dst_format)
+int NvVicGraphics2D::imageCvtColor(std::shared_ptr<G2DBuffer> src, std::shared_ptr<G2DBuffer> dst,
+        const std::string& src_format, const std::string& dst_format)
 {
     NvBufSurface* src_surf = getNvBufSurface(src);
     NvBufSurface* dst_surf = getNvBufSurface(dst);
-    
+
     if (!src_surf || !dst_surf) {
         std::cerr << "NvVicGraphics2D: Failed to get NvBufSurface for color conversion" << std::endl;
         return -1;
     }
-    
+
     NvBufSurfaceColorFormat src_nv_format = mapFormatStringToNvFormat(src_format);
     NvBufSurfaceColorFormat dst_nv_format = mapFormatStringToNvFormat(dst_format);
-    
-    if (src_nv_format == NVBUF_COLOR_FORMAT_INVALID || 
-        dst_nv_format == NVBUF_COLOR_FORMAT_INVALID) {
+
+    if (src_nv_format == NVBUF_COLOR_FORMAT_INVALID ||
+        dst_nv_format == NVBUF_COLOR_FORMAT_INVALID)
+    {
         std::cerr << "NvVicGraphics2D: Invalid format for color conversion" << std::endl;
         return -1;
     }
-    
+
     NvBufSurfTransformRect src_rect = {0};
     NvBufSurfTransformRect dst_rect = {0};
-    
+
     src_rect.top = 0;
     src_rect.left = 0;
     src_rect.width = src_surf->surfaceList[0].width;
     src_rect.height = src_surf->surfaceList[0].height;
-    
+
     dst_rect.top = 0;
     dst_rect.left = 0;
     dst_rect.width = dst_surf->surfaceList[0].width;
     dst_rect.height = dst_surf->surfaceList[0].height;
-    
+
     NvBufSurfTransformParams transform_params = {0};
     transform_params.transform_flag = NVBUFSURF_TRANSFORM_FILTER;
     transform_params.transform_filter = NvBufSurfTransformInter_Algo4;
     transform_params.src_rect = &src_rect;
     transform_params.dst_rect = &dst_rect;
-    
-    std::cout << "NvVicGraphics2D: Converting color from " << src_format 
+
+    std::cout << "NvVicGraphics2D: Converting color from " << src_format
               << " to " << dst_format << std::endl;
-    
+
     return performTransform(src_surf, dst_surf, transform_params);
 }
 

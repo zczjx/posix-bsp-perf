@@ -67,11 +67,8 @@ void ObjectsDetection::ObjectDetectionConsumerLoop(std::shared_ptr<SharedMemSubs
             continue;
         }
 
-        std::cout << "GuiClient::ObjectDetectionConsumerLoop() process msg" << std::endl;
         msgpack::unpacked result = msgpack::unpack(reinterpret_cast<const char*>(msg_buffer.get()), msg_size);
         ObjDetectMsg shmem_msg = result.get().as<ObjDetectMsg>();
-
-        std::cout << "GuiClient::ObjectDetectionConsumerLoop() valid_box_count: " << shmem_msg.valid_box_count << std::endl;
 
         if (data_buffer == nullptr)
         {
@@ -83,14 +80,8 @@ void ObjectsDetection::ObjectDetectionConsumerLoop(std::shared_ptr<SharedMemSubs
         if(shmem_msg.original_frame.pixel_format.compare("RGB888") == 0)
         {
             cv::Mat cvRGB888Image(shmem_msg.original_frame.height, shmem_msg.original_frame.width, CV_8UC3, data_buffer.get());
-
             for (size_t i = 0; i < shmem_msg.valid_box_count; i++)
             {
-                std::cout << "GuiClient::ObjectDetectionConsumerLoop() output_boxes[" << i << "].label: " << shmem_msg.output_boxes[i].label << std::endl;
-                std::cout << "GuiClient::ObjectDetectionConsumerLoop() output_boxes[" << i << "].bbox.left: " << shmem_msg.output_boxes[i].bbox.left << std::endl;
-                std::cout << "GuiClient::ObjectDetectionConsumerLoop() output_boxes[" << i << "].bbox.top: " << shmem_msg.output_boxes[i].bbox.top << std::endl;
-                std::cout << "GuiClient::ObjectDetectionConsumerLoop() output_boxes[" << i << "].bbox.right: " << shmem_msg.output_boxes[i].bbox.right << std::endl;
-                std::cout << "GuiClient::ObjectDetectionConsumerLoop() output_boxes[" << i << "].bbox.bottom: " << shmem_msg.output_boxes[i].bbox.bottom << std::endl;
 
                 cv::rectangle(cvRGB888Image,
                     cv::Point(shmem_msg.output_boxes[i].bbox.left, shmem_msg.output_boxes[i].bbox.top),
@@ -100,7 +91,23 @@ void ObjectsDetection::ObjectDetectionConsumerLoop(std::shared_ptr<SharedMemSubs
                     cv::Point(shmem_msg.output_boxes[i].bbox.left, shmem_msg.output_boxes[i].bbox.top + 12),
                     cv::FONT_HERSHEY_COMPLEX, 0.4, cv::Scalar(255, 255, 255));
             }
-            emit objectsDetectionFrameUpdated(data_buffer.get(), shmem_msg.original_frame.width, shmem_msg.original_frame.height);
+            emit objectsDetectionFrameUpdated(data_buffer.get(), shmem_msg.original_frame.width, shmem_msg.original_frame.height, QString::fromStdString(shmem_msg.original_frame.pixel_format));
+        }
+        else if(shmem_msg.original_frame.pixel_format.compare("RGBA8888") == 0)
+        {
+            cv::Mat cvRGBA8888Image(shmem_msg.original_frame.height, shmem_msg.original_frame.width, CV_8UC4, data_buffer.get());
+            for (size_t i = 0; i < shmem_msg.valid_box_count; i++)
+            {
+
+                cv::rectangle(cvRGBA8888Image,
+                    cv::Point(shmem_msg.output_boxes[i].bbox.left, shmem_msg.output_boxes[i].bbox.top),
+                    cv::Point(shmem_msg.output_boxes[i].bbox.right, shmem_msg.output_boxes[i].bbox.bottom),
+                    cv::Scalar(255, 255, 0, 255), 2);
+                cv::putText(cvRGBA8888Image, shmem_msg.output_boxes[i].label,
+                    cv::Point(shmem_msg.output_boxes[i].bbox.left, shmem_msg.output_boxes[i].bbox.top + 12),
+                    cv::FONT_HERSHEY_COMPLEX, 0.4, cv::Scalar(255, 255, 255, 255));
+            }
+            emit objectsDetectionFrameUpdated(data_buffer.get(), shmem_msg.original_frame.width, shmem_msg.original_frame.height, QString::fromStdString(shmem_msg.original_frame.pixel_format));
         }
         else
         {

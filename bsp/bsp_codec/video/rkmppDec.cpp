@@ -357,7 +357,7 @@ int rkmppDec::decode(DecodePacket& pkt_data)
     return ret;
 }
 
-int rkmppDec::reset()
+int rkmppDec::tearDown()
 {
     if (m_ctx.mpi != nullptr)
     {

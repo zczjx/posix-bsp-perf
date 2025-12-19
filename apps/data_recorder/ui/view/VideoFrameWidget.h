@@ -26,7 +26,7 @@ public:
     ~VideoFrameWidget();
 
     void setFrame(const QImage& image);
-    void setFrame(const uint8_t* data, int width, int height);
+    void setFrame(const uint8_t* data, int width, int height, std::string format);
 
     DataSourceType getCurrentDataSource()
     {

@@ -74,7 +74,8 @@ std::shared_ptr<IGraphics2D::G2DBuffer> rkrga::createBuffer(
 
 void rkrga::releaseBuffer(std::shared_ptr<G2DBuffer> buffer)
 {
-    if (buffer == nullptr) {
+    if (buffer == nullptr)
+    {
         return;
     }
     // RGA buffers don't need explicit cleanup for wrapped buffers

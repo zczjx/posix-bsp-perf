@@ -30,7 +30,7 @@ public:
 
     int stopAndSaveRecord();
 
-    int writeRecordFrame(uint8_t* data, int width, int height);
+    int writeRecordFrame(uint8_t* data, int width, int height, std::string format = "RGB888");
 
     std::string getRecordPath() const
     {

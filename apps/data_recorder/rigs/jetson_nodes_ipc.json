@@ -1,0 +1,98 @@
+{
+    "shared_memory":
+    [
+        {
+            "name": "view_camera",
+            "publisher": "view_camera",
+            "status": "enabled",
+            "shm_name": "/view_camera.rgb",
+            "shm_slots": 32,
+            "shm_single_buffer_size": 2764800,
+            "subscriber": ["yolov5_detector"]
+        }
+    ],
+    "gui":
+    [
+        {
+            "name": "gui",
+            "status": "enabled"
+        }
+    ],
+    "camera":
+    [
+        {
+            "name": "view_camera",
+            "type": "camera",
+            "status": "enabled",
+            "image_size_x": 1280,
+            "image_size_y": 720,
+            "fov": 90.0,
+            "output_pixel_format": "RGBA8888",
+            "publisher": {
+                "topic": "ipc:///tmp/view_camera.info",
+                "msg_type": "common/msg/CameraSensorMsg",
+                "shmem": "/view_camera.rgb",
+                "shmem_slots": 32,
+                "shmem_single_buffer_size": 3686400
+            }
+        }
+    ],
+
+    "lidar":
+    [
+        {
+            "name": "lidar",
+            "status": "enabled"
+        }
+    ],
+
+    "radar":
+    [
+        {
+            "name": "radar",
+            "status": "enabled"
+        }
+    ],
+
+    "gnss":
+    [
+        {
+            "name": "gnss",
+            "status": "enabled"
+        }
+    ],
+
+    "imu":
+    [
+        {
+            "name": "imu",
+            "status": "enabled"
+        }
+    ],
+
+    "object_detector":
+    [
+        {
+            "name": "yolov5_detector",
+            "type": "object_detector",
+            "status": "enabled",
+            "image_size_x": 1280,
+            "image_size_y": 720,
+            "fov": 90.0,
+            "subscriber": {
+                "topic": "ipc:///tmp/view_camera.info",
+                "msg_type": "common/msg/CameraSensorMsg",
+                "shmem": "/view_camera.rgb",
+                "shmem_slots": 32,
+                "shmem_single_buffer_size": 3686400
+            },
+            "publisher": {
+                "topic": "ipc:///tmp/yolov5_detector.info",
+                "msg_type": "common/msg/ObjDetectMsg",
+                "shmem": "/yolov5_detector.rgb",
+                "shmem_slots": 32,
+                "shmem_single_buffer_size": 3686400
+            }
+        }
+    ]
+}

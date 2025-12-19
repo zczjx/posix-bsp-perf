@@ -1,4 +1,5 @@
 #include "Recorder.hpp"
+#include <bsp_g2d/BufferHelper.hpp>
 #include <shared/ArgParser.hpp>
 #include <filesystem>
 #include <shared/BspTimeUtils.hpp>
@@ -44,6 +45,7 @@ Recorder::~Recorder()
 
 int Recorder::startNewRecord()
 {
+    std::cout << "Recorder::startNewRecord()" << std::endl;
     m_current_filename = "record_" + BspTimeUtils::getCurrentTimeString() + ".mp4";
     IMuxer::MuxConfig muxConfig{true, 30};
     m_muxer->openContainerMux(m_current_filename, muxConfig);
@@ -53,6 +55,7 @@ int Recorder::startNewRecord()
 
 int Recorder::stopAndSaveRecord()
 {
+    m_encoder->tearDown();
     m_muxer->endStreamMux();
     m_muxer->closeContainerMux();
     m_muxer_first_frame = true;
@@ -118,7 +121,14 @@ int Recorder::convertImageFormat(uint8_t* input_data, int width, int height, std
     auto out_g2d_buf = m_g2d->createBuffer(IGraphics2D::BufferType::Mapped, yuv420_g2d_buf_params);
 
     m_g2d->imageCvtColor(in_g2d_buf, out_g2d_buf, input_format, out_format);
-
+    {
+        bsp_g2d::BufferSyncGuard sync(
+            m_g2d.get(),
+            out_g2d_buf,
+            IGraphics2D::SyncDirection::Bidirectional);
+    }
+    m_g2d->releaseBuffer(in_g2d_buf);
+    m_g2d->releaseBuffer(out_g2d_buf);
     return 0;
 }
 
@@ -134,7 +144,7 @@ int Recorder::muxerWriteStreamPacket(EncodePacket& enc_pkt)
     return m_muxer->writeStreamPacket(m_stream_packet);
 }
 
-int Recorder::writeRecordFrame(uint8_t* data, int width, int height)
+int Recorder::writeRecordFrame(uint8_t* data, int width, int height, std::string format)
 {
     if (m_muxer_first_frame == true)
     {
@@ -144,7 +154,7 @@ int Recorder::writeRecordFrame(uint8_t* data, int width, int height)
         m_muxer_first_frame = false;
     }
 
-    convertImageFormat(data, width, height, "RGB888", m_enc_in_buf, "YUV420SP");
+    convertImageFormat(data, width, height, format, m_enc_in_buf, "YUV420SP");
 
     EncodePacket enc_pkt = {
         .max_size = m_encoder->getFrameSize(),

@@ -37,7 +37,7 @@ public:
         m_userdata = userdata;
     }
     int decode(DecodePacket& pkt_data) override;
-    int reset() override;
+    int tearDown() override;
 
 private:
     // Internal methods

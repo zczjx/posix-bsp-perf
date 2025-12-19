@@ -43,7 +43,7 @@ public:
     }
     int encode(EncodeInputBuffer& input_buf, EncodePacket& out_pkt) override;
     int getEncoderHeader(std::string& headBuf) override;
-    int reset() override;
+    int tearDown() override;
     std::shared_ptr<EncodeInputBuffer> getInputBuffer() override;
     size_t getFrameSize() override;
 

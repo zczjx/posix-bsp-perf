@@ -100,7 +100,7 @@ public:
     virtual int setup(DecodeConfig& cfg) = 0;
     virtual void setDecodeReadyCallback(decodeReadyCallback callback, std::any userdata) = 0;
     virtual int decode(DecodePacket& pkt_data) = 0;
-    virtual int reset() = 0;
+    virtual int tearDown() = 0;
     virtual ~IDecoder() = default;
 
 protected:

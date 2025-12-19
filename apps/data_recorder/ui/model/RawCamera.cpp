@@ -64,7 +64,6 @@ void RawCamera::CameraConsumerLoop(std::shared_ptr<SharedMemSubscriber> input_sh
             continue;
         }
 
-        std::cout << "GuiClient::CameraConsumerLoop() process msg" << std::endl;
         msgpack::unpacked result = msgpack::unpack(reinterpret_cast<const char*>(msg_buffer.get()), msg_size);
         CameraSensorMsg shmem_msg = result.get().as<CameraSensorMsg>();
 
@@ -75,9 +74,9 @@ void RawCamera::CameraConsumerLoop(std::shared_ptr<SharedMemSubscriber> input_sh
 
         input_shmem_port->receiveSharedMemData(data_buffer, shmem_msg.data_size, shmem_msg.slot_index);
 
-        if(shmem_msg.pixel_format.compare("RGB888") == 0)
+        if(shmem_msg.pixel_format.compare("RGB888") == 0 || shmem_msg.pixel_format.compare("RGBA8888") == 0)
         {
-            emit rawCameraFrameUpdated(data_buffer.get(), shmem_msg.width, shmem_msg.height);
+            emit rawCameraFrameUpdated(data_buffer.get(), shmem_msg.width, shmem_msg.height, QString::fromStdString(shmem_msg.pixel_format));
         }
         else
         {

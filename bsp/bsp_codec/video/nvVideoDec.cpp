@@ -13,14 +13,14 @@ namespace bsp_codec
 nvVideoDec::~nvVideoDec()
 {
     std::cout << "nvVideoDec::~nvVideoDec() destructor" << std::endl;
-    
+
     // Stop threads first
     m_running = false;
     m_got_eos = true;
-    
+
     // Wake up threads
     m_queue_cv.notify_all();
-    
+
     // Wait for threads to finish with timeout
     if (m_decoder_thread && m_decoder_thread->joinable()) {
         m_decoder_thread->join();
@@ -28,17 +28,17 @@ nvVideoDec::~nvVideoDec()
     if (m_capture_thread && m_capture_thread->joinable()) {
         m_capture_thread->join();
     }
-    
+
     // Stop streaming on capture plane if it's running
     if (m_dec && m_capture_plane_started) {
         m_dec->capture_plane.setStreamStatus(false);
     }
-    
+
     // Stop streaming on output plane
     if (m_dec) {
         m_dec->output_plane.setStreamStatus(false);
     }
-    
+
     // Cleanup dst buffer
     if (m_dst_dma_fd != -1)
     {
@@ -701,24 +701,24 @@ int nvVideoDec::decode(DecodePacket& pkt_data)
         memcpy(pkt.data.data(), pkt_data.data, pkt_data.pkt_size);
         pkt.is_eos = false;
     }
-    
+
     {
         std::lock_guard<std::mutex> lock(m_queue_mutex);
         m_packet_queue.push(std::move(pkt));
     }
     m_queue_cv.notify_one();
-    
+
     return 0;
 }
 
-int nvVideoDec::reset()
+int nvVideoDec::tearDown()
 {
-    std::cout << "nvVideoDec::reset()" << std::endl;
-    
+    std::cout << "nvVideoDec::tearDown()" << std::endl;
+
     m_running = false;
     m_got_eos = true;
     m_queue_cv.notify_all();
-    
+
     // Wait for threads
     if (m_decoder_thread && m_decoder_thread->joinable()) {
         m_decoder_thread->join();
@@ -726,7 +726,7 @@ int nvVideoDec::reset()
     if (m_capture_thread && m_capture_thread->joinable()) {
         m_capture_thread->join();
     }
-    
+
     // Clear packet queue
     {
         std::lock_guard<std::mutex> lock(m_queue_mutex);

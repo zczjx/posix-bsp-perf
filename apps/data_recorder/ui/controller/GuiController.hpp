@@ -40,12 +40,12 @@ public:
 private:
     void setupConnections();
 
-    int updateFrameRecord(uint8_t* data, int width, int height);
+    int updateFrameRecord(uint8_t* data, int width, int height, const QString& format = "RGB888");
 
 private slots:
-    void onRawCameraFrameUpdated(uint8_t* data, int width, int height);
+    void onRawCameraFrameUpdated(uint8_t* data, int width, int height, const QString& format);
 
-    void onObjectsDetectionFrameUpdated(uint8_t* data, int width, int height);
+    void onObjectsDetectionFrameUpdated(uint8_t* data, int width, int height, const QString& format);
 
     void onRecordStatusChanged(bool on);
 

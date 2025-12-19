@@ -58,7 +58,7 @@ public:
 
     virtual int setup(EncodeConfig& cfg) = 0;
     virtual void setEncodeReadyCallback(encodeReadyCallback callback, std::any userdata) = 0;
-    
+
     /**
      * @brief Get an input buffer for encoding.
      * 
@@ -121,7 +121,7 @@ public:
      */
     virtual int encode(EncodeInputBuffer& input_buf, EncodePacket& out_pkt) = 0;
     virtual int getEncoderHeader(std::string& headBuf) = 0;
-    virtual int reset() = 0;
+    virtual int tearDown() = 0;
 
     virtual size_t getFrameSize() = 0;
     virtual ~IEncoder() = default;

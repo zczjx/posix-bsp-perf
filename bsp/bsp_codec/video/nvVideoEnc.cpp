@@ -23,21 +23,23 @@ nvVideoEnc::nvVideoEnc()
 nvVideoEnc::~nvVideoEnc()
 {
     std::cout << "nvVideoEnc::~nvVideoEnc() destructor" << std::endl;
-    
+
     // Note: No capture thread in synchronous mode, so no need to stop it
-    
+
     // Stop streaming on both planes
-    if (m_encoder) {
+    if (m_encoder)
+    {
         m_encoder->capture_plane.setStreamStatus(false);
         m_encoder->output_plane.setStreamStatus(false);
     }
-    
+
     // Delete encoder (will cleanup buffers)
-    if (m_encoder) {
+    if (m_encoder)
+    {
         delete m_encoder;
         m_encoder = nullptr;
     }
-    
+
     // Clean up buffer pool
     {
         std::lock_guard<std::mutex> lock(m_buffer_pool_mutex);
@@ -65,7 +67,7 @@ int nvVideoEnc::setup(EncodeConfig& cfg)
     m_params.fps = cfg.fps > 0 ? cfg.fps : 30;
     m_params.encoding_type = cfg.encodingType;
     m_params.frame_format = cfg.frameFormat;
-    
+
     // Determine encoder pixel format
     uint32_t encoder_pixfmt = 0;
     if (m_params.encoding_type == "h264") {
@@ -76,13 +78,13 @@ int nvVideoEnc::setup(EncodeConfig& cfg)
         std::cerr << "Unsupported encoding type: " << m_params.encoding_type << std::endl;
         return -1;
     }
-    
+
     uint32_t raw_pixfmt = getV4L2PixelFormat(m_params.frame_format);
     if (raw_pixfmt == 0) {
         std::cerr << "Invalid raw pixel format" << std::endl;
         return -1;
     }
-    
+
     // Create encoder in blocking mode
     std::cout << "Creating NvVideoEncoder in blocking mode" << std::endl;
     m_encoder = NvVideoEncoder::createVideoEncoder("enc0");
@@ -90,7 +92,7 @@ int nvVideoEnc::setup(EncodeConfig& cfg)
         std::cerr << "Could not create NvVideoEncoder" << std::endl;
         return -1;
     }
-    
+
     // Set encoder capture plane format (encoded bitstream) - MUST be set before output plane
     int ret = m_encoder->setCapturePlaneFormat(encoder_pixfmt, m_params.width, 
                                                 m_params.height, 2 * 1024 * 1024);
@@ -98,27 +100,27 @@ int nvVideoEnc::setup(EncodeConfig& cfg)
         std::cerr << "Error in setting capture plane format" << std::endl;
         return -1;
     }
-    
+
     // Set encoder output plane format (raw YUV input)
     ret = m_encoder->setOutputPlaneFormat(raw_pixfmt, m_params.width, m_params.height);
     if (ret < 0) {
         std::cerr << "Error in setting output plane format" << std::endl;
         return -1;
     }
-    
+
     // Set encoding parameters
     ret = m_encoder->setBitrate(m_params.bitrate);
     if (ret < 0) {
         std::cerr << "Error setting bitrate" << std::endl;
         return -1;
     }
-    
+
     ret = m_encoder->setProfile(m_params.profile);
     if (ret < 0) {
         std::cerr << "Error setting profile" << std::endl;
         return -1;
     }
-    
+
     ret = m_encoder->setLevel(m_params.level);
     if (ret < 0) {
         std::cerr << "Error setting level" << std::endl;
@@ -489,14 +491,15 @@ int nvVideoEnc::getEncoderHeader(std::string& headBuf)
     return 0;
 }
 
-int nvVideoEnc::reset()
+int nvVideoEnc::tearDown()
 {
-    std::cout << "nvVideoEnc::reset() called" << std::endl;
+    std::cout << "nvVideoEnc::tearDown() called" << std::endl;
 
     // Note: No capture thread in synchronous mode
 
     // Stop streaming
-    if (m_encoder) {
+    if (m_encoder)
+    {
         m_encoder->capture_plane.setStreamStatus(false);
         m_encoder->output_plane.setStreamStatus(false);
     }

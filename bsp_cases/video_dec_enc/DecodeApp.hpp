@@ -191,6 +191,7 @@ private:
         std::this_thread::sleep_for(std::chrono::seconds(1));
         fflush(m_out_fp.get());
         m_logger->printStdoutLog(bsp_perf::shared::BspLogger::LogLevel::Info, "DecodeApp::onRelease() Output video file closed");
+        m_decoder->tearDown();
         m_decoder.reset();
         BspFileUtils::ReleaseFileMmap(m_inputFileCtx);
         m_out_fp.reset();

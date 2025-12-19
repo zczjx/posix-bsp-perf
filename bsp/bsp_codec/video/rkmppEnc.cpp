@@ -571,7 +571,7 @@ int rkmppEnc::getEncoderHeader(std::string& headBuf)
     return out_len;
 }
 
-int rkmppEnc::reset()
+int rkmppEnc::tearDown()
 {
     if (m_ctx.mpi != nullptr)
     {

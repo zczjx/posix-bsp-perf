@@ -15,7 +15,7 @@ public:
 
     void setFrame(const QImage& img);
 
-    void setFrame(const uint8_t* data, int width, int height);
+    void setFrame(const uint8_t* data, int width, int height, std::string format = "RGB888");
 
 protected:
     void paintEvent(QPaintEvent* event) override;

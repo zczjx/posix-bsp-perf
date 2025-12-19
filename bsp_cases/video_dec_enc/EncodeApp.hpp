@@ -146,7 +146,7 @@ private:
         m_logger->printStdoutLog(bsp_perf::shared::BspLogger::LogLevel::Info,
             "EncodeApp::onProcess() Starting encode, total size: {} bytes, frame_size: {} bytes",
             total_size, m_frame_size);
-        
+
         while (offset + m_frame_size <= total_size)
         {
             // 获取编码器输入缓冲区
@@ -229,8 +229,9 @@ private:
             m_outputFile.reset();
         }
 
+        m_encoder->tearDown();
         m_encoder.reset();
-        
+
         if (m_inputFileCtx)
         {
             BspFileUtils::ReleaseFileMmap(m_inputFileCtx);

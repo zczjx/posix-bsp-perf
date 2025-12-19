@@ -18,6 +18,10 @@ CameraClient::CameraClient(const json& sensor_context, const json& vehicle_info,
     {
         m_video_dec_helper = std::make_unique<VideoDecHelper>("rkmpp", "rkrga", m_out_pixel_format);
     }
+    else if (m_target_platform.compare("jetson") == 0)
+    {
+        m_video_dec_helper = std::make_unique<VideoDecHelper>("nvdec", "nvvic", m_out_pixel_format);
+    }
     else
     {
         throw std::runtime_error("Unsupported platform: " + m_target_platform);
