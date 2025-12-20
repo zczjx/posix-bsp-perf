@@ -3,23 +3,11 @@ cmake_minimum_required(VERSION 3.12)
 project(bsp_egl VERSION 0.0.1 LANGUAGES CXX)
 
 # 查找依赖库
-find_package(X11 REQUIRED)
-
+find_package(PkgConfig REQUIRED)
+pkg_check_modules(X11 REQUIRED x11)
 # EGL和OpenGL ES库
-find_library(EGL_LIBRARY NAMES EGL REQUIRED)
-find_library(GLES2_LIBRARY NAMES GLESv2 REQUIRED)
-
-if(NOT EGL_LIBRARY)
-    message(FATAL_ERROR "EGL library not found")
-endif()
-
-if(NOT GLES2_LIBRARY)
-    message(FATAL_ERROR "GLESv2 library not found")
-endif()
-
-message(STATUS "Found EGL: ${EGL_LIBRARY}")
-message(STATUS "Found GLESv2: ${GLES2_LIBRARY}")
-message(STATUS "Found X11: ${X11_LIBRARIES}")
+pkg_check_modules(EGL REQUIRED egl)
+pkg_check_modules(GLES2 REQUIRED glesv2)
 
 # 源文件
 set(SOURCES
@@ -35,15 +23,15 @@ target_include_directories(${PROJECT_NAME}
     PUBLIC
         ${CMAKE_CURRENT_SOURCE_DIR}/..
     PRIVATE
-        ${X11_INCLUDE_DIR}
+        ${X11_INCLUDE_DIRS}
 )
 
 # 链接库（EGL、OpenGL ES 2.0和X11）
 target_link_libraries(${PROJECT_NAME}
     PUBLIC
-        ${EGL_LIBRARY}
-        ${GLES2_LIBRARY}
-        ${X11_LIBRARIES}
+    ${EGL_LDFLAGS}
+    ${GLES2_LDFLAGS}
+    ${X11_LDFLAGS}
 )
 
 # 安装头文件
