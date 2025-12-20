@@ -135,27 +135,27 @@ private:
 
             if (pkt_eos)
             {
-                m_logger->printStdoutLog(bsp_perf::shared::BspLogger::LogLevel::Info, 
+                m_logger->printStdoutLog(bsp_perf::shared::BspLogger::LogLevel::Info,
                     "DecodeApp::onProcess() Video file read complete, sent EOS");
                 break;
             }
-            
+
             // Small delay to prevent overwhelming the decoder
             std::this_thread::sleep_for(std::chrono::milliseconds(1));
         }
-        
+
         // Wait for decoding to complete
         m_logger->printStdoutLog(bsp_perf::shared::BspLogger::LogLevel::Info,
             "DecodeApp::onProcess() Waiting for decoder to finish...");
-        
+
         auto start_wait = std::chrono::steady_clock::now();
         int prev_frame_count = m_frame_count.load();
-        
+
         while (!m_decode_error && std::chrono::steady_clock::now() - start_wait < std::chrono::seconds(10))
         {
             std::this_thread::sleep_for(std::chrono::milliseconds(200));
             int current_frame_count = m_frame_count.load();
-            
+
             // If no new frames in the last 2 seconds, assume done
             if (current_frame_count == prev_frame_count)
             {
@@ -173,7 +173,7 @@ private:
                 start_wait = std::chrono::steady_clock::now(); // Reset timer on new frame
             }
         }
-        
+
         m_logger->printStdoutLog(bsp_perf::shared::BspLogger::LogLevel::Info,
             "DecodeApp::onProcess() Decode process finished, total frames: {}", m_frame_count.load());
     }
@@ -220,18 +220,18 @@ private:
         {
             std::lock_guard<std::mutex> lock(m_file_mutex);
             size_t written = fwrite(frame->virt_addr, 1, frame->valid_data_size, m_out_fp.get());
-            
+
             if (written != frame->valid_data_size)
             {
                 m_logger->printStdoutLog(bsp_perf::shared::BspLogger::LogLevel::Error,
-                    "DecodeApp::onDecodeReady() Write failed, expected: {}, written: {}", 
+                    "DecodeApp::onDecodeReady() Write failed, expected: {}, written: {}",
                     frame->valid_data_size, written);
                 m_decode_error = true;
                 return;
             }
-            
+
             m_frame_count++;
-            
+
             // Log progress every 30 frames
             if (m_frame_count % 30 == 0)
             {

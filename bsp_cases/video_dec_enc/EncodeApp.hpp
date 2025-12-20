@@ -10,6 +10,7 @@
 #include <iostream>
 #include <vector>
 #include <shared/BspFileUtils.hpp>
+#include <bsp_g2d/BytesPerPixel.hpp>
 
 namespace bsp_perf {
 namespace perf_cases {
@@ -101,15 +102,6 @@ private:
                 "EncodeApp::onInit() Failed to setup encoder, ret: {}", ret);
             throw std::runtime_error("Failed to setup encoder");
         }
-
-        // 设置编码完成回调
-        m_encoder->setEncodeReadyCallback(
-            [this](std::any userdata, const char* data, int size) {
-                this->onEncodeReady(userdata, data, size);
-            },
-            std::any(this)
-        );
-
         // 获取并写入编码器头部（如 SPS/PPS）
         std::string header;
         ret = m_encoder->getEncoderHeader(header);
@@ -122,7 +114,8 @@ private:
         }
 
         // 获取每帧的大小
-        m_frame_size = m_encoder->getFrameSize();
+        // m_frame_size = m_encoder->getFrameSize();
+        m_frame_size = width * height * bsp_g2d::BytesPerPixel::getInstance().getBytesPerPixel(frameFormat);
         m_logger->printStdoutLog(bsp_perf::shared::BspLogger::LogLevel::Info,
             "EncodeApp::onInit() Frame size: {} bytes", m_frame_size);
 
@@ -142,7 +135,7 @@ private:
         uint8_t* data_ptr = m_inputFileCtx->data.get();
         size_t total_size = m_inputFileCtx->size;
         size_t offset = 0;
-        
+
         m_logger->printStdoutLog(bsp_perf::shared::BspLogger::LogLevel::Info,
             "EncodeApp::onProcess() Starting encode, total size: {} bytes, frame_size: {} bytes",
             total_size, m_frame_size);
@@ -169,13 +162,11 @@ private:
             outPkt.encode_pkt.resize(outPkt.max_size);
 
             // 编码
-            int ret = m_encoder->encode(*inputBuf, outPkt);
-            if (ret != 0)
-            {
-                m_logger->printStdoutLog(bsp_perf::shared::BspLogger::LogLevel::Error,
-                    "EncodeApp::onProcess() encode failed, ret: {}", ret);
-                break;
-            }
+            m_encoder->encode(*inputBuf, outPkt);
+            m_logger->printStdoutLog(bsp_perf::shared::BspLogger::LogLevel::Info,
+                "EncodeApp::onProcess() Encoded {} frames, offset: {} / {}",
+                m_frame_count, offset, total_size);
+            fwrite(outPkt.encode_pkt.data(), 1, outPkt.pkt_len, m_outputFile.get());
 
             m_frame_count++;
             offset += m_frame_size;
@@ -200,10 +191,12 @@ private:
         if (inputBuf)
         {
             EncodePacket eosPkt;
-            eosPkt.max_size = m_frame_size * 2;
+            eosPkt.max_size = m_encoder->getFrameSize() * 2;
             eosPkt.pkt_eos = 1;
+            eosPkt.pkt_len = 0;
             eosPkt.encode_pkt.resize(eosPkt.max_size);
             m_encoder->encode(*inputBuf, eosPkt);
+            fwrite(eosPkt.encode_pkt.data(), 1, eosPkt.pkt_len, m_outputFile.get());
         }
 
         // Wait for encoding to complete
@@ -241,32 +234,6 @@ private:
             "EncodeApp::onRelease() Resources released");
     }
 
-    void onEncodeReady(std::any userdata, const char* data, int size)
-    {
-        if (data && size > 0 && m_outputFile)
-        {
-            std::lock_guard<std::mutex> lock(m_file_mutex);
-            size_t written = fwrite(data, 1, size, m_outputFile.get());
-            
-            if (written != (size_t)size)
-            {
-                m_logger->printStdoutLog(bsp_perf::shared::BspLogger::LogLevel::Error,
-                    "EncodeApp::onEncodeReady() Write failed, expected: {}, written: {}", size, written);
-                return;
-            }
-            
-            m_encoded_frame_count++;
-            
-            // Log progress every 30 frames
-            if (m_encoded_frame_count % 30 == 0)
-            {
-                m_logger->printStdoutLog(bsp_perf::shared::BspLogger::LogLevel::Info,
-                    "EncodeApp::onEncodeReady() Encoded frame {}, size: {} bytes",
-                    m_encoded_frame_count.load(), size);
-            }
-        }
-    }
-
 private:
     std::string m_name {"[EncodeApp]:"};
     std::unique_ptr<bsp_perf::shared::BspLogger> m_logger{nullptr};
@@ -276,7 +243,6 @@ private:
     size_t m_frame_size{0};
     std::atomic<size_t> m_frame_count{0};
     std::atomic<size_t> m_encoded_frame_count{0};
-    std::mutex m_file_mutex;  // 保护文件写入的互斥锁
 };
 
 } // namespace perf_cases
