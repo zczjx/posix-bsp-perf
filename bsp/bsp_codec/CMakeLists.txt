@@ -13,6 +13,11 @@ set(ENC_SOURCES
     IEncoder.cpp
 )
 
+if(BUILD_PLATFORM_JETSON)
+find_package(PkgConfig REQUIRED)
+pkg_check_modules(PC_JETSON_MULTIMEDIA REQUIRED jetson_multimedia)
+endif()
+
 # 根据选项条件性地添加源文件
 if(BUILD_PLATFORM_RK35XX)
     list(APPEND ENC_SOURCES
@@ -23,15 +28,6 @@ endif()
 if(BUILD_PLATFORM_JETSON)
     list(APPEND ENC_SOURCES
         video/nvVideoEnc.cpp
-        ${CMAKE_SOURCE_DIR}/jetson_multimedia_api/samples/common/classes/NvVideoEncoder.cpp
-        ${CMAKE_SOURCE_DIR}/jetson_multimedia_api/samples/common/classes/NvV4l2Element.cpp
-        ${CMAKE_SOURCE_DIR}/jetson_multimedia_api/samples/common/classes/NvV4l2ElementPlane.cpp
-        ${CMAKE_SOURCE_DIR}/jetson_multimedia_api/samples/common/classes/NvElement.cpp
-        ${CMAKE_SOURCE_DIR}/jetson_multimedia_api/samples/common/classes/NvBuffer.cpp
-        ${CMAKE_SOURCE_DIR}/jetson_multimedia_api/samples/common/classes/NvBufSurface.cpp
-        ${CMAKE_SOURCE_DIR}/jetson_multimedia_api/samples/common/classes/NvLogging.cpp
-        ${CMAKE_SOURCE_DIR}/jetson_multimedia_api/samples/common/classes/NvUtils.cpp
-        ${CMAKE_SOURCE_DIR}/jetson_multimedia_api/samples/common/classes/NvElementProfiler.cpp
     )
 endif()
 
@@ -75,15 +71,6 @@ endif()
 if(BUILD_PLATFORM_JETSON)
     list(APPEND DEC_SOURCES
         video/nvVideoDec.cpp
-        ${CMAKE_SOURCE_DIR}/jetson_multimedia_api/samples/common/classes/NvVideoDecoder.cpp
-        ${CMAKE_SOURCE_DIR}/jetson_multimedia_api/samples/common/classes/NvV4l2Element.cpp
-        ${CMAKE_SOURCE_DIR}/jetson_multimedia_api/samples/common/classes/NvV4l2ElementPlane.cpp
-        ${CMAKE_SOURCE_DIR}/jetson_multimedia_api/samples/common/classes/NvElement.cpp
-        ${CMAKE_SOURCE_DIR}/jetson_multimedia_api/samples/common/classes/NvBuffer.cpp
-        ${CMAKE_SOURCE_DIR}/jetson_multimedia_api/samples/common/classes/NvBufSurface.cpp
-        ${CMAKE_SOURCE_DIR}/jetson_multimedia_api/samples/common/classes/NvLogging.cpp
-        ${CMAKE_SOURCE_DIR}/jetson_multimedia_api/samples/common/classes/NvUtils.cpp
-        ${CMAKE_SOURCE_DIR}/jetson_multimedia_api/samples/common/classes/NvElementProfiler.cpp
     )
 endif()
 
@@ -123,18 +110,16 @@ if(BUILD_PLATFORM_JETSON)
   target_compile_definitions(${DEC_PRJ_NAME} PRIVATE BUILD_PLATFORM_JETSON)
   # Add Jetson Multimedia API include path
   target_include_directories(${DEC_PRJ_NAME} PRIVATE
-    /usr/src/jetson_multimedia_api/include
-    ${CMAKE_SOURCE_DIR}/jetson_multimedia_api/include
+    ${PC_JETSON_MULTIMEDIA_INCLUDE_DIRS}
   )
 
   target_link_directories(${DEC_PRJ_NAME} PUBLIC
   /usr/lib/aarch64-linux-gnu/tegra
+  ${PC_JETSON_MULTIMEDIA_LIBRARY_DIRS}
 )
   # Link against NvVideoDecoder and related libraries
   target_link_libraries(${DEC_PRJ_NAME} PUBLIC
-    nvv4l2
-    nvbufsurface
-    nvbufsurftransform
+    ${PC_JETSON_MULTIMEDIA_LIBRARIES}
   )
 endif()
 
@@ -142,18 +127,16 @@ if(BUILD_PLATFORM_JETSON)
   target_compile_definitions(${ENC_PRJ_NAME} PRIVATE BUILD_PLATFORM_JETSON)
   # Add Jetson Multimedia API include path
   target_include_directories(${ENC_PRJ_NAME} PRIVATE
-    /usr/src/jetson_multimedia_api/include
-    ${CMAKE_SOURCE_DIR}/jetson_multimedia_api/include
+    ${PC_JETSON_MULTIMEDIA_INCLUDE_DIRS}
   )
 
   target_link_directories(${ENC_PRJ_NAME} PUBLIC
   /usr/lib/aarch64-linux-gnu/tegra
+  ${PC_JETSON_MULTIMEDIA_LIBRARY_DIRS}
 )
   # Link against NvVideoEncoder and related libraries
   target_link_libraries(${ENC_PRJ_NAME} PUBLIC
-    nvv4l2
-    nvbufsurface
-    nvbufsurftransform
+    ${PC_JETSON_MULTIMEDIA_LIBRARIES}
   )
 endif()
 
