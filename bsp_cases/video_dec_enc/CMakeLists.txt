@@ -13,7 +13,8 @@ set_target_properties(${PROJECT_NAME} PROPERTIES INSTALL_RPATH "$ORIGIN/../lib")
 # 添加 Jetson 平台特定的链接配置
 if(BUILD_PLATFORM_JETSON)
   target_link_directories(${PROJECT_NAME} PUBLIC
-    /usr/lib/aarch64-linux-gnu/tegra
+    ${BSP_LIB_PATH}
+    ${BSP_LIB_PATH}/nvidia
   )
   target_link_libraries(${PROJECT_NAME} PRIVATE
     nvv4l2

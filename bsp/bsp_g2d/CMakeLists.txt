@@ -44,18 +44,12 @@ if(BUILD_PLATFORM_JETSON)
   # Find NVIDIA libraries for Jetson
     # Default paths for Jetson platforms - try nvidia subdirectory first
   find_library(NVBUFSURFACE_LIB nvbufsurface
-      PATHS
-      /usr/lib/aarch64-linux-gnu/nvidia
-      /usr/lib/aarch64-linux-gnu
-      /usr/lib
-      NO_DEFAULT_PATH
+      ${BSP_LIB_PATH}
+      ${BSP_LIB_PATH}/nvidia
   )
   find_library(NVBUFSURFTRANSFORM_LIB nvbufsurftransform
-     PATHS
-      /usr/lib/aarch64-linux-gnu/nvidia
-      /usr/lib/aarch64-linux-gnu
-      /usr/lib
-    NO_DEFAULT_PATH
+      ${BSP_LIB_PATH}
+      ${BSP_LIB_PATH}/nvidia
   )
 
 

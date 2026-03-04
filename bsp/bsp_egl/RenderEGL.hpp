@@ -50,7 +50,8 @@ namespace bsp_egl {
  *   RK3588: EGL + OpenGL ES (Mali GPU)
  *   Jetson Orin NX: EGL + OpenGL ES (NVIDIA GPU)
  */
-class RenderEGL {
+class RenderEGL
+{
 public:
     /**
      * @brief 窗口配置参数

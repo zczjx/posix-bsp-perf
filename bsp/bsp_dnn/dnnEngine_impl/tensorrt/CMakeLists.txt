@@ -7,20 +7,33 @@ project(tensorrt_engine VERSION 0.0.1 LANGUAGES CXX)
 set(CMAKE_C_STANDARD 11)
 set(CMAKE_CXX_STANDARD 17)
 
-# Find CUDA
+if(DEFINED BSP_CUDA_PATH)
+    set(CMAKE_CUDA_COMPILER "${BSP_CUDA_PATH}/bin/nvcc")
+    set(CUDA_TOOLKIT_ROOT_DIR ${BSP_CUDA_PATH})
+    set(CUDAToolkit_ROOT ${BSP_CUDA_PATH})
+endif()
+
+# Avoid FindCUDA warning "Expecting to find librt for libcudart_static":
+# use dynamic cudart (libcudart.so) instead of static, so librt is not required.
+set(CUDA_USE_STATIC_CUDA_RUNTIME OFF CACHE BOOL "Use static CUDA runtime" FORCE)
+# Pre-find librt so FindCUDA can use it if needed (cross-compile: set CMAKE_FIND_ROOT_PATH for target sysroot).
+find_library(CUDA_rt_LIBRARY rt)
 find_package(CUDA REQUIRED)
 
-# Find TensorRT
-set(TensorRT_ROOT "/usr/local/TensorRT" CACHE PATH "TensorRT installation directory")
 find_path(TensorRT_INCLUDE_DIR NvInfer.h
-    HINTS ${TensorRT_ROOT} /usr/include/aarch64-linux-gnu /usr/include
-    PATH_SUFFIXES include)
+    PATHS ${BSP_INCLUDE_PATH}
+    NO_DEFAULT_PATH
+)
+
 find_library(TensorRT_LIBRARY nvinfer
-    HINTS ${TensorRT_ROOT} /usr/lib/aarch64-linux-gnu /usr/lib
-    PATH_SUFFIXES lib lib64)
+    PATHS ${BSP_LIB_PATH}
+    NO_DEFAULT_PATH
+)
+
+
 find_library(TensorRT_ONNX_PARSER nvonnxparser
-    HINTS ${TensorRT_ROOT} /usr/lib/aarch64-linux-gnu /usr/lib
-    PATH_SUFFIXES lib lib64)
+    PATHS ${BSP_LIB_PATH}
+    NO_DEFAULT_PATH)
 
 message(STATUS "TensorRT include dir: ${TensorRT_INCLUDE_DIR}")
 message(STATUS "TensorRT library: ${TensorRT_LIBRARY}")
@@ -56,6 +69,10 @@ if(is_top_level)
 endif()
 
 set_target_properties(${PROJECT_NAME} PROPERTIES INSTALL_RPATH "$ORIGIN/../lib")
+target_link_directories(${PROJECT_NAME} PUBLIC
+    ${BSP_LIB_PATH}
+    ${BSP_LIB_PATH}/nvidia
+)
 target_link_libraries(${PROJECT_NAME} PUBLIC
     ${CUDA_LIBRARIES}
     ${TensorRT_LIBRARY}

@@ -36,7 +36,8 @@ namespace bsp_egl {
  * 提供基于CPU的2D图形绘制功能，直接操作framebuffer
  * 职责：纯粹的2D绘图操作（矩形、像素、图像等）
  */
-class Cpu2dGraphics {
+class Cpu2dGraphics
+{
 public:
     /**
      * @brief 颜色结构（RGBA）

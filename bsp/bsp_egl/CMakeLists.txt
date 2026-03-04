@@ -2,6 +2,12 @@ cmake_minimum_required(VERSION 3.12)
 
 project(bsp_egl VERSION 0.0.1 LANGUAGES CXX)
 
+if(DEFINED BSP_PKG_CONFIG_PATH)
+    # 设置环境变量 PKG_CONFIG_PATH
+    set(ENV{PKG_CONFIG_PATH} ${BSP_PKG_CONFIG_PATH})
+    message(STATUS "ENV{PKG_CONFIG_PATH}: $ENV{PKG_CONFIG_PATH}")
+endif()
+
 # 查找依赖库
 find_package(PkgConfig REQUIRED)
 pkg_check_modules(X11 REQUIRED x11)

@@ -44,7 +44,8 @@ namespace perf_cases {
  * 
  * 性能优势：虽然绘图在CPU，但显示通过GPU硬件加速，比纯CPU方案快得多
  */
-class EglRenderApp : public common::BasePerfCase {
+class EglRenderApp : public common::BasePerfCase
+{
 public:
     EglRenderApp(shared::ArgParser&& args);
     virtual ~EglRenderApp() = default;
