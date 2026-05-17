@@ -1,0 +1,120 @@
+{
+    "rig": {
+        "properties": {
+            "layout": "HIL",
+            "grid_size": [3, 3]
+        },
+        "vehicle": {
+            "bp_id": "vehicle.tesla.model3",
+            "name": "ego_vehicle",
+            "value": {
+                "actuation": {
+                    "maxSteeringWheelAngle": 8.290313720703125
+                }
+            },
+            "target_platform": "rk3588"
+        },
+        "sensors":
+        [
+            {
+                "type": "camera",
+                "bp_id": "sensor.camera.rgb",
+                "name": "svs_left",
+                "status": "enabled",
+                "spawn_point": {"x": 0.0, "y": -1.0, "z": 2.2, "roll": 0.0, "pitch": -15.0, "yaw": -90.0},
+                "image_size_x": 1280,
+                "image_size_y": 720,
+                "fov": 90.0,
+                "raw_pixel_format": "BGRA",
+                "encode_format": "raw",
+                "zmq_ipc": "ipc:///tmp/svs_left.raw",
+                "zmq_transport": "tcp://192.168.2.110:12001",
+                "protocol": "h264.rtp",
+                "display_position": [1, 0]
+            },
+            {
+                "type": "camera",
+                "bp_id": "sensor.camera.rgb",
+                "name": "svs_front",
+                "status": "enabled",
+                "spawn_point": {"x": 2.3, "y": 0.0, "z": 2.2, "roll": 0.0, "pitch": -15.0, "yaw": 0.0},
+                "image_size_x": 1280,
+                "image_size_y": 720,
+                "fov": 90.0,
+                "raw_pixel_format": "BGRA",
+                "encode_format": "raw",
+                "zmq_ipc": "ipc:///tmp/svs_front.raw",
+                "zmq_transport": "tcp://192.168.2.110:12002",
+                "protocol": "h264.rtp",
+                "display_position": [0, 1]
+            },
+            {
+                "type": "camera",
+                "bp_id": "sensor.camera.rgb",
+                "name": "svs_rear",
+                "status": "enabled",
+                "spawn_point": {"x": -2.3, "y": 0.0, "z": 2.2, "roll": 0.0, "pitch": -15.0, "yaw": 180.0},
+                "image_size_x": 1280,
+                "image_size_y": 720,
+                "fov": 90.0,
+                "raw_pixel_format": "BGRA",
+                "encode_format": "raw",
+                "zmq_ipc": "ipc:///tmp/svs_rear.raw",
+                "zmq_transport": "tcp://192.168.2.110:12003",
+                "protocol": "h264.rtp",
+                "display_position": [2, 1]
+            },
+            {
+                "type": "camera",
+                "bp_id": "sensor.camera.rgb",
+                "name": "svs_right",
+                "status": "enabled",
+                "spawn_point": {"x": 0.0, "y": 1.0, "z": 2.2, "roll": 0.0, "pitch": -15.0, "yaw": 90.0},
+                "image_size_x": 1280,
+                "image_size_y": 720,
+                "fov": 90.0,
+                "raw_pixel_format": "BGRA",
+                "encode_format": "raw",
+                "zmq_ipc": "ipc:///tmp/svs_right.raw",
+                "zmq_transport": "tcp://192.168.2.110:12004",
+                "protocol": "h264.rtp",
+                "display_position": [1, 2]
+            }
+        ],
+        "vehicle_states":
+        [
+            {
+                "bp_id": "sensor.other.collision",
+                "name": "collision",
+                "status": "enabled",
+                "spawn_point": {"x": 0.0, "y": 0.0, "z": 0.0}
+            },
+            {
+                "bp_id": "sensor.other.lane_invasion",
+                "name": "lane_invasion",
+                "status": "enabled",
+                "spawn_point": {"x": 0.0, "y": 0.0, "z": 0.0}
+            },
+            {
+                "bp_id": "sensor.pseudo.tf",
+                "name": "tf",
+                "status": "enabled"
+            },
+            {
+                "bp_id": "sensor.pseudo.odom",
+                "name": "odometry",
+                "status": "enabled"
+            },
+            {
+                "bp_id": "sensor.pseudo.speedometer",
+                "name": "speedometer",
+                "status": "enabled"
+            },
+            {
+                "bp_id": "actor.pseudo.control",
+                "name": "control",
+                "status": "enabled"
+            }
+        ]
+    }
+}
