@@ -2,6 +2,7 @@
 #define __GUI_CONTROLLER_HPP__
 
 #include <QApplication>
+#include <QElapsedTimer>
 #include <QObject>
 #include <QImage>
 
@@ -40,7 +41,7 @@ public:
 private:
     void setupConnections();
 
-    int updateFrameRecord(uint8_t* data, int width, int height, const QString& format = "RGB888");
+    int updateFrameRecord();
 
 private slots:
     void onRawCameraFrameUpdated(const QString& sensorName, uint8_t* data, int width, int height, const QString& format);
@@ -61,6 +62,8 @@ private:
 
     bool m_record_enabled{false};
     std::mutex m_record_enabled_mutex;
+    QElapsedTimer m_record_frame_timer;
+    int m_record_interval_ms{33};
 
 };
 

@@ -41,6 +41,7 @@ public:
     void setFrame(const std::string& sourceName, const uint8_t* data, int width, int height, std::string format);
     void setupVideoGrid(int rows, int columns);
     void setupVideoGrid(const json& gui_ipc);
+    QImage grabCompositeFrame();
 
     DataSourceType getCurrentDataSource()
     {

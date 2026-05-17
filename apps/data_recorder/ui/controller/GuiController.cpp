@@ -1,4 +1,5 @@
 #include "GuiController.hpp"
+#include <cstring>
 #include <iostream>
 
 namespace apps
@@ -27,13 +28,44 @@ void GuiController::setupConnections()
     connect(m_video_frame_widget.get(), &VideoFrameWidget::recordStatusChanged, this, &GuiController::onRecordStatusChanged);
 }
 
-int GuiController::updateFrameRecord(uint8_t* data, int width, int height, const QString& format)
+int GuiController::updateFrameRecord()
 {
-    if (m_record_enabled)
+    if (!m_record_enabled)
     {
-        m_recorder->writeRecordFrame(data, width, height, format.toStdString());
+        return 0;
     }
-    return 0;
+
+    if (m_record_frame_timer.isValid() && m_record_frame_timer.elapsed() < m_record_interval_ms)
+    {
+        return 0;
+    }
+
+    QImage compositeFrame = m_video_frame_widget->grabCompositeFrame();
+    if (compositeFrame.isNull())
+    {
+        return -1;
+    }
+
+    const int width = compositeFrame.width();
+    const int height = compositeFrame.height();
+    const int packedLineSize = width * 4;
+    uint8_t* frameData = compositeFrame.bits();
+    std::vector<uint8_t> packedFrame;
+
+    if (compositeFrame.bytesPerLine() != packedLineSize)
+    {
+        packedFrame.resize(static_cast<size_t>(packedLineSize) * height);
+        for (int row = 0; row < height; ++row)
+        {
+            std::memcpy(packedFrame.data() + static_cast<size_t>(row) * packedLineSize,
+                compositeFrame.constScanLine(row), packedLineSize);
+        }
+        frameData = packedFrame.data();
+    }
+
+    int ret = m_recorder->writeRecordFrame(frameData, width, height, "RGBA8888");
+    m_record_frame_timer.restart();
+    return ret;
 }
 
 GuiController::~GuiController()
@@ -55,7 +87,7 @@ void GuiController::onRawCameraFrameUpdated(const QString& sensorName, uint8_t* 
     {
         std::cout << "GuiController::onRawCameraFrameUpdated() sensor: " << sensorName.toStdString() << " width: " << width << " height: " << height << std::endl;
         m_video_frame_widget->setFrame(sensorName.toStdString(), data, width, height, format.toStdString());
-        updateFrameRecord(data, width, height, format);
+        updateFrameRecord();
     }
 }
 
@@ -65,7 +97,7 @@ void GuiController::onObjectsDetectionFrameUpdated(const QString& detectorName, 
     {
         std::cout << "GuiController::onObjectsDetectionFrameUpdated() detector: " << detectorName.toStdString() << " width: " << width << " height: " << height << std::endl;
         m_video_frame_widget->setFrame(detectorName.toStdString(), data, width, height, format.toStdString());
-        updateFrameRecord(data, width, height, format);
+        updateFrameRecord();
     }
 }
 
@@ -76,6 +108,7 @@ void GuiController::onRecordStatusChanged(bool on)
     if (m_record_enabled)
     {
         m_recorder->startNewRecord();
+        m_record_frame_timer.invalidate();
     }
     else
     {

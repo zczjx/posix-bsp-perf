@@ -3,6 +3,7 @@
 #include "ui_CameraView.h" // uic 生成的头文件
 #include <QDebug>
 #include <QGridLayout>
+#include <QPixmap>
 #include <algorithm>
 
 VideoFrameWidget::VideoFrameWidget(QWidget *parent)
@@ -221,6 +222,29 @@ void VideoFrameWidget::setupVideoGrid(const json& gui_ipc)
             }
         }
     }
+}
+
+QImage VideoFrameWidget::grabCompositeFrame()
+{
+    if (!m_ui || !m_ui->videoGridContainer)
+    {
+        return {};
+    }
+
+    QImage image = m_ui->videoGridContainer->grab().toImage().convertToFormat(QImage::Format_RGBA8888);
+    const int evenWidth = image.width() & ~1;
+    const int evenHeight = image.height() & ~1;
+    if (evenWidth <= 0 || evenHeight <= 0)
+    {
+        return {};
+    }
+
+    if (evenWidth != image.width() || evenHeight != image.height())
+    {
+        image = image.copy(0, 0, evenWidth, evenHeight);
+    }
+
+    return image;
 }
 
 void VideoFrameWidget::clearFrames()

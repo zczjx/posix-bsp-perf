@@ -58,6 +58,10 @@ private:
     std::unique_ptr<IMuxer> m_muxer{nullptr};
     StreamPacket m_stream_packet{};
     std::atomic<bool> m_muxer_first_frame{true};
+    int m_enc_width{0};
+    int m_enc_height{0};
+    int m_enc_hor_stride{0};
+    int m_enc_ver_stride{0};
 
 };
 
