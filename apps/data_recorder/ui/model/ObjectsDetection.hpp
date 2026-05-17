@@ -30,10 +30,10 @@ public:
 private:
     void setupObjectDetectionConsumer(const json& gui_ipc);
 
-    void ObjectDetectionConsumerLoop(std::shared_ptr<SharedMemSubscriber> input_shmem_port);
+    void ObjectDetectionConsumerLoop(const std::string& detector_name, std::shared_ptr<SharedMemSubscriber> input_shmem_port);
 
 signals:
-    void objectsDetectionFrameUpdated(uint8_t* data, int width, int height, const QString& format);
+    void objectsDetectionFrameUpdated(const QString& detectorName, uint8_t* data, int width, int height, const QString& format);
 
 private:
     std::unordered_map<std::string, std::pair<std::string, std::shared_ptr<SharedMemSubscriber>>> m_input_shmem_ports;

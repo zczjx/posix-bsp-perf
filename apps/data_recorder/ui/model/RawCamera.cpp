@@ -44,13 +44,13 @@ void RawCamera::setupCameraConsumer(const json& gui_ipc)
         if (sensor_type.compare("camera") == 0)
         {
             m_input_shmem_threads.push_back(std::thread([this, input_pair]() {
-                CameraConsumerLoop(input_pair.second.second);
+                CameraConsumerLoop(input_pair.first, input_pair.second.second);
             }));
         }
     }
 }
 
-void RawCamera::CameraConsumerLoop(std::shared_ptr<SharedMemSubscriber> input_shmem_port)
+void RawCamera::CameraConsumerLoop(const std::string& sensor_name, std::shared_ptr<SharedMemSubscriber> input_shmem_port)
 {
     std::shared_ptr<uint8_t[]> msg_buffer(new uint8_t[sizeof(CameraSensorMsg)]);
     std::shared_ptr<uint8_t[]> data_buffer{nullptr};
@@ -76,7 +76,7 @@ void RawCamera::CameraConsumerLoop(std::shared_ptr<SharedMemSubscriber> input_sh
 
         if(shmem_msg.pixel_format.compare("RGB888") == 0 || shmem_msg.pixel_format.compare("RGBA8888") == 0)
         {
-            emit rawCameraFrameUpdated(data_buffer.get(), shmem_msg.width, shmem_msg.height, QString::fromStdString(shmem_msg.pixel_format));
+            emit rawCameraFrameUpdated(QString::fromStdString(sensor_name), data_buffer.get(), shmem_msg.width, shmem_msg.height, QString::fromStdString(shmem_msg.pixel_format));
         }
         else
         {

@@ -43,7 +43,8 @@
     [
         {
             "name": "gui",
-            "status": "enabled"
+            "status": "enabled",
+            "grid_size": [3, 3]
         }
     ],
     "camera":
@@ -56,6 +57,7 @@
             "image_size_y": 720,
             "fov": 90.0,
             "output_pixel_format": "RGB888",
+            "display_position": [1, 0],
             "publisher": {
                 "topic": "ipc:///tmp/svs_left.info",
                 "msg_type": "common/msg/CameraSensorMsg",
@@ -72,6 +74,7 @@
             "image_size_y": 720,
             "fov": 90.0,
             "output_pixel_format": "RGB888",
+            "display_position": [0, 1],
             "publisher": {
                 "topic": "ipc:///tmp/svs_front.info",
                 "msg_type": "common/msg/CameraSensorMsg",
@@ -88,6 +91,7 @@
             "image_size_y": 720,
             "fov": 90.0,
             "output_pixel_format": "RGB888",
+            "display_position": [2, 1],
             "publisher": {
                 "topic": "ipc:///tmp/svs_rear.info",
                 "msg_type": "common/msg/CameraSensorMsg",
@@ -104,6 +108,7 @@
             "image_size_y": 720,
             "fov": 90.0,
             "output_pixel_format": "RGB888",
+            "display_position": [1, 2],
             "publisher": {
                 "topic": "ipc:///tmp/svs_right.info",
                 "msg_type": "common/msg/CameraSensorMsg",
@@ -154,6 +159,7 @@
             "image_size_x": 1280,
             "image_size_y": 720,
             "fov": 90.0,
+            "display_position": [1, 2],
             "subscriber": {
                 "topic": "ipc:///tmp/svs_right.info",
                 "msg_type": "common/msg/CameraSensorMsg",

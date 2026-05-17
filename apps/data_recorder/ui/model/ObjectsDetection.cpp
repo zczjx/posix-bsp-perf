@@ -46,13 +46,13 @@ void ObjectsDetection::setupObjectDetectionConsumer(const json& gui_ipc)
         if (sensor_type.compare("object_detector") == 0)
         {
             m_input_shmem_threads.push_back(std::thread([this, input_pair]() {
-                ObjectDetectionConsumerLoop(input_pair.second.second);
+                ObjectDetectionConsumerLoop(input_pair.first, input_pair.second.second);
             }));
         }
     }
 }
 
-void ObjectsDetection::ObjectDetectionConsumerLoop(std::shared_ptr<SharedMemSubscriber> input_shmem_port)
+void ObjectsDetection::ObjectDetectionConsumerLoop(const std::string& detector_name, std::shared_ptr<SharedMemSubscriber> input_shmem_port)
 {
 
     std::shared_ptr<uint8_t[]> msg_buffer(new uint8_t[sizeof(ObjDetectMsg)]);
@@ -91,7 +91,7 @@ void ObjectsDetection::ObjectDetectionConsumerLoop(std::shared_ptr<SharedMemSubs
                     cv::Point(shmem_msg.output_boxes[i].bbox.left, shmem_msg.output_boxes[i].bbox.top + 12),
                     cv::FONT_HERSHEY_COMPLEX, 0.4, cv::Scalar(255, 255, 255));
             }
-            emit objectsDetectionFrameUpdated(data_buffer.get(), shmem_msg.original_frame.width, shmem_msg.original_frame.height, QString::fromStdString(shmem_msg.original_frame.pixel_format));
+            emit objectsDetectionFrameUpdated(QString::fromStdString(detector_name), data_buffer.get(), shmem_msg.original_frame.width, shmem_msg.original_frame.height, QString::fromStdString(shmem_msg.original_frame.pixel_format));
         }
         else if(shmem_msg.original_frame.pixel_format.compare("RGBA8888") == 0)
         {
@@ -107,7 +107,7 @@ void ObjectsDetection::ObjectDetectionConsumerLoop(std::shared_ptr<SharedMemSubs
                     cv::Point(shmem_msg.output_boxes[i].bbox.left, shmem_msg.output_boxes[i].bbox.top + 12),
                     cv::FONT_HERSHEY_COMPLEX, 0.4, cv::Scalar(255, 255, 255, 255));
             }
-            emit objectsDetectionFrameUpdated(data_buffer.get(), shmem_msg.original_frame.width, shmem_msg.original_frame.height, QString::fromStdString(shmem_msg.original_frame.pixel_format));
+            emit objectsDetectionFrameUpdated(QString::fromStdString(detector_name), data_buffer.get(), shmem_msg.original_frame.width, shmem_msg.original_frame.height, QString::fromStdString(shmem_msg.original_frame.pixel_format));
         }
         else
         {

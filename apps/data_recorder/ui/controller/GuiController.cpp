@@ -11,7 +11,7 @@ namespace ui
 GuiController::GuiController(int argc, char *argv[], const json& gui_ipc)
 {
     m_app = std::make_unique<QApplication>(argc, argv);
-    m_video_frame_widget = std::make_unique<VideoFrameWidget>();
+    m_video_frame_widget = std::make_unique<VideoFrameWidget>(gui_ipc);
     m_video_frame_widget->show();
 
     m_raw_camera = std::make_unique<RawCamera>(gui_ipc);
@@ -49,22 +49,22 @@ void GuiController::runLoop()
     m_app->exec();
 }
 
-void GuiController::onRawCameraFrameUpdated(uint8_t* data, int width, int height, const QString& format)
+void GuiController::onRawCameraFrameUpdated(const QString& sensorName, uint8_t* data, int width, int height, const QString& format)
 {
     if (m_video_frame_widget->getCurrentDataSource() == VideoFrameWidget::RawCamera)
     {
-        std::cout << "GuiController::onRawCameraFrameUpdated() width: " << width << " height: " << height << std::endl;
-        m_video_frame_widget->setFrame(data, width, height, format.toStdString());
+        std::cout << "GuiController::onRawCameraFrameUpdated() sensor: " << sensorName.toStdString() << " width: " << width << " height: " << height << std::endl;
+        m_video_frame_widget->setFrame(sensorName.toStdString(), data, width, height, format.toStdString());
         updateFrameRecord(data, width, height, format);
     }
 }
 
-void GuiController::onObjectsDetectionFrameUpdated(uint8_t* data, int width, int height, const QString& format)
+void GuiController::onObjectsDetectionFrameUpdated(const QString& detectorName, uint8_t* data, int width, int height, const QString& format)
 {
     if (m_video_frame_widget->getCurrentDataSource() == VideoFrameWidget::ObjectsDetection)
     {
-        std::cout << "GuiController::onObjectsDetectionFrameUpdated() width: " << width << " height: " << height << std::endl;
-        m_video_frame_widget->setFrame(data, width, height, format.toStdString());
+        std::cout << "GuiController::onObjectsDetectionFrameUpdated() detector: " << detectorName.toStdString() << " width: " << width << " height: " << height << std::endl;
+        m_video_frame_widget->setFrame(detectorName.toStdString(), data, width, height, format.toStdString());
         updateFrameRecord(data, width, height, format);
     }
 }

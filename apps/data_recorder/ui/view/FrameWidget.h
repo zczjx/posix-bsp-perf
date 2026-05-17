@@ -17,6 +17,8 @@ public:
 
     void setFrame(const uint8_t* data, int width, int height, std::string format = "RGB888");
 
+    void clearFrame();
+
 protected:
     void paintEvent(QPaintEvent* event) override;
 

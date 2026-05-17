@@ -31,10 +31,10 @@ public:
 private:
     void setupCameraConsumer(const json& gui_ipc);
 
-    void CameraConsumerLoop(std::shared_ptr<SharedMemSubscriber> input_shmem_port);
+    void CameraConsumerLoop(const std::string& sensor_name, std::shared_ptr<SharedMemSubscriber> input_shmem_port);
 
 signals:
-    void rawCameraFrameUpdated(uint8_t* data, int width, int height, const QString& format);
+    void rawCameraFrameUpdated(const QString& sensorName, uint8_t* data, int width, int height, const QString& format);
 
 private:
     // the key of the map is the sensor name

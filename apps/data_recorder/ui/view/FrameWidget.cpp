@@ -44,6 +44,14 @@ void FrameWidget::setFrame(const uint8_t* data, int width, int height, std::stri
     update();
 }
 
+void FrameWidget::clearFrame()
+{
+    QMutexLocker locker(&m_mutex);
+    m_img = QImage();
+    m_img_initialized = false;
+    update();
+}
+
 void FrameWidget::paintEvent(QPaintEvent* event)
 {
     Q_UNUSED(event);

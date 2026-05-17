@@ -15,7 +15,8 @@
     [
         {
             "name": "gui",
-            "status": "enabled"
+            "status": "enabled",
+            "grid_size": [1, 1]
         }
     ],
     "camera":
@@ -28,6 +29,7 @@
             "image_size_y": 720,
             "fov": 90.0,
             "output_pixel_format": "RGB888",
+            "display_position": [0, 0],
             "publisher": {
                 "topic": "ipc:///tmp/view_camera.info",
                 "msg_type": "common/msg/CameraSensorMsg",
