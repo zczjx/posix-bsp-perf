@@ -48,7 +48,7 @@ int GuiController::updateFrameRecord()
 
     const int width = compositeFrame.width();
     const int height = compositeFrame.height();
-    const int packedLineSize = width * 4;
+    const int packedLineSize = width * 3;
     uint8_t* frameData = compositeFrame.bits();
     std::vector<uint8_t> packedFrame;
 
@@ -63,7 +63,7 @@ int GuiController::updateFrameRecord()
         frameData = packedFrame.data();
     }
 
-    int ret = m_recorder->writeRecordFrame(frameData, width, height, "RGBA8888");
+    int ret = m_recorder->writeRecordFrame(frameData, width, height, "RGB888");
     m_record_frame_timer.restart();
     return ret;
 }

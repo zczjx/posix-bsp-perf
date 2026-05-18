@@ -15,10 +15,6 @@ namespace ui
 
 namespace
 {
-int alignUp(int value, int alignment)
-{
-    return ((value + alignment - 1) / alignment) * alignment;
-}
 
 int bytesPerPixel(const std::string& format)
 {
@@ -29,61 +25,6 @@ int bytesPerPixel(const std::string& format)
     return 3;
 }
 
-uint8_t clampToByte(int value)
-{
-    if (value < 0)
-    {
-        return 0;
-    }
-    if (value > 255)
-    {
-        return 255;
-    }
-    return static_cast<uint8_t>(value);
-}
-
-int convertToYuv420spCpu(uint8_t* input_data, int width, int height, const std::string& input_format,
-    uint8_t* output_data, int output_stride, int output_height_stride)
-{
-    if (input_data == nullptr || output_data == nullptr)
-    {
-        return -1;
-    }
-
-    const int input_bpp = bytesPerPixel(input_format);
-    uint8_t* y_plane = output_data;
-    uint8_t* uv_plane = output_data + output_stride * output_height_stride;
-
-    for (int y = 0; y < height; ++y)
-    {
-        for (int x = 0; x < width; ++x)
-        {
-            const uint8_t* pixel = input_data + (static_cast<size_t>(y) * width + x) * input_bpp;
-            const int r = pixel[0];
-            const int g = pixel[1];
-            const int b = pixel[2];
-            y_plane[y * output_stride + x] = clampToByte(((66 * r + 129 * g + 25 * b + 128) >> 8) + 16);
-        }
-    }
-
-    for (int y = 0; y < height; y += 2)
-    {
-        for (int x = 0; x < width; x += 2)
-        {
-            const uint8_t* pixel = input_data + (static_cast<size_t>(y) * width + x) * input_bpp;
-            const int r = pixel[0];
-            const int g = pixel[1];
-            const int b = pixel[2];
-            const uint8_t u = clampToByte(((-38 * r - 74 * g + 112 * b + 128) >> 8) + 128);
-            const uint8_t v = clampToByte(((112 * r - 94 * g - 18 * b + 128) >> 8) + 128);
-            const size_t uv_index = static_cast<size_t>(y / 2) * output_stride + x;
-            uv_plane[uv_index] = u;
-            uv_plane[uv_index + 1] = v;
-        }
-    }
-
-    return 0;
-}
 }
 
 Recorder::Recorder(int argc, char *argv[])
@@ -139,19 +80,14 @@ int Recorder::stopAndSaveRecord()
 
 int Recorder::setupEncoder(int width, int height)
 {
-    m_enc_width = width;
-    m_enc_height = height;
-    m_enc_hor_stride = alignUp(width, 16);
-    m_enc_ver_stride = alignUp(height, 16);
-
     EncodeConfig enc_cfg = {
         .encodingType = "h264",
         .frameFormat = "YUV420SP",
         .fps = 30,
-        .width = static_cast<uint32_t>(m_enc_width),
-        .height = static_cast<uint32_t>(m_enc_height),
-        .hor_stride = static_cast<uint32_t>(m_enc_hor_stride),
-        .ver_stride = static_cast<uint32_t>(m_enc_ver_stride),
+        .width = width,
+        .height = height,
+        .hor_stride = width,
+        .ver_stride = height,
     };
 
     return m_encoder->setup(enc_cfg);
@@ -190,51 +126,27 @@ int Recorder::convertImageFormat(uint8_t* input_data, int width, int height, std
     IGraphics2D::G2DBufferParams yuv420_g2d_buf_params = {
         .width = static_cast<size_t>(width),
         .height = static_cast<size_t>(height),
-        .width_stride = static_cast<size_t>(m_enc_hor_stride > 0 ? m_enc_hor_stride : alignUp(width, 16)),
-        .height_stride = static_cast<size_t>(m_enc_ver_stride > 0 ? m_enc_ver_stride : alignUp(height, 16)),
+        .width_stride = static_cast<size_t>(width),
+        .height_stride = static_cast<size_t>(height),
         .format = out_format,
         .host_ptr = output_buf->input_buf_addr,
-        .buffer_size = static_cast<size_t>(m_enc_hor_stride > 0 ? m_enc_hor_stride : alignUp(width, 16)) *
-            static_cast<size_t>(m_enc_ver_stride > 0 ? m_enc_ver_stride : alignUp(height, 16)) * 3 / 2,
+        .buffer_size = static_cast<size_t>(width * height * 3 / 2),
     };
-
-    std::memset(output_buf->input_buf_addr, 0, yuv420_g2d_buf_params.buffer_size);
 
     auto out_g2d_buf = m_g2d->createBuffer(IGraphics2D::BufferType::Mapped, yuv420_g2d_buf_params);
 
-    int ret = -1;
-    if (in_g2d_buf && out_g2d_buf)
+    m_g2d->imageCvtColor(in_g2d_buf, out_g2d_buf, input_format, out_format);
     {
-        ret = m_g2d->imageCvtColor(in_g2d_buf, out_g2d_buf, input_format, out_format);
-        if (ret == 0)
-        {
-            bsp_g2d::BufferSyncGuard sync(
-                m_g2d.get(),
-                out_g2d_buf,
-                IGraphics2D::SyncDirection::Bidirectional);
-        }
+        bsp_g2d::BufferSyncGuard sync(
+            m_g2d.get(),
+            out_g2d_buf,
+            IGraphics2D::SyncDirection::Bidirectional);
     }
-
-    if (in_g2d_buf)
-    {
-        m_g2d->releaseBuffer(in_g2d_buf);
-    }
-    if (out_g2d_buf)
-    {
-        m_g2d->releaseBuffer(out_g2d_buf);
-    }
-
-    if (ret != 0)
-    {
-        std::cerr << "Recorder::convertImageFormat() RGA convert failed, fallback to CPU conversion" << std::endl;
-        return convertToYuv420spCpu(input_data, width, height, input_format,
-            static_cast<uint8_t*>(output_buf->input_buf_addr),
-            static_cast<int>(yuv420_g2d_buf_params.width_stride),
-            static_cast<int>(yuv420_g2d_buf_params.height_stride));
-    }
-
+    m_g2d->releaseBuffer(in_g2d_buf);
+    m_g2d->releaseBuffer(out_g2d_buf);
     return 0;
 }
+
 
 int Recorder::muxerWriteStreamPacket(EncodePacket& enc_pkt)
 {

@@ -4,6 +4,7 @@
 #include <QDebug>
 #include <QGridLayout>
 #include <QPixmap>
+#include <QSize>
 #include <algorithm>
 
 VideoFrameWidget::VideoFrameWidget(QWidget *parent)
@@ -231,7 +232,12 @@ QImage VideoFrameWidget::grabCompositeFrame()
         return {};
     }
 
-    QImage image = m_ui->videoGridContainer->grab().toImage().convertToFormat(QImage::Format_RGBA8888);
+    QImage image = m_ui->videoGridContainer->grab().toImage();
+    if (image.size() != QSize(1280, 720))
+    {
+        image = image.scaled(1280, 720, Qt::IgnoreAspectRatio, Qt::SmoothTransformation);
+    }
+    image = image.convertToFormat(QImage::Format_RGB888);
     const int evenWidth = image.width() & ~1;
     const int evenHeight = image.height() & ~1;
     if (evenWidth <= 0 || evenHeight <= 0)
