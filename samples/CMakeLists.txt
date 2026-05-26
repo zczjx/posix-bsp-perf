@@ -2,7 +2,7 @@ cmake_minimum_required(VERSION 3.12)
 
 option(BUILD_SAMPLES_BSP "Build BSP samples" ON)
 option(BUILD_SAMPLES_MIDWARE "Build midware samples" ON)
-option(BUILD_SAMPLES_FEATURES "Build feature samples" OFF)
+option(BUILD_SAMPLES_FEATURES "Build feature samples" ON)
 
 if(BUILD_SAMPLES_BSP)
     add_subdirectory(bsp)
