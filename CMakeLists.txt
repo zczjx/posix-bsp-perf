@@ -41,9 +41,9 @@ endif()
 
 # 添加子目录
 add_subdirectory(bsp)
-add_subdirectory(bsp_cases)
+add_subdirectory(features)
 add_subdirectory(midware)
-add_subdirectory(midware_cases)
+add_subdirectory(samples)
 add_subdirectory(apps)
 
 

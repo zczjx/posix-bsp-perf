@@ -17,4 +17,4 @@ install(TARGETS ${PROJECT_NAME}
   LIBRARY DESTINATION lib
 )
 
-install(FILES ${CMAKE_SOURCE_DIR}/bsp_cases/json_parse/carla-vehicle-view.json DESTINATION share/bsp_cases/json_parse)
+install(FILES ${CMAKE_CURRENT_SOURCE_DIR}/carla-vehicle-view.json DESTINATION share/samples/bsp/json_parse)

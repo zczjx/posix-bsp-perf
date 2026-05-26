@@ -1,8 +1,8 @@
 cmake_minimum_required(VERSION 3.12)
 
-option(BUILD_PERF_CASE_COMMON "Build common cases" ON)
+option(BUILD_BSP_SAMPLE_COMMON "Build common BSP samples" ON)
 
-if(BUILD_PERF_CASE_COMMON)
+if(BUILD_BSP_SAMPLE_COMMON)
     add_subdirectory(hello_world)
     add_subdirectory(json_parse)
     add_subdirectory(ddr_bandwidth)
@@ -23,4 +23,3 @@ if(BUILD_PLATFORM_JETSON)
     add_subdirectory(video_dec_enc)
     add_subdirectory(egl_render)
 endif()
-
