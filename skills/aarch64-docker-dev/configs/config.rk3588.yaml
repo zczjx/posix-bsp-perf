@@ -1,0 +1,201 @@
+# Copy this file to your project, for example `aarch64-libs.yaml`, then edit it.
+
+board:
+  host: 192.168.2.119
+  user: orange
+  port: 22
+  identity_file: ~/.ssh/id_rsa
+
+docker:
+  container: optimistic_mestorf
+  prefix: /opt/cross_env/rk3588s/install
+  libdir: /opt/cross_env/rk3588s/install/lib
+  includedir: /opt/cross_env/rk3588s/install/include
+  pkgconfig_dirs:
+    - /opt/cross_env/rk3588s/install/lib/pkgconfig
+    - /opt/cross_env/rk3588s/install/share/pkgconfig
+
+libraries:
+  - name: opencv4
+    pkgconfig_names:
+      - opencv4
+    board_paths:
+      - /usr/lib/aarch64-linux-gnu/libopencv*.so*
+      - /usr/include/opencv4
+      - /usr/lib/aarch64-linux-gnu/pkgconfig/opencv4.pc
+      - /usr/lib/aarch64-linux-gnu/cmake/opencv4
+    
+  - name: opencv4-deps
+    pkgconfig_names:
+      - libjpeg
+      - libwebp
+      - libpng16
+      - libtiff
+      - libopenjp2
+      - libgdcm
+      - libgdal
+      - libIlmImf-2_5
+      - libIex-2_5
+      - libIlmThread-2_5
+      - libImath-2_5
+      - libHalf-2_5
+      - libtbb
+      - libz
+    board_paths:
+      - /usr/lib/aarch64-linux-gnu/libjpeg.so*
+      - /usr/lib/aarch64-linux-gnu/libwebp.so*
+      - /usr/lib/aarch64-linux-gnu/libpng16.so*
+      - /usr/lib/aarch64-linux-gnu/libtiff.so*
+      - /usr/lib/aarch64-linux-gnu/libopenjp2.so*
+      - /usr/lib/aarch64-linux-gnu/libgdcm*.so*
+      - /lib/libgdal.so*
+      - /usr/lib/aarch64-linux-gnu/libIlmImf-2_5.so*
+      - /usr/lib/aarch64-linux-gnu/libIex-2_5.so*
+      - /usr/lib/aarch64-linux-gnu/libIlmThread-2_5.so*
+      - /usr/lib/aarch64-linux-gnu/libImath-2_5.so*
+      - /usr/lib/aarch64-linux-gnu/libHalf-2_5.so*
+      - /usr/lib/aarch64-linux-gnu/libtbb.so*
+      - /usr/lib/aarch64-linux-gnu/libz.so*
+    
+  - name: opencv4-gdal-deps
+    pkgconfig_names:
+      - libcharls
+      - libuuid
+      - libjson-c
+      - liblzma
+      - libjbig
+      - libdeflate
+      - libheif
+    board_paths:
+      - /usr/lib/aarch64-linux-gnu/libcharls.so*
+      - /usr/lib/aarch64-linux-gnu/libuuid.so*
+      - /usr/lib/aarch64-linux-gnu/libjson-c.so*
+      - /usr/lib/aarch64-linux-gnu/liblzma.so*
+      - /usr/lib/aarch64-linux-gnu/libjbig.so*
+      - /usr/lib/aarch64-linux-gnu/libdeflate.so*
+      - /usr/lib/aarch64-linux-gnu/libheif.so*
+      - /lib/libarmadillo.so*
+      - /usr/lib/aarch64-linux-gnu/libpoppler.so*
+      - /usr/lib/aarch64-linux-gnu/libfreexl.so*
+      - /usr/lib/aarch64-linux-gnu/libqhull_r.so*
+      - /usr/lib/aarch64-linux-gnu/libgeos_c.so*
+      - /usr/lib/aarch64-linux-gnu/libgeos.so*
+      - /usr/lib/aarch64-linux-gnu/libodbc.so*
+      - /usr/lib/aarch64-linux-gnu/libodbcinst.so*
+      - /usr/lib/aarch64-linux-gnu/libkmlbase.so*
+      - /usr/lib/aarch64-linux-gnu/libkmldom.so*
+      - /usr/lib/aarch64-linux-gnu/libkmlengine.so*
+      - /usr/lib/aarch64-linux-gnu/libexpat.so*
+      - /usr/lib/aarch64-linux-gnu/libxerces-c-3.2.so*
+      - /usr/lib/aarch64-linux-gnu/libnetcdf.so*
+      - /usr/lib/aarch64-linux-gnu/libhdf5_serial.so*
+      - /usr/lib/aarch64-linux-gnu/libhdf5_serial_hl.so*
+      - /lib/libmfhdfalt.so*
+      - /lib/libdfalt.so*
+      - /lib/libogdi.so*
+      - /usr/lib/aarch64-linux-gnu/libgif.so*
+      - /usr/lib/aarch64-linux-gnu/libgeotiff.so*
+      - /usr/lib/aarch64-linux-gnu/libcfitsio.so*
+      - /usr/lib/aarch64-linux-gnu/libpq.so*
+      - /usr/lib/aarch64-linux-gnu/liblz4.so*
+      - /usr/lib/aarch64-linux-gnu/libblosc.so*
+      - /usr/lib/aarch64-linux-gnu/libproj.so*
+      - /usr/lib/aarch64-linux-gnu/libsqlite3.so*
+      - /usr/lib/aarch64-linux-gnu/libspatialite.so*
+      - /usr/lib/aarch64-linux-gnu/libpcre2-8.so*
+      - /usr/lib/aarch64-linux-gnu/libcurl.so*
+      - /usr/lib/aarch64-linux-gnu/libfyba.so*
+      - /usr/lib/aarch64-linux-gnu/libfygm.so*
+      - /usr/lib/aarch64-linux-gnu/libfyut.so*
+      - /usr/lib/aarch64-linux-gnu/libxml2.so*
+      - /usr/lib/aarch64-linux-gnu/libmysqlclient.so*
+      - /usr/lib/aarch64-linux-gnu/libcrypto.so*
+      - /usr/lib/aarch64-linux-gnu/libssl.so*
+      - /usr/lib/aarch64-linux-gnu/libaom.so*
+      - /usr/lib/aarch64-linux-gnu/libde265.so*
+      - /usr/lib/aarch64-linux-gnu/libx265.so*
+      - /usr/lib/aarch64-linux-gnu/libdav1d.so*
+      - /usr/lib/aarch64-linux-gnu/blas/libblas.so*
+      - /usr/lib/aarch64-linux-gnu/lapack/liblapack.so*
+      - /usr/lib/aarch64-linux-gnu/libarpack.so*
+      - /usr/lib/aarch64-linux-gnu/libsuperlu.so*
+      - /usr/lib/aarch64-linux-gnu/libfontconfig.so*
+      - /usr/lib/aarch64-linux-gnu/liblcms2.so*
+      - /usr/lib/aarch64-linux-gnu/libnss3.so*
+      - /usr/lib/aarch64-linux-gnu/libsmime3.so*
+      - /usr/lib/aarch64-linux-gnu/libplc4.so*
+      - /usr/lib/aarch64-linux-gnu/libnspr4.so*
+      - /usr/lib/aarch64-linux-gnu/libltdl.so*
+      - /usr/lib/aarch64-linux-gnu/libminizip.so*
+      - /usr/lib/aarch64-linux-gnu/liburiparser.so*
+      - /usr/lib/aarch64-linux-gnu/libcurl-gnutls.so*
+      - /usr/lib/aarch64-linux-gnu/libsz.so*
+      - /usr/lib/aarch64-linux-gnu/libtirpc.so*
+      - /usr/lib/aarch64-linux-gnu/libbz2.so*
+      - /usr/lib/aarch64-linux-gnu/libldap-2.5.so*
+      - /usr/lib/aarch64-linux-gnu/libsnappy.so*
+      - /usr/lib/aarch64-linux-gnu/librttopo.so*
+      - /usr/lib/aarch64-linux-gnu/libnghttp2.so*
+      - /usr/lib/aarch64-linux-gnu/libidn2.so*
+      - /usr/lib/aarch64-linux-gnu/librtmp.so*
+      - /usr/lib/aarch64-linux-gnu/libssh.so*
+      - /usr/lib/aarch64-linux-gnu/libpsl.so*
+      - /usr/lib/aarch64-linux-gnu/liblber-2.5.so*
+      - /usr/lib/aarch64-linux-gnu/libgfortran.so*
+      - /usr/lib/aarch64-linux-gnu/libgnutls.so*
+      - /usr/lib/aarch64-linux-gnu/libnettle.so*
+      - /usr/lib/aarch64-linux-gnu/libunistring.so*
+      - /usr/lib/aarch64-linux-gnu/libsasl2.so*
+      - /usr/lib/aarch64-linux-gnu/libnssutil3.so*
+      - /usr/lib/aarch64-linux-gnu/libplds4.so*
+      - /usr/lib/aarch64-linux-gnu/libgmp.so*
+      - /usr/lib/aarch64-linux-gnu/libhogweed.so*
+      - /usr/lib/aarch64-linux-gnu/libaec.so*
+      - /usr/lib/aarch64-linux-gnu/libnuma.so*
+      - /usr/lib/aarch64-linux-gnu/libp11-kit.so*
+      - /usr/lib/aarch64-linux-gnu/libtasn1.so*
+      - /usr/lib/aarch64-linux-gnu/libffi.so*      
+
+  - name: drm
+    pkgconfig_names:
+      - libdrm
+    board_paths:
+      - /usr/lib/aarch64-linux-gnu/libdrm*.so*
+      - /usr/include/libdrm
+      - /usr/lib/aarch64-linux-gnu/pkgconfig/libdrm.pc
+
+  - name: rga
+    pkgconfig_names:
+      - librga
+    board_paths:
+      - /usr/lib/aarch64-linux-gnu/librga*.so*
+      - /usr/include/rga
+      - /usr/lib/aarch64-linux-gnu/pkgconfig/librga.pc
+
+  - name: mpp
+    pkgconfig_names:
+      - rockchip_mpp
+    board_paths:
+      - /usr/lib/aarch64-linux-gnu/librockchip_mpp*.so*
+      - /usr/include/rockchip
+      - /usr/lib/aarch64-linux-gnu/pkgconfig/rockchip_mpp.pc
+
+  - name: ffmpeg
+    pkgconfig_names:
+      - libavcodec
+      - libavformat
+      - libavutil
+      - libswscale
+    board_paths:
+      - /usr/lib/aarch64-linux-gnu/libavcodec.so*
+      - /usr/lib/aarch64-linux-gnu/libavformat.so*
+      - /usr/lib/aarch64-linux-gnu/libavutil.so*
+      - /usr/lib/aarch64-linux-gnu/libswscale.so*
+      - /usr/include/aarch64-linux-gnu/libavcodec
+      - /usr/include/aarch64-linux-gnu/libavformat
+      - /usr/include/aarch64-linux-gnu/libavutil
+      - /usr/include/aarch64-linux-gnu/libswscale
+      - /usr/lib/aarch64-linux-gnu/pkgconfig/libavcodec.pc
+      - /usr/lib/aarch64-linux-gnu/pkgconfig/libavformat.pc
+      - /usr/lib/aarch64-linux-gnu/pkgconfig/libavutil.pc
+      - /usr/lib/aarch64-linux-gnu/pkgconfig/libswscale.pc
