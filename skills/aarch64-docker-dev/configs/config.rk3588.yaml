@@ -15,6 +15,12 @@ docker:
     - /opt/cross_env/rk3588s/install/lib/pkgconfig
     - /opt/cross_env/rk3588s/install/share/pkgconfig
 
+local:
+  prefix: /build/opt/cross_env/rk3588s/install
+  libdir: /build/opt/cross_env/rk3588s/install/lib
+  includedir: /build/opt/cross_env/rk3588s/install/include
+  metadata: raw
+
 libraries:
   - name: opencv4
     pkgconfig_names:

@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Sync selected RK3588 AArch64 libraries into a Docker cross sysroot."""
+"""Sync selected RK3588 AArch64 libraries into Docker or local install prefixes."""
 
 from __future__ import annotations
 
@@ -237,21 +237,29 @@ def rsync_auth_prefix(
     )
 
 
-def docker_paths(docker: dict[str, Any]) -> dict[str, str]:
-    prefix = str(docker.get("prefix") or "").rstrip("/")
+def install_paths(settings: dict[str, Any], section_name: str) -> dict[str, str]:
+    prefix = str(settings.get("prefix") or "").rstrip("/")
 
     if not prefix:
-        sysroot = str(docker.get("sysroot") or "").rstrip("/")
-        if not sysroot:
-            raise ValueError("docker.prefix is required")
+        sysroot = str(settings.get("sysroot") or "").rstrip("/")
+        if not sysroot or section_name != "docker":
+            raise ValueError(f"{section_name}.prefix is required")
         prefix = f"{sysroot}/usr"
 
-    default_libdir = f"{prefix}/{str(docker.get('libdir_suffix', 'lib')).strip('/')}"
+    default_libdir = f"{prefix}/{str(settings.get('libdir_suffix', 'lib')).strip('/')}"
     return {
         "prefix": prefix,
-        "libdir": str(docker.get("libdir") or default_libdir).rstrip("/"),
-        "includedir": str(docker.get("includedir") or f"{prefix}/include").rstrip("/"),
+        "libdir": str(settings.get("libdir") or default_libdir).rstrip("/"),
+        "includedir": str(settings.get("includedir") or f"{prefix}/include").rstrip("/"),
     }
+
+
+def docker_paths(docker: dict[str, Any]) -> dict[str, str]:
+    return install_paths(docker, "docker")
+
+
+def local_paths(local: dict[str, Any]) -> dict[str, str]:
+    return install_paths(local, "local")
 
 
 def staging_dest_for_board_path(board_path: str, staging: Path) -> Path:
@@ -323,9 +331,13 @@ def sync_from_board(
             run(command, dry_run=dry_run, env=auth_env, display_env=display_env)
 
 
-def rewrite_pc_files(config: dict[str, Any], staging: Path, *, dry_run: bool) -> None:
-    docker = require_mapping(config, "docker")
-    paths = docker_paths(docker)
+def rewrite_pc_files_for_paths(
+    staging: Path,
+    paths: dict[str, str],
+    *,
+    dry_run: bool,
+    label: str,
+) -> None:
     replacements = {
         "prefix": paths["prefix"],
         "exec_prefix": "${prefix}",
@@ -334,7 +346,7 @@ def rewrite_pc_files(config: dict[str, Any], staging: Path, *, dry_run: bool) ->
     }
 
     if dry_run:
-        print("* dry-run: .pc files copied into staging will be rewritten")
+        print(f"* dry-run: .pc files copied into staging will be rewritten for {label}")
         return
 
     pc_files = sorted(staging.rglob("*.pc"))
@@ -357,6 +369,11 @@ def rewrite_pc_files(config: dict[str, Any], staging: Path, *, dry_run: bool) ->
         if not backup.exists():
             shutil.copy2(pc_file, backup)
         pc_file.write_text(rewritten, encoding="utf-8")
+
+
+def rewrite_pc_files(config: dict[str, Any], staging: Path, *, dry_run: bool) -> None:
+    docker = require_mapping(config, "docker")
+    rewrite_pc_files_for_paths(staging, docker_paths(docker), dry_run=dry_run, label="docker")
 
 
 def rewrite_pc_text(text: str, replacements: dict[str, str], paths: dict[str, str]) -> str:
@@ -384,13 +401,17 @@ def map_absolute_paths(text: str, paths: dict[str, str]) -> str:
     )
 
 
-def rewrite_cmake_files(config: dict[str, Any], staging: Path, *, dry_run: bool) -> None:
-    docker = require_mapping(config, "docker")
-    paths = docker_paths(docker)
+def rewrite_cmake_files_for_paths(
+    staging: Path,
+    paths: dict[str, str],
+    *,
+    dry_run: bool,
+    label: str,
+) -> None:
     prefix_parent = str(Path(paths["prefix"]).parent).rstrip("/")
 
     if dry_run:
-        print("* dry-run: .cmake files copied into staging will be path-rewritten")
+        print(f"* dry-run: .cmake files copied into staging will be path-rewritten for {label}")
         return
 
     cmake_files = sorted(staging.rglob("*.cmake"))
@@ -410,6 +431,11 @@ def rewrite_cmake_files(config: dict[str, Any], staging: Path, *, dry_run: bool)
         if not backup.exists():
             shutil.copy2(cmake_file, backup)
         cmake_file.write_text(rewritten, encoding="utf-8")
+
+
+def rewrite_cmake_files(config: dict[str, Any], staging: Path, *, dry_run: bool) -> None:
+    docker = require_mapping(config, "docker")
+    rewrite_cmake_files_for_paths(staging, docker_paths(docker), dry_run=dry_run, label="docker")
 
 
 def rewrite_cmake_text(text: str, paths: dict[str, str], prefix_parent: str) -> str:
@@ -456,6 +482,19 @@ def copy_to_docker(config: dict[str, Any], staging: Path, *, dry_run: bool) -> N
     run(["docker", "cp", f"{staging}/.", f"{container}:{prefix}/"], dry_run=dry_run)
 
 
+def copy_to_local(config: dict[str, Any], staging: Path, *, dry_run: bool) -> None:
+    local = require_mapping(config, "local")
+    prefix = Path(local_paths(local)["prefix"])
+
+    print(f"+ mkdir -p {shlex.quote(str(prefix))}")
+    print(f"+ copy {shlex.quote(str(staging))}/. {shlex.quote(str(prefix))}/")
+    if dry_run:
+        return
+
+    prefix.mkdir(parents=True, exist_ok=True)
+    shutil.copytree(staging, prefix, dirs_exist_ok=True, symlinks=True)
+
+
 def clean_old_libraries(
     config: dict[str, Any],
     libraries: list[dict[str, Any]],
@@ -475,6 +514,50 @@ def clean_old_libraries(
 
     rm_targets = " ".join(f"{shlex.quote(libdir)}/{pattern}" for pattern in patterns)
     run(["docker", "exec", container, "sh", "-lc", f"rm -f -- {rm_targets}"], dry_run=dry_run)
+
+
+def clean_old_local_libraries(
+    config: dict[str, Any],
+    libraries: list[dict[str, Any]],
+    *,
+    dry_run: bool,
+) -> None:
+    local = require_mapping(config, "local")
+    libdir = Path(local_paths(local)["libdir"])
+    patterns = cleanup_patterns_for_libraries(libraries)
+    if not patterns:
+        print("No old local library cleanup patterns inferred")
+        return
+
+    display_targets = " ".join(str(libdir / pattern) for pattern in patterns)
+    print(f"+ rm -f -- {display_targets}")
+    if dry_run:
+        return
+    libdir.mkdir(parents=True, exist_ok=True)
+    for pattern in patterns:
+        for path in libdir.glob(pattern):
+            if path.is_dir():
+                continue
+            path.unlink(missing_ok=True)
+
+
+def local_metadata_mode(config: dict[str, Any]) -> str:
+    local = require_mapping(config, "local")
+    mode = str(local.get("metadata", "raw")).strip()
+    if mode not in {"raw", "rewrite"}:
+        raise ValueError("local.metadata must be `raw` or `rewrite`")
+    return mode
+
+
+def clone_staging(staging: Path, suffix: str, *, dry_run: bool) -> Path:
+    clone = Path(f"{staging}-{suffix}")
+    print(f"+ copy staging {shlex.quote(str(staging))} {shlex.quote(str(clone))}")
+    if dry_run:
+        return clone
+    if clone.exists():
+        shutil.rmtree(clone)
+    shutil.copytree(staging, clone, symlinks=True)
+    return clone
 
 
 def verify_pkg_config(config: dict[str, Any], libraries: list[dict[str, Any]], *, dry_run: bool) -> None:
@@ -517,13 +600,19 @@ def parse_args(argv: list[str]) -> argparse.Namespace:
     parser.add_argument("--libs", help="Comma-separated library names. Defaults to all libraries.")
     parser.add_argument("--staging", type=Path, default=Path(DEFAULT_STAGING), help="Local staging directory")
     parser.add_argument(
+        "--target",
+        choices=("docker", "local", "both"),
+        default="docker",
+        help="Install target. Defaults to docker for backward compatibility.",
+    )
+    parser.add_argument(
         "--clean-old",
         action="store_true",
-        help="Remove matching old library files from docker.libdir before docker cp",
+        help="Remove matching old library files from selected target libdirs before copying",
     )
     mode = parser.add_mutually_exclusive_group()
     mode.add_argument("--dry-run", action="store_true", help="Print planned commands and rewrites")
-    mode.add_argument("--apply", action="store_true", help="Sync, rewrite .pc files, and copy into Docker")
+    mode.add_argument("--apply", action="store_true", help="Sync, rewrite metadata as needed, and copy into targets")
     mode.add_argument("--verify", action="store_true", help="Run pkg-config verification inside Docker")
     return parser.parse_args(argv)
 
@@ -535,20 +624,41 @@ def main(argv: list[str]) -> int:
     dry_run = args.dry_run or not args.apply
 
     if args.verify:
+        if args.target != "docker":
+            raise ValueError("--verify currently supports --target docker only")
         verify_pkg_config(config, libraries, dry_run=False)
         return 0
 
     print(f"Config: {args.config}")
     print(f"Staging: {args.staging}")
     print("Libraries: " + ", ".join(str(lib["name"]) for lib in libraries))
+    print(f"Target: {args.target}")
     print("Mode: " + ("apply" if args.apply else "dry-run"))
 
     sync_from_board(config, libraries, args.staging, dry_run=dry_run)
-    rewrite_pc_files(config, args.staging, dry_run=dry_run)
-    rewrite_cmake_files(config, args.staging, dry_run=dry_run)
-    if args.clean_old:
-        clean_old_libraries(config, libraries, dry_run=dry_run)
-    copy_to_docker(config, args.staging, dry_run=dry_run)
+
+    if args.target in {"local", "both"}:
+        metadata_mode = local_metadata_mode(config)
+        local_staging = args.staging
+        if metadata_mode == "rewrite" and args.target == "both":
+            local_staging = clone_staging(args.staging, "local", dry_run=dry_run)
+        if metadata_mode == "rewrite":
+            local = require_mapping(config, "local")
+            paths = local_paths(local)
+            rewrite_pc_files_for_paths(local_staging, paths, dry_run=dry_run, label="local")
+            rewrite_cmake_files_for_paths(local_staging, paths, dry_run=dry_run, label="local")
+        else:
+            print("* local metadata mode: raw; skip .pc/.cmake rewrite")
+        if args.clean_old:
+            clean_old_local_libraries(config, libraries, dry_run=dry_run)
+        copy_to_local(config, local_staging, dry_run=dry_run)
+
+    if args.target in {"docker", "both"}:
+        rewrite_pc_files(config, args.staging, dry_run=dry_run)
+        rewrite_cmake_files(config, args.staging, dry_run=dry_run)
+        if args.clean_old:
+            clean_old_libraries(config, libraries, dry_run=dry_run)
+        copy_to_docker(config, args.staging, dry_run=dry_run)
     return 0
 
 
