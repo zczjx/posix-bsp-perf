@@ -7,7 +7,7 @@ board:
   identity_file: ~/.ssh/id_rsa
 
 docker:
-  container: optimistic_mestorf
+  container: bold_feistel
   prefix: /opt/cross_env/rk3588s/install
   libdir: /opt/cross_env/rk3588s/install/lib
   includedir: /opt/cross_env/rk3588s/install/include
