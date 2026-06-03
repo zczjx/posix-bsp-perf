@@ -86,6 +86,7 @@ std::vector<bsp_dnn::ObjDetectOutputBox> ObjDetector::runDnnInference(std::share
         bsp_dnn::ObjDetectInput objDetectInput =
         {
             .handleType = "DecodeOutFrame",
+            .image = bsp_codec::toImageView(frame),
             .imageHandle = frame,
         };
 

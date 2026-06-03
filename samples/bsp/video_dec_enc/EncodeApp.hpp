@@ -10,7 +10,7 @@
 #include <iostream>
 #include <vector>
 #include <shared/BspFileUtils.hpp>
-#include <bsp_g2d/BytesPerPixel.hpp>
+#include <image/ImageFormat.hpp>
 
 namespace bsp_perf {
 namespace perf_cases {
@@ -115,7 +115,7 @@ private:
 
         // 获取每帧的大小
         // m_frame_size = m_encoder->getFrameSize();
-        m_frame_size = width * height * bsp_g2d::BytesPerPixel::getInstance().getBytesPerPixel(frameFormat);
+        m_frame_size = width * height * bsp_perf::image::bytesPerPixel(frameFormat);
         m_logger->printStdoutLog(bsp_perf::shared::BspLogger::LogLevel::Info,
             "EncodeApp::onInit() Frame size: {} bytes", m_frame_size);
 

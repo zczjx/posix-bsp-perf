@@ -1,6 +1,6 @@
 #include "rkmppCodecHeader.hpp"
 #include "rkmppDec.hpp"
-#include <bsp_g2d/BytesPerPixel.hpp>
+#include <image/ImageFormat.hpp>
 #include <iostream>
 #include <sys/time.h>
 #include <unistd.h>
@@ -269,7 +269,7 @@ int rkmppDec::decode(DecodePacket& pkt_data)
                         frame->height_stride = ver_stride;
                         frame->format = rkmppCodecHeader::getInstance().mppFrameFormatToStr(format);
                         frame->virt_addr = data_vir;
-                        frame->valid_data_size = frame->width * frame->height * bsp_g2d::BytesPerPixel::getInstance().getBytesPerPixel(frame->format);
+                        frame->valid_data_size = frame->width * frame->height * bsp_perf::image::bytesPerPixel(frame->format);
                         frame->fd = fd;
                         m_callback(m_userdata, frame);
                     }

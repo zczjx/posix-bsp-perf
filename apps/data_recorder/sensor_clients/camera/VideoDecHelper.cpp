@@ -1,5 +1,5 @@
 #include "VideoDecHelper.hpp"
-#include <bsp_g2d/BytesPerPixel.hpp>
+#include <image/ImageFormat.hpp>
 #include <bsp_g2d/BufferHelper.hpp>
 #include <stdexcept>
 #include <iostream>
@@ -114,7 +114,7 @@ std::shared_ptr<DecodeOutFrame> VideoDecHelper::convertPixelFormat(std::shared_p
 
     auto in_g2d_buf = m_g2d->createBuffer(IGraphics2D::BufferType::Mapped, in_g2d_params);
 
-    size_t out_data_size = frame->width * frame->height * bsp_g2d::BytesPerPixel::getInstance().getBytesPerPixel(m_out_pixel_format);
+    size_t out_data_size = frame->width * frame->height * bsp_perf::image::bytesPerPixel(m_out_pixel_format);
 
     std::shared_ptr<DecodeOutFrame> out_frame(new DecodeOutFrame(), [](DecodeOutFrame* frame) {
         if (frame->virt_addr != nullptr)

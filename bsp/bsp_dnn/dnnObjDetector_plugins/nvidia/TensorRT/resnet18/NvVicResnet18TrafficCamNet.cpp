@@ -16,15 +16,20 @@ int NvVicResnet18TrafficCamNet::preProcess(ObjDetectParams& params, ObjDetectInp
                                            IDnnEngine::dnnInput& outputData)
 {
     // 验证输入类型
-    if (inputData.handleType != "DecodeOutFrame")
+    if (inputData.handleType != "ImageView" && inputData.handleType != "DecodeOutFrame")
     {
-        std::cerr << "[NvVicResnet18TrafficCamNet] Error: Only DecodeOutFrame handle type is supported" << std::endl;
+        std::cerr << "[NvVicResnet18TrafficCamNet] Error: Only ImageView or DecodeOutFrame handle type is supported" << std::endl;
         return -1;
     }
 
     // 获取输入的 YUV420 帧
-    auto yuv420_frame = std::any_cast<std::shared_ptr<DecodeOutFrame>>(inputData.imageHandle);
-    if (yuv420_frame == nullptr)
+    bsp_perf::image::ImageView inputImage = inputData.image;
+    if (inputImage.empty() && inputData.handleType == "DecodeOutFrame")
+    {
+        auto yuv420_frame = std::any_cast<std::shared_ptr<DecodeOutFrame>>(inputData.imageHandle);
+        inputImage = toImageView(yuv420_frame);
+    }
+    if (inputImage.empty())
     {
         std::cerr << "[NvVicResnet18TrafficCamNet] Error: Input frame is nullptr" << std::endl;
         return -1;
@@ -37,36 +42,37 @@ int NvVicResnet18TrafficCamNet::preProcess(ObjDetectParams& params, ObjDetectInp
     }
 
     // 计算缩放参数（直接拉伸，不保持宽高比）
-    params.scale_width = static_cast<float>(params.model_input_width) / yuv420_frame->width;
-    params.scale_height = static_cast<float>(params.model_input_height) / yuv420_frame->height;
+    params.scale_width = static_cast<float>(params.model_input_width) / inputImage.desc.width;
+    params.scale_height = static_cast<float>(params.model_input_height) / inputImage.desc.height;
     params.pads.left = 0;
     params.pads.top = 0;
     params.pads.right = 0;
     params.pads.bottom = 0;
 
-    std::cout << "[NvVicResnet18TrafficCamNet] Input: " << yuv420_frame->width << "x" << yuv420_frame->height 
+    std::cout << "[NvVicResnet18TrafficCamNet] Input: " << inputImage.desc.width << "x" << inputImage.desc.height
               << " → Model: " << params.model_input_width << "x" << params.model_input_height 
               << ", Scale: " << params.scale_width << "x" << params.scale_height << std::endl;
 
     // ========== 使用新的 IGraphics2D API ==========
     
     // 修复 stride 为 0 的问题
-    size_t input_width_stride = yuv420_frame->width_stride > 0 ? 
-                                static_cast<size_t>(yuv420_frame->width_stride) : 
-                                static_cast<size_t>(yuv420_frame->width);
-    size_t input_height_stride = yuv420_frame->height_stride > 0 ? 
-                                 static_cast<size_t>(yuv420_frame->height_stride) : 
-                                 static_cast<size_t>(yuv420_frame->height);
+    size_t input_width_stride = inputImage.desc.widthStride > 0 ?
+                                static_cast<size_t>(inputImage.desc.widthStride) :
+                                static_cast<size_t>(inputImage.desc.width);
+    size_t input_height_stride = inputImage.desc.heightStride > 0 ?
+                                 static_cast<size_t>(inputImage.desc.heightStride) :
+                                 static_cast<size_t>(inputImage.desc.height);
 
     // 步骤1: 创建输入 YUV420 帧的 Mapped 缓冲区
     IGraphics2D::G2DBufferParams yuv420_params;
-    yuv420_params.host_ptr = yuv420_frame->virt_addr;
-    yuv420_params.buffer_size = yuv420_frame->valid_data_size;
-    yuv420_params.width = static_cast<size_t>(yuv420_frame->width);
-    yuv420_params.height = static_cast<size_t>(yuv420_frame->height);
+    yuv420_params.host_ptr = inputImage.planes[0].data;
+    yuv420_params.buffer_size = inputImage.desc.dataSize;
+    yuv420_params.width = static_cast<size_t>(inputImage.desc.width);
+    yuv420_params.height = static_cast<size_t>(inputImage.desc.height);
     yuv420_params.width_stride = input_width_stride;
     yuv420_params.height_stride = input_height_stride;
-    yuv420_params.format = yuv420_frame->format;
+    yuv420_params.format = inputImage.desc.format;
+    yuv420_params.fd = inputImage.planes[0].fd;
     
     auto yuv420_g2d_buf = m_g2d->createBuffer(IGraphics2D::BufferType::Mapped, yuv420_params);
     if (!yuv420_g2d_buf)

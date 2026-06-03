@@ -4,6 +4,7 @@
 #include <memory>
 #include <string>
 #include <any>
+#include <image/ImageTypes.hpp>
 
 namespace bsp_g2d
 {
@@ -101,6 +102,37 @@ public:
         int height;   /* height */
     };
 
+    static G2DBufferParams toG2DBufferParams(const bsp_perf::image::ImageView& image)
+    {
+        G2DBufferParams params;
+        params.width = image.desc.width;
+        params.height = image.desc.height;
+        params.width_stride = image.desc.widthStride;
+        params.height_stride = image.desc.heightStride;
+        params.format = image.desc.format;
+        params.fd = image.planes[0].fd;
+        params.host_ptr = image.planes[0].data;
+        params.buffer_size = image.desc.dataSize;
+        return params;
+    }
+
+    static bsp_perf::image::ImageView toImageView(const G2DBufferParams& params)
+    {
+        bsp_perf::image::ImageView image;
+        image.desc.width = static_cast<uint32_t>(params.width);
+        image.desc.height = static_cast<uint32_t>(params.height);
+        image.desc.widthStride = static_cast<uint32_t>(params.width_stride);
+        image.desc.heightStride = static_cast<uint32_t>(params.height_stride);
+        image.desc.format = params.format;
+        image.desc.dataSize = params.buffer_size;
+        image.memoryType = params.fd >= 0 ? bsp_perf::image::ImageMemoryType::DmaBuf : bsp_perf::image::ImageMemoryType::Host;
+        image.planeCount = 1;
+        image.planes[0].data = static_cast<uint8_t*>(params.host_ptr);
+        image.planes[0].size = params.buffer_size;
+        image.planes[0].fd = params.fd;
+        return image;
+    }
+
     // ========== Buffer Management (New Interface) ==========
     
     /**
@@ -123,6 +155,13 @@ public:
     virtual std::shared_ptr<G2DBuffer> createBuffer(
         BufferType type,
         const G2DBufferParams& params) = 0;
+
+    std::shared_ptr<G2DBuffer> createBuffer(
+        BufferType type,
+        const bsp_perf::image::ImageView& image)
+    {
+        return createBuffer(type, toG2DBufferParams(image));
+    }
 
     /**
      * @brief 释放 G2D 缓冲区（新接口）
@@ -209,6 +248,24 @@ public:
         std::shared_ptr<G2DBuffer> src,
         std::shared_ptr<G2DBuffer> dst) = 0;
 
+    int imageResize(const bsp_perf::image::ImageView& src,
+                    const bsp_perf::image::ImageView& dst,
+                    BufferType type = BufferType::Mapped)
+    {
+        auto srcBuffer = createBuffer(type, src);
+        auto dstBuffer = createBuffer(type, dst);
+        if (!srcBuffer || !dstBuffer) {
+            releaseBuffer(srcBuffer);
+            releaseBuffer(dstBuffer);
+            return -1;
+        }
+
+        const int ret = imageResize(srcBuffer, dstBuffer);
+        releaseBuffer(srcBuffer);
+        releaseBuffer(dstBuffer);
+        return ret;
+    }
+
     /**
      * @brief 图像拷贝
      * @param src 源缓冲区
@@ -220,6 +277,24 @@ public:
     virtual int imageCopy(
         std::shared_ptr<G2DBuffer> src,
         std::shared_ptr<G2DBuffer> dst) = 0;
+
+    int imageCopy(const bsp_perf::image::ImageView& src,
+                  const bsp_perf::image::ImageView& dst,
+                  BufferType type = BufferType::Mapped)
+    {
+        auto srcBuffer = createBuffer(type, src);
+        auto dstBuffer = createBuffer(type, dst);
+        if (!srcBuffer || !dstBuffer) {
+            releaseBuffer(srcBuffer);
+            releaseBuffer(dstBuffer);
+            return -1;
+        }
+
+        const int ret = imageCopy(srcBuffer, dstBuffer);
+        releaseBuffer(srcBuffer);
+        releaseBuffer(dstBuffer);
+        return ret;
+    }
 
     /**
      * @brief 颜色空间转换
@@ -234,6 +309,24 @@ public:
         std::shared_ptr<G2DBuffer> dst,
         const std::string& src_format,
         const std::string& dst_format) = 0;
+
+    int imageCvtColor(const bsp_perf::image::ImageView& src,
+                      const bsp_perf::image::ImageView& dst,
+                      BufferType type = BufferType::Mapped)
+    {
+        auto srcBuffer = createBuffer(type, src);
+        auto dstBuffer = createBuffer(type, dst);
+        if (!srcBuffer || !dstBuffer) {
+            releaseBuffer(srcBuffer);
+            releaseBuffer(dstBuffer);
+            return -1;
+        }
+
+        const int ret = imageCvtColor(srcBuffer, dstBuffer, src.desc.format, dst.desc.format);
+        releaseBuffer(srcBuffer);
+        releaseBuffer(dstBuffer);
+        return ret;
+    }
 
     /**
      * @brief 绘制矩形（硬件加速，如果支持）

@@ -1,0 +1,114 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<ui version="4.0">
+ <class>VideoFrameWidget</class>
+ <widget class="QWidget" name="VideoFrameWidget">
+  <property name="geometry">
+   <rect>
+    <x>0</x>
+    <y>0</y>
+    <width>1280</width>
+    <height>720</height>
+   </rect>
+  </property>
+  <property name="windowTitle">
+   <string>RGB888 视频帧显示</string>
+  </property>
+  <layout class="QVBoxLayout" name="verticalLayout">
+   <item>
+    <layout class="QHBoxLayout" name="horizontalLayout">
+     <item>
+      <widget class="QLabel" name="dataSourceLabel">
+       <property name="text">
+        <string>Data Source</string>
+       </property>
+      </widget>
+     </item>
+     <item>
+      <widget class="QComboBox" name="dataSourceComboBox">
+       <property name="minimumSize">
+        <size>
+         <width>200</width>
+         <height>0</height>
+        </size>
+       </property>
+       <item>
+        <property name="text">
+         <string>Raw Camera</string>
+        </property>
+       </item>
+       <item>
+        <property name="text">
+         <string>Objects Detection</string>
+        </property>
+       </item>
+      </widget>
+     </item>
+     <item>
+      <widget class="QPushButton" name="toggleBtn">
+       <property name="styleSheet">
+        <string notr="true">QPushButton#toggleBtn {
+    min-width: 60px;
+    padding: 6px 12px;
+    border: 2px outset #999;
+    border-radius: 12px;
+    color: white;
+    background: #d9534f;
+    font-weight: bold;
+}
+QPushButton#toggleBtn:pressed {
+    border-style: inset;
+    padding-top: 8px;
+}
+QPushButton#toggleBtn:checked {
+    background: #5cb85c;
+}</string>
+       </property>
+       <property name="text">
+        <string>Record OFF</string>
+       </property>
+       <property name="checkable">
+        <bool>true</bool>
+       </property>
+      </widget>
+     </item>
+     <item>
+      <spacer name="horizontalSpacer">
+       <property name="orientation">
+        <enum>Qt::Orientation::Horizontal</enum>
+       </property>
+       <property name="sizeHint" stdset="0">
+        <size>
+         <width>40</width>
+         <height>20</height>
+        </size>
+       </property>
+      </spacer>
+     </item>
+    </layout>
+   </item>
+   <item>
+    <widget class="FrameWidget" name="frameWidget" native="true">
+     <property name="minimumSize">
+      <size>
+       <width>320</width>
+       <height>240</height>
+      </size>
+     </property>
+     <property name="styleSheet">
+      <string notr="true">background-color: black;</string>
+     </property>
+    </widget>
+   </item>
+  </layout>
+ </widget>
+ <customwidgets>
+  <customwidget>
+   <class>FrameWidget</class>
+   <extends>QWidget</extends>
+   <header>FrameWidget.h</header>
+   <container>1</container>
+  </customwidget>
+ </customwidgets>
+ <resources/>
+ <connections/>
+</ui>

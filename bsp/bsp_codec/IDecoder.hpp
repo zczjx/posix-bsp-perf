@@ -5,6 +5,7 @@
 #include <string>
 #include <any>
 #include <functional>
+#include <image/ImageTypes.hpp>
 
 namespace bsp_codec
 {
@@ -74,6 +75,50 @@ struct DecodeOutFrame
     int fd;
     int eos_flag;
 };
+
+inline bsp_perf::image::ImageView toImageView(const DecodeOutFrame& frame)
+{
+    bsp_perf::image::ImageView view;
+    view.desc.width = static_cast<uint32_t>(frame.width);
+    view.desc.height = static_cast<uint32_t>(frame.height);
+    view.desc.widthStride = static_cast<uint32_t>(frame.width_stride > 0 ? frame.width_stride : frame.width);
+    view.desc.heightStride = static_cast<uint32_t>(frame.height_stride > 0 ? frame.height_stride : frame.height);
+    view.desc.format = frame.format;
+    view.desc.dataSize = frame.valid_data_size;
+    view.memoryType = frame.fd >= 0 ? bsp_perf::image::ImageMemoryType::DmaBuf : bsp_perf::image::ImageMemoryType::Host;
+    view.planeCount = 1;
+    view.planes[0].data = frame.virt_addr;
+    view.planes[0].size = frame.valid_data_size;
+    view.planes[0].rowStride = view.desc.widthStride;
+    view.planes[0].fd = frame.fd;
+    return view;
+}
+
+inline bsp_perf::image::ImageView toImageView(const std::shared_ptr<DecodeOutFrame>& frame)
+{
+    if (!frame) {
+        return {};
+    }
+
+    auto view = toImageView(*frame);
+    view.owner = frame;
+    return view;
+}
+
+inline DecodeOutFrame fromImageView(const bsp_perf::image::ImageView& view)
+{
+    DecodeOutFrame frame{};
+    frame.width = static_cast<int>(view.desc.width);
+    frame.height = static_cast<int>(view.desc.height);
+    frame.width_stride = static_cast<int>(view.desc.widthStride);
+    frame.height_stride = static_cast<int>(view.desc.heightStride);
+    frame.format = view.desc.format;
+    frame.virt_addr = view.planes[0].data;
+    frame.valid_data_size = view.desc.dataSize;
+    frame.fd = view.planes[0].fd;
+    frame.eos_flag = 0;
+    return frame;
+}
 
 using decodeReadyCallback = std::function<void(std::any userdata, std::shared_ptr<DecodeOutFrame> frame)>;
 

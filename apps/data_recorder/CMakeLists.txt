@@ -25,6 +25,7 @@ target_include_directories(${PROJECT_NAME} PRIVATE
 )
 target_link_libraries(${PROJECT_NAME} PRIVATE
   zeromq_ipc
+  bsp_image
   bsp_shared
   bsp_protocol
   bsp_dec

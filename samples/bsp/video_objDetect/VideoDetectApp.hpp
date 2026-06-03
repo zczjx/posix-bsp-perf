@@ -352,6 +352,7 @@ private:
     {
         bsp_dnn::ObjDetectInput objDetectInput = {
             .handleType = "DecodeOutFrame",
+            .image = bsp_codec::toImageView(frame),
             .imageHandle = frame,
         };
         m_dnnObjDetector->pushInputData(std::make_shared<bsp_dnn::ObjDetectInput>(objDetectInput));

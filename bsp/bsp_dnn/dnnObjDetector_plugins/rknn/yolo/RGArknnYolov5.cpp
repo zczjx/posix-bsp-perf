@@ -11,15 +11,20 @@ using namespace bsp_codec;
 
 int RGArknnYolov5::preProcess(ObjDetectParams& params, ObjDetectInput& inputData, IDnnEngine::dnnInput& outputData)
 {
-    if (inputData.handleType.compare("DecodeOutFrame") != 0)
+    if (inputData.handleType != "ImageView" && inputData.handleType != "DecodeOutFrame")
     {
-        throw std::invalid_argument("Only DecodeOutFrame is supported.");
+        throw std::invalid_argument("Only ImageView or DecodeOutFrame is supported.");
     }
 
-    auto yuv420_frame = std::any_cast<std::shared_ptr<DecodeOutFrame>>(inputData.imageHandle);
-    if (yuv420_frame == nullptr)
+    bsp_perf::image::ImageView inputImage = inputData.image;
+    if (inputImage.empty() && inputData.handleType == "DecodeOutFrame")
     {
-        throw std::invalid_argument("inputData.imageHandle is nullptr.");
+        auto yuv420_frame = std::any_cast<std::shared_ptr<DecodeOutFrame>>(inputData.imageHandle);
+        inputImage = toImageView(yuv420_frame);
+    }
+    if (inputImage.empty())
+    {
+        throw std::invalid_argument("inputData.image is empty.");
     }
 
     if (m_g2d == nullptr)
@@ -38,13 +43,14 @@ int RGArknnYolov5::preProcess(ObjDetectParams& params, ObjDetectInput& inputData
 
     // 创建输入 YUV420 帧的 Mapped 缓冲区
     IGraphics2D::G2DBufferParams yuv420_params;
-    yuv420_params.host_ptr = yuv420_frame->virt_addr;
-    yuv420_params.buffer_size = yuv420_frame->valid_data_size;
-    yuv420_params.width = yuv420_frame->width;
-    yuv420_params.height = yuv420_frame->height;
-    yuv420_params.width_stride = yuv420_frame->width_stride;
-    yuv420_params.height_stride = yuv420_frame->height_stride;
-    yuv420_params.format = yuv420_frame->format;
+    yuv420_params.host_ptr = inputImage.planes[0].data;
+    yuv420_params.buffer_size = inputImage.desc.dataSize;
+    yuv420_params.width = inputImage.desc.width;
+    yuv420_params.height = inputImage.desc.height;
+    yuv420_params.width_stride = inputImage.desc.widthStride;
+    yuv420_params.height_stride = inputImage.desc.heightStride;
+    yuv420_params.format = inputImage.desc.format;
+    yuv420_params.fd = inputImage.planes[0].fd;
 
     auto yuv420_g2d_buf = m_g2d->createBuffer(IGraphics2D::BufferType::Mapped, yuv420_params);
     if (!yuv420_g2d_buf)

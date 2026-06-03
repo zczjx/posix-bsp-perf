@@ -78,7 +78,7 @@ endif()
 
 # target_link_libraries(${PROJECT_NAME} PRIVATE bsp_shared)
 
-target_include_directories(${PROJECT_NAME} PRIVATE
+target_include_directories(${PROJECT_NAME} PUBLIC
     $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/..>
     $<INSTALL_INTERFACE:include>
 )
@@ -94,7 +94,7 @@ install(FILES ${${PROJECT_NAME}_PC} DESTINATION lib/pkgconfig)
 
 
 set_target_properties(${PROJECT_NAME} PROPERTIES INSTALL_RPATH "$ORIGIN/../lib")
-target_link_libraries(${PROJECT_NAME} PRIVATE bsp_shared)
+target_link_libraries(${PROJECT_NAME} PUBLIC bsp_image PRIVATE bsp_shared)
 
 install(TARGETS ${PROJECT_NAME}
   RUNTIME DESTINATION bin

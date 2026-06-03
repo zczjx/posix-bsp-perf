@@ -34,7 +34,7 @@ endif()
 # 添加第一个动态库
 add_library(${ENC_PRJ_NAME} SHARED ${ENC_SOURCES})
 
-target_include_directories(${ENC_PRJ_NAME} PRIVATE
+target_include_directories(${ENC_PRJ_NAME} PUBLIC
     $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/..>
     $<INSTALL_INTERFACE:include>
 )
@@ -49,7 +49,7 @@ configure_file(${CMAKE_SOURCE_DIR}/cmake/subProject.pc.in ${${ENC_PRJ_NAME}_PC} 
 install(FILES ${${ENC_PRJ_NAME}_PC} DESTINATION lib/pkgconfig)
 
 set_target_properties(${ENC_PRJ_NAME} PROPERTIES INSTALL_RPATH "$ORIGIN/../lib")
-target_link_libraries(${ENC_PRJ_NAME} PRIVATE bsp_shared)
+target_link_libraries(${ENC_PRJ_NAME} PUBLIC bsp_image PRIVATE bsp_shared)
 
 install(TARGETS ${ENC_PRJ_NAME}
   RUNTIME DESTINATION bin
@@ -77,7 +77,7 @@ endif()
 # 添加第二个动态库
 add_library(${DEC_PRJ_NAME} SHARED ${DEC_SOURCES})
 
-target_include_directories(${DEC_PRJ_NAME} PRIVATE
+target_include_directories(${DEC_PRJ_NAME} PUBLIC
     $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/..>
     $<INSTALL_INTERFACE:include>
 )
@@ -92,7 +92,7 @@ configure_file(${CMAKE_SOURCE_DIR}/cmake/subProject.pc.in ${${DEC_PRJ_NAME}_PC} 
 install(FILES ${${DEC_PRJ_NAME}_PC} DESTINATION lib/pkgconfig)
 
 set_target_properties(${DEC_PRJ_NAME} PROPERTIES INSTALL_RPATH "$ORIGIN/../lib")
-target_link_libraries(${DEC_PRJ_NAME} PRIVATE bsp_shared)
+target_link_libraries(${DEC_PRJ_NAME} PUBLIC bsp_image PRIVATE bsp_shared)
 
 if(BUILD_PLATFORM_RK35XX)
   if(DEFINED BSP_LIB_PATH)
