@@ -121,7 +121,7 @@ void SvsBlender::applyAwbAndLuminanceBalance(std::array<cv::Mat, kCameraCount>& 
     }
 }
 
-bool SvsBlender::blend(const std::array<cv::Mat, kCameraCount>& projectedImages, OutputFrame& output) const
+bool SvsBlender::blend(const std::array<cv::Mat, kCameraCount>& projectedImages, cv::Mat& output) const
 {
     if (!m_ready) {
         return false;
@@ -134,30 +134,30 @@ bool SvsBlender::blend(const std::array<cv::Mat, kCameraCount>& projectedImages,
     const int yt = m_layout.vehicleTop();
     const int yb = m_layout.vehicleBottom();
 
-    output.image = cv::Mat(cv::Size(totalW, totalH), CV_8UC3, cv::Scalar(0, 0, 0));
+    output = cv::Mat(cv::Size(totalW, totalH), CV_8UC3, cv::Scalar(0, 0, 0));
 
     if (m_hasVehicleImage) {
-        m_vehicleImage.copyTo(output.image(cv::Rect(xl, yt, m_vehicleImage.cols, m_vehicleImage.rows)));
+        m_vehicleImage.copyTo(output(cv::Rect(xl, yt, m_vehicleImage.cols, m_vehicleImage.rows)));
     }
 
-    projectedImages[0](cv::Rect(xl, 0, xr - xl, yt)).copyTo(output.image(cv::Rect(xl, 0, xr - xl, yt)));
-    projectedImages[1](cv::Rect(0, yt, xl, yb - yt)).copyTo(output.image(cv::Rect(0, yt, xl, yb - yt)));
-    projectedImages[3](cv::Rect(0, yt, xl, yb - yt)).copyTo(output.image(cv::Rect(xr, yt, totalW - xr, yb - yt)));
-    projectedImages[2](cv::Rect(xl, 0, xr - xl, yt)).copyTo(output.image(cv::Rect(xl, yb, xr - xl, yt)));
+    projectedImages[0](cv::Rect(xl, 0, xr - xl, yt)).copyTo(output(cv::Rect(xl, 0, xr - xl, yt)));
+    projectedImages[1](cv::Rect(0, yt, xl, yb - yt)).copyTo(output(cv::Rect(0, yt, xl, yb - yt)));
+    projectedImages[3](cv::Rect(0, yt, xl, yb - yt)).copyTo(output(cv::Rect(xr, yt, totalW - xr, yb - yt)));
+    projectedImages[2](cv::Rect(xl, 0, xr - xl, yt)).copyTo(output(cv::Rect(xl, yb, xr - xl, yt)));
 
     cv::Rect roi(0, 0, xl, yt);
-    mergeImage(projectedImages[0](roi), projectedImages[1](roi), m_weights[2], output.image(roi));
+    mergeImage(projectedImages[0](roi), projectedImages[1](roi), m_weights[2], output(roi));
 
     roi = cv::Rect(xr, 0, xl, yt);
     mergeImage(projectedImages[0](roi), projectedImages[3](cv::Rect(0, 0, xl, yt)), m_weights[1],
-               output.image(cv::Rect(xr, 0, xl, yt)));
+               output(cv::Rect(xr, 0, xl, yt)));
 
     roi = cv::Rect(0, yb, xl, yt);
-    mergeImage(projectedImages[2](cv::Rect(0, 0, xl, yt)), projectedImages[1](roi), m_weights[0], output.image(roi));
+    mergeImage(projectedImages[2](cv::Rect(0, 0, xl, yt)), projectedImages[1](roi), m_weights[0], output(roi));
 
     roi = cv::Rect(xr, 0, xl, yt);
     mergeImage(projectedImages[2](roi), projectedImages[3](cv::Rect(0, yb, xl, yt)), m_weights[3],
-               output.image(cv::Rect(xr, yb, xl, yt)));
+               output(cv::Rect(xr, yb, xl, yt)));
 
     return true;
 }

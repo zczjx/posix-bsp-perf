@@ -17,7 +17,7 @@ class SvsBlender
 public:
     bool setup(const SurroundViewConfig& config);
     void applyAwbAndLuminanceBalance(std::array<cv::Mat, kCameraCount>& images) const;
-    bool blend(const std::array<cv::Mat, kCameraCount>& projectedImages, OutputFrame& output) const;
+    bool blend(const std::array<cv::Mat, kCameraCount>& projectedImages, cv::Mat& output) const;
     void reset();
 
 private:

@@ -19,6 +19,7 @@ set(SOURCES
     SvsParamLoader.cpp
     SvsProjector.cpp
     SvsBlender.cpp
+    impl/opencv/OpenCvImageAdapter.cpp
     impl/opencv/OpenCvSurroundView.cpp
 )
 
@@ -27,12 +28,16 @@ add_library(${PROJECT_NAME} SHARED ${SOURCES})
 target_include_directories(${PROJECT_NAME}
     PUBLIC
         $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/..>
+        $<BUILD_INTERFACE:${CMAKE_SOURCE_DIR}/bsp>
         $<INSTALL_INTERFACE:include>
+    PRIVATE
         ${OpenCV_INCLUDE_DIRS}
 )
 
 target_link_libraries(${PROJECT_NAME}
     PUBLIC
+        bsp_image
+    PRIVATE
         ${OpenCV_LIBS}
 )
 
@@ -43,8 +48,8 @@ install(TARGETS ${PROJECT_NAME}
     LIBRARY DESTINATION lib
 )
 
-install(DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/
+install(FILES
+    ${CMAKE_CURRENT_SOURCE_DIR}/ISurroundView.hpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/SvsTypes.hpp
     DESTINATION include/svs
-    FILES_MATCHING
-    PATTERN "*.hpp"
 )

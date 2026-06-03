@@ -1,3 +1,4 @@
+#include <array>
 #include <iostream>
 #include <opencv2/imgcodecs.hpp>
 #include <svs/ISurroundView.hpp>
@@ -13,6 +14,37 @@ std::string joinPath(const std::string& root, const std::string& path)
         return root + path;
     }
     return root + "/" + path;
+}
+
+bsp_perf::image::ImageView toImageView(cv::Mat& image, const std::string& format)
+{
+    bsp_perf::image::ImageView view;
+    view.desc.width = static_cast<uint32_t>(image.cols);
+    view.desc.height = static_cast<uint32_t>(image.rows);
+    view.desc.widthStride = static_cast<uint32_t>(image.cols);
+    view.desc.heightStride = static_cast<uint32_t>(image.rows);
+    view.desc.format = format;
+    view.desc.dataSize = image.total() * image.elemSize();
+    view.memoryType = bsp_perf::image::ImageMemoryType::Host;
+    view.access = bsp_perf::image::ImageAccess::ReadWrite;
+    view.planeCount = 1;
+    view.planes[0].data = image.data;
+    view.planes[0].size = view.desc.dataSize;
+    view.planes[0].rowStride = static_cast<uint32_t>(image.step);
+    return view;
+}
+
+cv::Mat toBgrMat(const bsp_perf::image::ImageView& view)
+{
+    if (view.desc.format != "BGR888" || view.data() == nullptr) {
+        return {};
+    }
+    const size_t step = view.planes[0].rowStride > 0 ? view.planes[0].rowStride : view.desc.width * 3;
+    return cv::Mat(static_cast<int>(view.desc.height),
+                   static_cast<int>(view.desc.width),
+                   CV_8UC3,
+                   view.planes[0].data,
+                   step);
 }
 } // namespace
 
@@ -38,13 +70,15 @@ int main(int argc, char** argv)
     }};
 
     bsp_perf::svs::FrameSet input;
+    std::array<cv::Mat, bsp_perf::svs::kCameraCount> inputImages;
     for (size_t i = 0; i < bsp_perf::svs::kCameraCount; ++i) {
         const auto& camera = config.cameras[i];
-        input.cameras[i] = cv::imread(joinPath(dataRoot, "images/" + camera.name + ".png"), cv::IMREAD_COLOR);
-        if (input.cameras[i].empty()) {
+        inputImages[i] = cv::imread(joinPath(dataRoot, "images/" + camera.name + ".png"), cv::IMREAD_COLOR);
+        if (inputImages[i].empty()) {
             std::cerr << "failed to read camera image: " << camera.name << "\n";
             return -1;
         }
+        input.cameras[i] = toImageView(inputImages[i], "BGR888");
     }
 
     auto svs = bsp_perf::svs::ISurroundView::create("opencv");
@@ -59,7 +93,8 @@ int main(int argc, char** argv)
         return -1;
     }
 
-    if (!cv::imwrite(outputPath, output.image)) {
+    cv::Mat outputImage = toBgrMat(output.image);
+    if (outputImage.empty() || !cv::imwrite(outputPath, outputImage)) {
         std::cerr << "failed to write output: " << outputPath << "\n";
         return -1;
     }

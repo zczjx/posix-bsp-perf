@@ -2,9 +2,9 @@
 #define __SVS_TYPES_HPP__
 
 #include <array>
+#include <cstddef>
 #include <cstdint>
-#include <map>
-#include <opencv2/core.hpp>
+#include <image/ImageTypes.hpp>
 #include <string>
 #include <vector>
 
@@ -15,16 +15,25 @@ namespace svs
 
 constexpr size_t kCameraCount = 4;
 
+struct Matrix
+{
+    uint32_t rows{0};
+    uint32_t cols{0};
+    std::vector<double> values{};
+
+    bool empty() const { return rows == 0 || cols == 0 || values.empty(); }
+};
+
 struct CameraParameters
 {
     std::string name;
-    cv::Mat distCoeffs;
-    cv::Mat cameraMatrix;
-    cv::Mat projectMatrix;
-    cv::Mat transMatrix;
-    cv::Size size;
-    cv::Mat scaleXY;
-    cv::Mat shiftXY;
+    Matrix distCoeffs;
+    Matrix cameraMatrix;
+    Matrix projectMatrix;
+    Matrix transMatrix;
+    bsp_perf::image::ImageSize size;
+    Matrix scaleXY;
+    Matrix shiftXY;
 };
 
 struct CameraConfig
@@ -51,7 +60,13 @@ struct ProjectionLayout
     int vehicleRight() const { return totalWidth() - vehicleLeft(); }
     int vehicleTop() const { return shiftHeight + vehicleOffsetHeight + innerShiftHeight; }
     int vehicleBottom() const { return totalHeight() - vehicleTop(); }
-    cv::Size outputSize() const { return cv::Size(totalWidth(), totalHeight()); }
+    bsp_perf::image::ImageSize outputSize() const
+    {
+        return {
+            static_cast<uint32_t>(totalWidth()),
+            static_cast<uint32_t>(totalHeight()),
+        };
+    }
 };
 
 struct SurroundViewConfig
@@ -72,12 +87,12 @@ struct SurroundViewConfig
 
 struct FrameSet
 {
-    std::array<cv::Mat, kCameraCount> cameras;
+    std::array<bsp_perf::image::ImageView, kCameraCount> cameras;
 };
 
 struct OutputFrame
 {
-    cv::Mat image;
+    bsp_perf::image::ImageView image;
 };
 
 } // namespace svs

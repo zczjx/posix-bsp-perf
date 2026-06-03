@@ -1,4 +1,5 @@
 #include "SvsProjector.hpp"
+#include <cstring>
 #include <opencv2/calib3d.hpp>
 #include <opencv2/imgproc.hpp>
 
@@ -16,7 +17,8 @@ cv::Size SvsProjector::projectSize(const std::string& cameraName, const Projecti
         return cv::Size(layout.totalHeight(), layout.vehicleLeft());
     }
 
-    return layout.outputSize();
+    const auto outputSize = layout.outputSize();
+    return cv::Size(static_cast<int>(outputSize.width), static_cast<int>(outputSize.height));
 }
 
 bool SvsProjector::project(const cv::Mat& src,
@@ -25,7 +27,8 @@ bool SvsProjector::project(const cv::Mat& src,
                            const ProjectionLayout& layout,
                            cv::Mat& dst) const
 {
-    if (src.empty() || params.projectMatrix.empty()) {
+    const cv::Mat projectMatrix = toCvMat(params.projectMatrix);
+    if (src.empty() || projectMatrix.empty()) {
         return false;
     }
 
@@ -34,36 +37,55 @@ bool SvsProjector::project(const cv::Mat& src,
         return false;
     }
 
-    cv::warpPerspective(undistorted, dst, params.projectMatrix, projectSize(cameraConfig.name, layout));
+    cv::warpPerspective(undistorted, dst, projectMatrix, projectSize(cameraConfig.name, layout));
     applyFlip(cameraConfig.flipMode, dst);
     return !dst.empty();
 }
 
+cv::Mat SvsProjector::toCvMat(const Matrix& matrix) const
+{
+    if (matrix.empty() || matrix.values.size() != static_cast<size_t>(matrix.rows) * matrix.cols) {
+        return {};
+    }
+
+    cv::Mat out(static_cast<int>(matrix.rows), static_cast<int>(matrix.cols), CV_64F);
+    std::memcpy(out.data, matrix.values.data(), matrix.values.size() * sizeof(double));
+    return out;
+}
+
 bool SvsProjector::undistortByRemap(const cv::Mat& src, const CameraParameters& params, cv::Mat& dst) const
 {
-    if (src.empty() || params.cameraMatrix.empty() || params.distCoeffs.empty() ||
-        params.scaleXY.empty() || params.shiftXY.empty() || params.size.empty()) {
+    cv::Mat cameraMatrix = toCvMat(params.cameraMatrix);
+    cv::Mat distCoeffs = toCvMat(params.distCoeffs);
+    cv::Mat scaleXY = toCvMat(params.scaleXY);
+    cv::Mat shiftXY = toCvMat(params.shiftXY);
+    if (src.empty() || cameraMatrix.empty() || distCoeffs.empty() ||
+        scaleXY.empty() || shiftXY.empty() || params.size.empty()) {
         return false;
     }
 
     cv::Mat newCameraMatrix;
-    params.cameraMatrix.convertTo(newCameraMatrix, CV_64F);
-    const auto* scale = reinterpret_cast<const float*>(params.scaleXY.data);
-    const auto* shift = reinterpret_cast<const float*>(params.shiftXY.data);
-
-    if (newCameraMatrix.empty() || scale == nullptr || shift == nullptr) {
+    cameraMatrix.convertTo(newCameraMatrix, CV_64F);
+    if (newCameraMatrix.empty() || scaleXY.total() < 2 || shiftXY.total() < 2) {
         return false;
     }
 
-    newCameraMatrix.at<double>(0, 0) *= static_cast<double>(scale[0]);
-    newCameraMatrix.at<double>(1, 1) *= static_cast<double>(scale[1]);
-    newCameraMatrix.at<double>(0, 2) += static_cast<double>(shift[0]);
-    newCameraMatrix.at<double>(1, 2) += static_cast<double>(shift[1]);
+    newCameraMatrix.at<double>(0, 0) *= scaleXY.at<double>(0);
+    newCameraMatrix.at<double>(1, 1) *= scaleXY.at<double>(1);
+    newCameraMatrix.at<double>(0, 2) += shiftXY.at<double>(0);
+    newCameraMatrix.at<double>(1, 2) += shiftXY.at<double>(1);
 
     cv::Mat map1;
     cv::Mat map2;
     cv::fisheye::initUndistortRectifyMap(
-        params.cameraMatrix, params.distCoeffs, cv::Mat(), newCameraMatrix, params.size, CV_16SC2, map1, map2);
+        cameraMatrix,
+        distCoeffs,
+        cv::Mat(),
+        newCameraMatrix,
+        cv::Size(static_cast<int>(params.size.width), static_cast<int>(params.size.height)),
+        CV_16SC2,
+        map1,
+        map2);
     cv::remap(src, dst, map1, map2, cv::INTER_LINEAR, cv::BORDER_CONSTANT);
 
     return !dst.empty();

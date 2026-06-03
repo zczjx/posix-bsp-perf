@@ -20,6 +20,7 @@ public:
                  cv::Mat& dst) const;
 
 private:
+    cv::Mat toCvMat(const Matrix& matrix) const;
     bool undistortByRemap(const cv::Mat& src, const CameraParameters& params, cv::Mat& dst) const;
     void applyFlip(const std::string& flipMode, cv::Mat& image) const;
 };

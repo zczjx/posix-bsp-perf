@@ -1,4 +1,5 @@
 #include "svs/SurroundView.hpp"
+#include "OpenCvImageAdapter.hpp"
 #include <opencv2/imgproc.hpp>
 
 namespace bsp_perf
@@ -36,7 +37,13 @@ int OpenCvSurroundView::process(const FrameSet& input, OutputFrame& output)
         return -1;
     }
 
-    std::array<cv::Mat, kCameraCount> cameras = input.cameras;
+    std::array<cv::Mat, kCameraCount> cameras;
+    for (size_t i = 0; i < kCameraCount; ++i) {
+        if (!OpenCvImageAdapter::toMat(input.cameras[i], cameras[i])) {
+            return -1;
+        }
+    }
+
     if (m_config.enableAwb || m_config.enableLuminanceBalance) {
         m_blender.applyAwbAndLuminanceBalance(cameras);
     }
@@ -48,7 +55,12 @@ int OpenCvSurroundView::process(const FrameSet& input, OutputFrame& output)
         }
     }
 
-    return m_blender.blend(projectedImages, output) ? 0 : -1;
+    cv::Mat blended;
+    if (!m_blender.blend(projectedImages, blended)) {
+        return -1;
+    }
+
+    return OpenCvImageAdapter::fromMat(blended, "BGR888", output.image) ? 0 : -1;
 }
 
 int OpenCvSurroundView::tearDown()
