@@ -16,9 +16,9 @@ using namespace bsp_g2d;
  * @brief NvVic version of ResNet18 TrafficCamNet plugin
  * 
  * This plugin uses NVIDIA VIC (Video Image Compositor) for hardware-accelerated
- * preprocessing of DecodeOutFrame input data.
+ * preprocessing of ImageView input data.
  * 
- * Supports DecodeOutFrame input type (YUV420SP from decoder)
+ * Supports ImageView input type (YUV420SP from decoder)
  * Uses nvvic for YUV to RGB conversion and resizing
  * 
  * Model output format (DetectNet architecture):
@@ -42,7 +42,7 @@ public:
     ~NvVicResnet18TrafficCamNet() = default;
 
     /**
-     * @brief Preprocess DecodeOutFrame input for ResNet18 TrafficCamNet
+     * @brief Preprocess ImageView input for ResNet18 TrafficCamNet
      *
      * Preprocessing steps:
      * 1. Use nvvic to convert YUV420SP to RGBA8888 (NvVic format requirement)
@@ -56,7 +56,7 @@ public:
      * - Normalization: [0, 1] range (pixel / 255.0)
      * 
      * @param params Detection parameters including model input shape
-     * @param inputData Input frame data (DecodeOutFrame format)
+     * @param inputData Input frame data (ImageView format)
      * @param outputData Output preprocessed data ready for inference
      * @return 0 on success, non-zero on failure
      */

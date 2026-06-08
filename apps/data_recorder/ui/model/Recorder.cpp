@@ -108,32 +108,26 @@ int Recorder::addVideoStream(int width, int height)
 }
 
 int Recorder::convertImageFormat(uint8_t* input_data, int width, int height, std::string input_format,
-    std::shared_ptr<EncodeInputBuffer> output_buf, std::string out_format)
+    std::shared_ptr<bsp_perf::image::ImageBuffer> output_buf, std::string out_format)
 {
-    IGraphics2D::G2DBufferParams rgb888_g2d_buf_params = {
-        .width = static_cast<size_t>(width),
-        .height = static_cast<size_t>(height),
-        .width_stride = static_cast<size_t>(width),
-        .height_stride = static_cast<size_t>(height),
-        .format = input_format,
-        .host_ptr = input_data,
-        .buffer_size = static_cast<size_t>(width) * height * bytesPerPixel(input_format),
-    };
+    bsp_perf::image::ImageView inputImage{};
+    inputImage.desc.width = static_cast<uint32_t>(width);
+    inputImage.desc.height = static_cast<uint32_t>(height);
+    inputImage.desc.widthStride = static_cast<uint32_t>(width);
+    inputImage.desc.heightStride = static_cast<uint32_t>(height);
+    inputImage.desc.format = input_format;
+    inputImage.desc.dataSize = static_cast<size_t>(width) * height * bytesPerPixel(input_format);
+    inputImage.memoryType = bsp_perf::image::ImageMemoryType::Host;
+    inputImage.planeCount = 1;
+    inputImage.planes[0].data = input_data;
+    inputImage.planes[0].size = inputImage.desc.dataSize;
+    inputImage.planes[0].rowStride = static_cast<uint32_t>(width);
+    inputImage.planes[0].fd = -1;
 
-    auto in_g2d_buf = m_g2d->createBuffer(IGraphics2D::BufferType::Mapped, rgb888_g2d_buf_params);
+    output_buf->view.desc.format = out_format;
 
-
-    IGraphics2D::G2DBufferParams yuv420_g2d_buf_params = {
-        .width = static_cast<size_t>(width),
-        .height = static_cast<size_t>(height),
-        .width_stride = static_cast<size_t>(width),
-        .height_stride = static_cast<size_t>(height),
-        .format = out_format,
-        .host_ptr = output_buf->input_buf_addr,
-        .buffer_size = static_cast<size_t>(width * height * 3 / 2),
-    };
-
-    auto out_g2d_buf = m_g2d->createBuffer(IGraphics2D::BufferType::Mapped, yuv420_g2d_buf_params);
+    auto in_g2d_buf = m_g2d->createBuffer(IGraphics2D::BufferType::Mapped, inputImage);
+    auto out_g2d_buf = m_g2d->createBuffer(IGraphics2D::BufferType::Mapped, output_buf->view);
 
     m_g2d->imageCvtColor(in_g2d_buf, out_g2d_buf, input_format, out_format);
     {

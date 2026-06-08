@@ -102,3 +102,4 @@ all.config
 *.mp4
 bak_*
 ui_*
+__pycache__

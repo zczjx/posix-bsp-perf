@@ -1,27 +1,13 @@
 #include "RGArknnYolov5.hpp"
-#include <bsp_codec/IDecoder.hpp>
 #include <memory>
-#include <any>
 #include <iostream>
 #include <cstring>
 
 namespace bsp_dnn
 {
-using namespace bsp_codec;
-
 int RGArknnYolov5::preProcess(ObjDetectParams& params, ObjDetectInput& inputData, IDnnEngine::dnnInput& outputData)
 {
-    if (inputData.handleType != "ImageView" && inputData.handleType != "DecodeOutFrame")
-    {
-        throw std::invalid_argument("Only ImageView or DecodeOutFrame is supported.");
-    }
-
     bsp_perf::image::ImageView inputImage = inputData.image;
-    if (inputImage.empty() && inputData.handleType == "DecodeOutFrame")
-    {
-        auto yuv420_frame = std::any_cast<std::shared_ptr<DecodeOutFrame>>(inputData.imageHandle);
-        inputImage = toImageView(yuv420_frame);
-    }
     if (inputImage.empty())
     {
         throw std::invalid_argument("inputData.image is empty.");
@@ -39,36 +25,27 @@ int RGArknnYolov5::preProcess(ObjDetectParams& params, ObjDetectInput& inputData
         m_rknn_input_buf.resize(rknn_input_size);
     }
 
-    // ========== 使用新的 IGraphics2D API ==========
-
-    // 创建输入 YUV420 帧的 Mapped 缓冲区
-    IGraphics2D::G2DBufferParams yuv420_params;
-    yuv420_params.host_ptr = inputImage.planes[0].data;
-    yuv420_params.buffer_size = inputImage.desc.dataSize;
-    yuv420_params.width = inputImage.desc.width;
-    yuv420_params.height = inputImage.desc.height;
-    yuv420_params.width_stride = inputImage.desc.widthStride;
-    yuv420_params.height_stride = inputImage.desc.heightStride;
-    yuv420_params.format = inputImage.desc.format;
-    yuv420_params.fd = inputImage.planes[0].fd;
-
-    auto yuv420_g2d_buf = m_g2d->createBuffer(IGraphics2D::BufferType::Mapped, yuv420_params);
+    auto yuv420_g2d_buf = m_g2d->createBuffer(IGraphics2D::BufferType::Mapped, inputImage);
     if (!yuv420_g2d_buf)
     {
         throw std::runtime_error("Failed to create YUV420 G2D buffer");
     }
 
-    // 创建输出 RGB888 帧的 Mapped 缓冲区
-    IGraphics2D::G2DBufferParams rgb888_params;
-    rgb888_params.host_ptr = m_rknn_input_buf.data();
-    rgb888_params.buffer_size = rknn_input_size;
-    rgb888_params.width = params.model_input_width;
-    rgb888_params.height = params.model_input_height;
-    rgb888_params.width_stride = params.model_input_width;
-    rgb888_params.height_stride = params.model_input_height;
-    rgb888_params.format = "RGB888";
+    bsp_perf::image::ImageView rgb888Image{};
+    rgb888Image.desc.width = static_cast<uint32_t>(params.model_input_width);
+    rgb888Image.desc.height = static_cast<uint32_t>(params.model_input_height);
+    rgb888Image.desc.widthStride = static_cast<uint32_t>(params.model_input_width);
+    rgb888Image.desc.heightStride = static_cast<uint32_t>(params.model_input_height);
+    rgb888Image.desc.format = "RGB888";
+    rgb888Image.desc.dataSize = rknn_input_size;
+    rgb888Image.memoryType = bsp_perf::image::ImageMemoryType::Host;
+    rgb888Image.planeCount = 1;
+    rgb888Image.planes[0].data = m_rknn_input_buf.data();
+    rgb888Image.planes[0].size = rknn_input_size;
+    rgb888Image.planes[0].rowStride = rgb888Image.desc.widthStride;
+    rgb888Image.planes[0].fd = -1;
 
-    auto rgb888_g2d_buf = m_g2d->createBuffer(IGraphics2D::BufferType::Mapped, rgb888_params);
+    auto rgb888_g2d_buf = m_g2d->createBuffer(IGraphics2D::BufferType::Mapped, rgb888Image);
     if (!rgb888_g2d_buf)
     {
         m_g2d->releaseBuffer(yuv420_g2d_buf);

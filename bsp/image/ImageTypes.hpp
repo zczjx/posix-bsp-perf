@@ -2,8 +2,10 @@
 #define __BSP_IMAGE_TYPES_HPP__
 
 #include <array>
+#include <any>
 #include <cstddef>
 #include <cstdint>
+#include <functional>
 #include <memory>
 #include <string>
 
@@ -76,6 +78,27 @@ struct ImageView
     }
 };
 
+struct ImageBuffer
+{
+    ImageView view{};
+    std::shared_ptr<void> owner{};
+    std::any nativeHandle{};
+    std::function<void()> release{};
+
+    ~ImageBuffer()
+    {
+        if (release) {
+            release();
+        }
+    }
+
+    ImageBuffer() = default;
+    ImageBuffer(const ImageBuffer&) = delete;
+    ImageBuffer& operator=(const ImageBuffer&) = delete;
+    ImageBuffer(ImageBuffer&&) = default;
+    ImageBuffer& operator=(ImageBuffer&&) = default;
+};
+
 } // namespace image
 
 namespace shared
@@ -83,6 +106,7 @@ namespace shared
 using image::ImageAccess;
 using image::ImageDesc;
 using image::ImageMemoryType;
+using image::ImageBuffer;
 using image::ImagePlane;
 using image::ImageSize;
 using image::ImageView;

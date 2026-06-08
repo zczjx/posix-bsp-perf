@@ -60,9 +60,23 @@ private:
 
     void onProcess() override
     {
+        bsp_perf::image::ImageView image{};
+        image.desc.width = static_cast<uint32_t>(m_orig_image_ptr->cols);
+        image.desc.height = static_cast<uint32_t>(m_orig_image_ptr->rows);
+        image.desc.widthStride = static_cast<uint32_t>(m_orig_image_ptr->cols);
+        image.desc.heightStride = static_cast<uint32_t>(m_orig_image_ptr->rows);
+        image.desc.format = "BGR888";
+        image.desc.dataSize = m_orig_image_ptr->total() * m_orig_image_ptr->elemSize();
+        image.memoryType = bsp_perf::image::ImageMemoryType::Host;
+        image.planeCount = 1;
+        image.planes[0].data = m_orig_image_ptr->data;
+        image.planes[0].size = image.desc.dataSize;
+        image.planes[0].rowStride = static_cast<uint32_t>(m_orig_image_ptr->step);
+        image.planes[0].fd = -1;
+        image.owner = m_orig_image_ptr;
+
         bsp_dnn::ObjDetectInput objDetectInput = {
-            .handleType = "opencv4",
-            .imageHandle = m_orig_image_ptr,
+            .image = image,
         };
         m_dnnObjDetector->pushInputData(std::make_shared<bsp_dnn::ObjDetectInput>(objDetectInput));
         setObjDetectParams(m_objDetectParams);

@@ -251,22 +251,22 @@ private:
         };
         m_decoder->setup(cfg);
 
-        auto decoderCallback = [this](std::any /*userdata*/, std::shared_ptr<DecodeOutFrame> frame)
+        auto decoderCallback = [this](std::any /*userdata*/, std::shared_ptr<bsp_perf::image::ImageBuffer> frame)
         {
             if (m_encoder == nullptr)
             {
                 m_encoder = IEncoder::create(m_encoderType);
 
                 // 修复 stride 为 0 的问题：当 stride 为 0 时，使用 width/height 作为默认值
-                int hor_stride = (frame->width_stride > 0) ? frame->width_stride : frame->width;
-                int ver_stride = (frame->height_stride > 0) ? frame->height_stride : frame->height;
+                int hor_stride = (frame->view.desc.widthStride > 0) ? frame->view.desc.widthStride : frame->view.desc.width;
+                int ver_stride = (frame->view.desc.heightStride > 0) ? frame->view.desc.heightStride : frame->view.desc.height;
                 EncodeConfig enc_cfg =
                 {
                     .encodingType = "h264",
                     .frameFormat = "YUV420SP",
                     .fps = 30,
-                    .width = frame->width,
-                    .height = frame->height,
+                    .width = frame->view.desc.width,
+                    .height = frame->view.desc.height,
                     .hor_stride = hor_stride,
                     .ver_stride = ver_stride,
                 };
@@ -274,7 +274,7 @@ private:
                 int ret = m_encoder->setup(enc_cfg);
                 m_logger->printStdoutLog(bsp_perf::shared::BspLogger::LogLevel::Info,
                     "VideoDetectApp encoder setup ret: {}, width: {}, height: {}, hor_stride: {}, ver_stride: {}",
-                    ret, frame->width, frame->height, hor_stride, ver_stride);
+                    ret, frame->view.desc.width, frame->view.desc.height, hor_stride, ver_stride);
                 // 获取并写入编码器头部（如 SPS/PPS）
                 std::string enc_header;
                 m_encoder->getEncoderHeader(enc_header);
@@ -286,7 +286,7 @@ private:
                     fflush(m_out_fp.get());
                 }
             }
-            m_logger->printStdoutLog(bsp_perf::shared::BspLogger::LogLevel::Debug, "frame->width: {}, frame->height: {}, frame->width_stride: {}, frame->height_stride: {}, frame->format: {}, frame->valid_data_size: {}", frame->width, frame->height, frame->width_stride, frame->height_stride, frame->format, frame->valid_data_size);
+            m_logger->printStdoutLog(bsp_perf::shared::BspLogger::LogLevel::Debug, "frame width: {}, height: {}, width_stride: {}, height_stride: {}, format: {}, data_size: {}", frame->view.desc.width, frame->view.desc.height, frame->view.desc.widthStride, frame->view.desc.heightStride, frame->view.desc.format, frame->view.desc.dataSize);
 
             // ⚠️ 确保编码器在入队前就绪（避免死锁）
             // 推理线程需要编码器，如果编码器在回调中创建但回调被队列满阻塞，就会死锁
@@ -299,12 +299,14 @@ private:
             // 🚀 异步架构：快速入队，不阻塞解码器
             // 拷贝帧数据（重要！避免 decoder buffer 被下一帧覆盖）
             FrameTask task;
-            task.frame_data.resize(frame->valid_data_size);
-            std::memcpy(task.frame_data.data(), frame->virt_addr, frame->valid_data_size);
-            task.width = frame->width;
-            task.height = frame->height;
-            task.format = frame->format;
-            task.eos_flag = frame->eos_flag;
+            task.frame_data.resize(frame->view.desc.dataSize);
+            std::memcpy(task.frame_data.data(), frame->view.data(), frame->view.desc.dataSize);
+            task.width = frame->view.desc.width;
+            task.height = frame->view.desc.height;
+            task.width_stride = frame->view.desc.widthStride;
+            task.height_stride = frame->view.desc.heightStride;
+            task.format = frame->view.desc.format;
+            task.eos_flag = false;
 
             {
                 std::unique_lock<std::mutex> lock(m_queue_mutex);
@@ -329,7 +331,7 @@ private:
         m_decoder->setDecodeReadyCallback(decoderCallback, nullptr);
     }
 
-    void setObjDetectParams(ObjDetectParams& objDetectParams, std::shared_ptr<DecodeOutFrame> frame)
+    void setObjDetectParams(ObjDetectParams& objDetectParams, const bsp_perf::image::ImageView& frame)
     {
         IDnnEngine::dnnInputShape shape;
         m_dnnObjDetector->getInputShape(shape);
@@ -339,8 +341,8 @@ private:
         objDetectParams.model_input_channel = shape.channel;
         params.getSubOptionVal("objDetectParams", "--conf_threshold", objDetectParams.conf_threshold);
         params.getSubOptionVal("objDetectParams", "--nms_threshold", objDetectParams.nms_threshold);
-        objDetectParams.scale_width = static_cast<float>(shape.width) / static_cast<float>(frame->width);
-        objDetectParams.scale_height = static_cast<float>(shape.height) / static_cast<float>(frame->height);
+        objDetectParams.scale_width = static_cast<float>(shape.width) / static_cast<float>(frame.desc.width);
+        objDetectParams.scale_height = static_cast<float>(shape.height) / static_cast<float>(frame.desc.height);
         params.getSubOptionVal("objDetectParams", "--pads_left", objDetectParams.pads.left);
         params.getSubOptionVal("objDetectParams", "--pads_right", objDetectParams.pads.right);
         params.getSubOptionVal("objDetectParams", "--pads_top", objDetectParams.pads.top);
@@ -348,12 +350,10 @@ private:
         m_dnnObjDetector->getOutputQuantParams(objDetectParams.quantize_zero_points, objDetectParams.quantize_scales);
     }
 
-    std::vector<ObjDetectOutputBox> dnnInference(std::shared_ptr<DecodeOutFrame> frame)
+    std::vector<ObjDetectOutputBox> dnnInference(const bsp_perf::image::ImageView& frame)
     {
         bsp_dnn::ObjDetectInput objDetectInput = {
-            .handleType = "DecodeOutFrame",
-            .image = bsp_codec::toImageView(frame),
-            .imageHandle = frame,
+            .image = frame,
         };
         m_dnnObjDetector->pushInputData(std::make_shared<bsp_dnn::ObjDetectInput>(objDetectInput));
         setObjDetectParams(m_objDetectParams, frame);
@@ -414,6 +414,8 @@ private:
         std::vector<uint8_t> frame_data;  // 拷贝帧数据（避免 decoder buffer 被覆盖）
         uint32_t width;
         uint32_t height;
+        uint32_t width_stride;
+        uint32_t height_stride;
         std::string format;
         bool eos_flag;
     };
@@ -500,13 +502,19 @@ private:
             }
 
             // 执行 DNN 推理（在推理线程中，不阻塞解码器）
-            auto frame = std::make_shared<DecodeOutFrame>();
-            frame->virt_addr = task.frame_data.data();
-            frame->width = task.width;
-            frame->height = task.height;
-            frame->format = task.format;
-            frame->valid_data_size = task.frame_data.size();
-            frame->eos_flag = task.eos_flag;
+            bsp_perf::image::ImageView frame{};
+            frame.desc.width = task.width;
+            frame.desc.height = task.height;
+            frame.desc.widthStride = task.width_stride;
+            frame.desc.heightStride = task.height_stride;
+            frame.desc.format = task.format;
+            frame.desc.dataSize = task.frame_data.size();
+            frame.memoryType = bsp_perf::image::ImageMemoryType::Host;
+            frame.planeCount = 1;
+            frame.planes[0].data = task.frame_data.data();
+            frame.planes[0].size = task.frame_data.size();
+            frame.planes[0].rowStride = task.width_stride > 0 ? task.width_stride : task.width;
+            frame.planes[0].fd = -1;
 
             // 执行 DNN 推理
             auto objDetectOutput = dnnInference(frame);
@@ -517,25 +525,17 @@ private:
                           << " detected " << objDetectOutput.size() << " objects" << std::endl;
 
             // // 修复 stride 为 0 的问题
-            size_t input_width_stride = frame->width_stride > 0 ?
-                                        static_cast<size_t>(frame->width_stride) :
-                                        static_cast<size_t>(frame->width);
-            size_t input_height_stride = frame->height_stride > 0 ?
-                                         static_cast<size_t>(frame->height_stride) :
-                                         static_cast<size_t>(frame->height);
+            size_t input_width_stride = frame.desc.widthStride > 0 ?
+                                        static_cast<size_t>(frame.desc.widthStride) :
+                                        static_cast<size_t>(frame.desc.width);
+            size_t input_height_stride = frame.desc.heightStride > 0 ?
+                                         static_cast<size_t>(frame.desc.heightStride) :
+                                         static_cast<size_t>(frame.desc.height);
 
 
-            // // 步骤1: 创建输入 YUV420 帧的 G2DBuffer
-            IGraphics2D::G2DBufferParams dec_out_params;
-            dec_out_params.host_ptr = task.frame_data.data();
-            dec_out_params.buffer_size = task.frame_data.size();
-            dec_out_params.width = static_cast<size_t>(task.width);
-            dec_out_params.height = static_cast<size_t>(task.height);
-            dec_out_params.width_stride = input_width_stride;
-            dec_out_params.height_stride = input_height_stride;
-            dec_out_params.format = task.format;
-
-            auto yuv_in_buf = m_g2d->createBuffer(IGraphics2D::BufferType::Mapped, dec_out_params);
+            frame.desc.widthStride = static_cast<uint32_t>(input_width_stride);
+            frame.desc.heightStride = static_cast<uint32_t>(input_height_stride);
+            auto yuv_in_buf = m_g2d->createBuffer(IGraphics2D::BufferType::Mapped, frame);
             if (!yuv_in_buf)
             {
                 m_logger->printStdoutLog(bsp_perf::shared::BspLogger::LogLevel::Error,
@@ -550,16 +550,21 @@ private:
                 m_rgba_buf.resize(rgba_buffer_size);
             }
 
-            IGraphics2D::G2DBufferParams rgba_params;
-            rgba_params.host_ptr = m_rgba_buf.data();
-            rgba_params.buffer_size = rgba_buffer_size;
-            rgba_params.width = static_cast<size_t>(task.width);
-            rgba_params.height = static_cast<size_t>(task.height);
-            rgba_params.width_stride = static_cast<size_t>(task.width);
-            rgba_params.height_stride = static_cast<size_t>(task.height);
-            rgba_params.format = "RGBA8888";
+            bsp_perf::image::ImageView rgbaImage{};
+            rgbaImage.desc.width = task.width;
+            rgbaImage.desc.height = task.height;
+            rgbaImage.desc.widthStride = task.width;
+            rgbaImage.desc.heightStride = task.height;
+            rgbaImage.desc.format = "RGBA8888";
+            rgbaImage.desc.dataSize = rgba_buffer_size;
+            rgbaImage.memoryType = bsp_perf::image::ImageMemoryType::Host;
+            rgbaImage.planeCount = 1;
+            rgbaImage.planes[0].data = m_rgba_buf.data();
+            rgbaImage.planes[0].size = rgba_buffer_size;
+            rgbaImage.planes[0].rowStride = task.width;
+            rgbaImage.planes[0].fd = -1;
 
-            auto rgba_mapped_buf = m_g2d->createBuffer(IGraphics2D::BufferType::Mapped, rgba_params);
+            auto rgba_mapped_buf = m_g2d->createBuffer(IGraphics2D::BufferType::Mapped, rgbaImage);
             if (!rgba_mapped_buf)
             {
                 m_logger->printStdoutLog(bsp_perf::shared::BspLogger::LogLevel::Error,
@@ -625,16 +630,21 @@ private:
                 m_yuv420_buf.resize(yuv420_buffer_size);
             }
 
-            IGraphics2D::G2DBufferParams yuv_out_params;
-            yuv_out_params.host_ptr = m_yuv420_buf.data();
-            yuv_out_params.buffer_size = yuv420_buffer_size;
-            yuv_out_params.width = static_cast<size_t>(task.width);
-            yuv_out_params.height = static_cast<size_t>(task.height);
-            yuv_out_params.width_stride = input_width_stride;
-            yuv_out_params.height_stride = input_height_stride;
-            yuv_out_params.format = task.format;
+            bsp_perf::image::ImageView yuvOutImage{};
+            yuvOutImage.desc.width = task.width;
+            yuvOutImage.desc.height = task.height;
+            yuvOutImage.desc.widthStride = static_cast<uint32_t>(input_width_stride);
+            yuvOutImage.desc.heightStride = static_cast<uint32_t>(input_height_stride);
+            yuvOutImage.desc.format = task.format;
+            yuvOutImage.desc.dataSize = yuv420_buffer_size;
+            yuvOutImage.memoryType = bsp_perf::image::ImageMemoryType::Host;
+            yuvOutImage.planeCount = 1;
+            yuvOutImage.planes[0].data = m_yuv420_buf.data();
+            yuvOutImage.planes[0].size = yuv420_buffer_size;
+            yuvOutImage.planes[0].rowStride = static_cast<uint32_t>(input_width_stride);
+            yuvOutImage.planes[0].fd = -1;
 
-            auto yuv_out_buf = m_g2d->createBuffer(IGraphics2D::BufferType::Mapped, yuv_out_params);
+            auto yuv_out_buf = m_g2d->createBuffer(IGraphics2D::BufferType::Mapped, yuvOutImage);
             if (!yuv_out_buf)
             {
                 m_logger->printStdoutLog(bsp_perf::shared::BspLogger::LogLevel::Error,
@@ -671,7 +681,7 @@ private:
             m_g2d->releaseBuffer(yuv_in_buf);
 
             // 步骤8: 发送到编码器
-            std::shared_ptr<EncodeInputBuffer> enc_in_buf = m_encoder->getInputBuffer();
+            std::shared_ptr<bsp_perf::image::ImageBuffer> enc_in_buf = m_encoder->getInputBuffer();
             if (!enc_in_buf)
             {
                 m_logger->printStdoutLog(bsp_perf::shared::BspLogger::LogLevel::Error,
@@ -680,8 +690,7 @@ private:
             }
 
             // 将画好 bbox 的 YUV420 数据传给编码器
-            std::memcpy(enc_in_buf->input_buf_addr, m_yuv420_buf.data(), m_yuv420_buf.size());
-            // enc_in_buf->input_buf_addr = task.frame_data.data();//m_yuv420_buf.data();
+            std::memcpy(enc_in_buf->view.data(), m_yuv420_buf.data(), m_yuv420_buf.size());
 
             // 准备编码输出包
             EncodePacket enc_pkt = {
@@ -708,7 +717,7 @@ private:
 
         if (m_encoder)
         {
-            std::shared_ptr<EncodeInputBuffer> inputBuf = m_encoder->getInputBuffer();
+            std::shared_ptr<bsp_perf::image::ImageBuffer> inputBuf = m_encoder->getInputBuffer();
             if (inputBuf)
             {
                 EncodePacket eosPkt;

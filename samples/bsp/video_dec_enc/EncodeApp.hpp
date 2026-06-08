@@ -143,7 +143,7 @@ private:
         while (offset + m_frame_size <= total_size)
         {
             // 获取编码器输入缓冲区
-            std::shared_ptr<EncodeInputBuffer> inputBuf = m_encoder->getInputBuffer();
+            std::shared_ptr<bsp_perf::image::ImageBuffer> inputBuf = m_encoder->getInputBuffer();
             if (!inputBuf)
             {
                 m_logger->printStdoutLog(bsp_perf::shared::BspLogger::LogLevel::Error,
@@ -152,8 +152,7 @@ private:
             }
 
             // 拷贝输入数据到编码器缓冲区
-            // 新的统一API：编码器分配并管理内存，用户拷贝数据到 input_buf_addr
-            memcpy(inputBuf->input_buf_addr, data_ptr + offset, m_frame_size);
+            memcpy(inputBuf->view.data(), data_ptr + offset, m_frame_size);
 
             // 准备输出包
             EncodePacket outPkt;
@@ -187,7 +186,7 @@ private:
         m_logger->printStdoutLog(bsp_perf::shared::BspLogger::LogLevel::Info,
             "EncodeApp::onProcess() Sending EOS after {} frames", m_frame_count);
 
-        std::shared_ptr<EncodeInputBuffer> inputBuf = m_encoder->getInputBuffer();
+        std::shared_ptr<bsp_perf::image::ImageBuffer> inputBuf = m_encoder->getInputBuffer();
         if (inputBuf)
         {
             EncodePacket eosPkt;

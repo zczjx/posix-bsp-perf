@@ -5,6 +5,8 @@
 #include <string>
 #include <any>
 #include <functional>
+#include <vector>
+#include <image/ImageTypes.hpp>
 
 namespace bsp_codec
 {
@@ -27,13 +29,6 @@ struct EncodePacket
     int pkt_eos;
     size_t pkt_len{0};
     std::vector<uint8_t> encode_pkt{};
-};
-
-struct EncodeInputBuffer
-{
-    std::any internal_buf{nullptr};
-    int input_buf_fd{-1};
-    void* input_buf_addr{nullptr};
 };
 
 class IEncoder
@@ -69,20 +64,20 @@ public:
      * Memory Management:
      * - The encoder allocates and manages the buffer memory
      * - Both rkmpp and nvenc implementations provide allocated buffers
-     * - The buffer's input_buf_addr is ready to be written to
-     * - User should write frame data directly to input_buf_addr
+     * - The buffer's ImageView data pointer is ready to be written to
+     * - User should write frame data directly to buffer->view.data()
      * - Buffer is automatically released back to pool after encode()
      * 
      * Usage:
      *   auto buf = encoder->getInputBuffer();
-     *   memcpy(buf->input_buf_addr, frame_data, frame_size);
+     *   memcpy(buf->view.data(), frame_data, frame_size);
      *   encoder->encode(*buf, out_pkt);
      *   // Buffer automatically returned to pool
      * 
-     * @return std::shared_ptr<EncodeInputBuffer> A shared pointer to the input buffer,
+     * @return std::shared_ptr<bsp_perf::image::ImageBuffer> A shared pointer to the input buffer,
      *         or nullptr if no buffer is available (pool exhausted)
      */
-    virtual std::shared_ptr<EncodeInputBuffer> getInputBuffer() = 0;
+    virtual std::shared_ptr<bsp_perf::image::ImageBuffer> getInputBuffer() = 0;
     
     /**
      * @brief Encode a frame and return the encoded data.
@@ -92,7 +87,7 @@ public:
      * data is available in out_pkt when this function returns.
      * 
      * Behavior:
-     * - Reads frame data from input_buf.input_buf_addr
+     * - Reads frame data from input_buf.view.data()
      * - Encodes the frame
      * - Fills out_pkt with encoded data (if out_pkt.encode_pkt has capacity)
      * - Calls the callback (if set) with encoded data
@@ -115,11 +110,11 @@ public:
      *       write_to_file(out_pkt.encode_pkt.data(), out_pkt.pkt_len);
      *   }
      * 
-     * @param input_buf Input buffer obtained from getInputBuffer()
+     * @param input_buf Input image buffer obtained from getInputBuffer()
      * @param out_pkt Output packet to be filled with encoded data
      * @return 0 on success, negative on error
      */
-    virtual int encode(EncodeInputBuffer& input_buf, EncodePacket& out_pkt) = 0;
+    virtual int encode(bsp_perf::image::ImageBuffer& input_buf, EncodePacket& out_pkt) = 0;
     virtual int getEncoderHeader(std::string& headBuf) = 0;
     virtual int tearDown() = 0;
 

@@ -263,7 +263,7 @@ int nvVideoEnc::setupCapturePlane()
     return 0;
 }
 
-int nvVideoEnc::encode(EncodeInputBuffer& input_buf, EncodePacket& out_pkt)
+int nvVideoEnc::encode(bsp_perf::image::ImageBuffer& input_buf, EncodePacket& out_pkt)
 {
     if (!m_encoder) {
         std::cerr << "Encoder not initialized" << std::endl;
@@ -355,8 +355,8 @@ int nvVideoEnc::encode(EncodeInputBuffer& input_buf, EncodePacket& out_pkt)
     }
 
     // Copy input data to buffer (plane by plane, considering stride)
-    if (input_buf.input_buf_addr) {
-        uint8_t *src = (uint8_t*)input_buf.input_buf_addr;
+    if (input_buf.view.data()) {
+        uint8_t *src = input_buf.view.data();
 
         // For NV12M: 2 planes (Y, UV)
         // Plane 0: Y plane (width x height, 1 byte per pixel)
@@ -403,7 +403,7 @@ int nvVideoEnc::encode(EncodeInputBuffer& input_buf, EncodePacket& out_pkt)
 
     // Release the input buffer back to the pool
     // Since we've already copied the data to encoder's buffer, we can release it immediately
-    releaseInputBufferToPool(input_buf.input_buf_addr);
+    releaseInputBufferToPool(input_buf.view.data());
 
     // === 同步模式：等待编码完成并返回结果 ===
     // 如果 out_pkt 有有效的 buffer，等待并填充编码结果
@@ -511,7 +511,7 @@ int nvVideoEnc::tearDown()
     return 0;
 }
 
-std::shared_ptr<EncodeInputBuffer> nvVideoEnc::getInputBuffer()
+std::shared_ptr<bsp_perf::image::ImageBuffer> nvVideoEnc::getInputBuffer()
 {
     std::lock_guard<std::mutex> lock(m_buffer_pool_mutex);
 
@@ -541,11 +541,21 @@ std::shared_ptr<EncodeInputBuffer> nvVideoEnc::getInputBuffer()
             [](uint8_t* p) { free(p); }
         );
 
-        // 创建 EncodeInputBuffer
-        info.input_buf = std::make_shared<EncodeInputBuffer>();
-        info.input_buf->internal_buf = info.buffer;  // 保存引用防止释放
-        info.input_buf->input_buf_addr = info.buffer.get();
-        info.input_buf->input_buf_fd = -1;  // nvenc 不使用 fd
+        info.input_buf = std::make_shared<bsp_perf::image::ImageBuffer>();
+        info.input_buf->owner = info.buffer;
+        info.input_buf->view.owner = info.buffer;
+        info.input_buf->view.desc.width = m_params.width;
+        info.input_buf->view.desc.height = m_params.height;
+        info.input_buf->view.desc.widthStride = m_params.width;
+        info.input_buf->view.desc.heightStride = m_params.height;
+        info.input_buf->view.desc.format = m_params.frame_format;
+        info.input_buf->view.desc.dataSize = m_frame_size;
+        info.input_buf->view.memoryType = bsp_perf::image::ImageMemoryType::Host;
+        info.input_buf->view.planeCount = 1;
+        info.input_buf->view.planes[0].data = info.buffer.get();
+        info.input_buf->view.planes[0].size = m_frame_size;
+        info.input_buf->view.planes[0].rowStride = m_params.width;
+        info.input_buf->view.planes[0].fd = -1;  // nvenc 不使用 fd
         info.in_use = true;
 
         m_input_buffer_pool.push_back(info);
@@ -577,7 +587,7 @@ void nvVideoEnc::releaseInputBufferToPool(void* addr)
 
     // Find the buffer in the pool and mark it as not in use
     for (auto& info : m_input_buffer_pool) {
-        if (info.input_buf && info.input_buf->input_buf_addr == addr) {
+        if (info.input_buf && info.input_buf->view.data() == addr) {
             info.in_use = false;
             return;
         }

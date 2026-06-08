@@ -64,13 +64,13 @@ public:
         m_userdata = userdata;
     }
 
-    int encode(EncodeInputBuffer& input_buf, EncodePacket& out_pkt) override;
+    int encode(bsp_perf::image::ImageBuffer& input_buf, EncodePacket& out_pkt) override;
 
     int getEncoderHeader(std::string& headBuf) override;
 
     int tearDown() override;
 
-    std::shared_ptr<EncodeInputBuffer> getInputBuffer() override;
+    std::shared_ptr<bsp_perf::image::ImageBuffer> getInputBuffer() override;
 
     size_t getFrameSize() override
     {

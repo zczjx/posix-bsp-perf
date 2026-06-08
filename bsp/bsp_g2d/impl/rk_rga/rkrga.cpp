@@ -11,68 +11,62 @@ namespace bsp_g2d
 
 // ========== New Interface Implementation ==========
 
-std::shared_ptr<IGraphics2D::G2DBuffer> rkrga::createBuffer(
+std::shared_ptr<bsp_perf::image::ImageBuffer> rkrga::createBuffer(
     BufferType type,
-    const G2DBufferParams& params)
+    const bsp_perf::image::ImageView& image)
 {
-    std::shared_ptr<G2DBuffer> g2dBuffer = std::make_shared<G2DBuffer>();
+    auto imageBuffer = std::make_shared<bsp_perf::image::ImageBuffer>();
+    imageBuffer->view = image;
+    auto g2dBuffer = std::make_shared<impl::G2DBufferInternal>();
     g2dBuffer->g2dPlatform = "rkrga";
     g2dBuffer->bufferType = type;
+    imageBuffer->nativeHandle = g2dBuffer;
 
-    int rga_format = rgaPixelFormat::getInstance().strToRgaPixFormat(params.format);
+    const auto& desc = image.desc;
+    const auto& plane = image.planes[0];
+    int rga_format = rgaPixelFormat::getInstance().strToRgaPixFormat(desc.format);
+    const uint32_t widthStride = desc.widthStride > 0 ? desc.widthStride : desc.width;
+    const uint32_t heightStride = desc.heightStride > 0 ? desc.heightStride : desc.height;
 
     if (type == BufferType::Hardware)
     {
         // Hardware buffer: use fd or handle
-        if (params.fd >= 0) {
+        if (plane.fd >= 0) {
             g2dBuffer->g2dBufferHandle = wrapbuffer_fd_t(
-                params.fd,
-                params.width,
-                params.height,
-                params.width_stride > 0 ? params.width_stride : params.width,
-                params.height_stride > 0 ? params.height_stride : params.height,
+                plane.fd,
+                desc.width,
+                desc.height,
+                widthStride,
+                heightStride,
                 rga_format);
-        } else if (params.handle.has_value()) {
-            rga_buffer_handle_t handle = std::any_cast<rga_buffer_handle_t>(params.handle);
-            if (handle != NULL) {
-                g2dBuffer->g2dBufferHandle = wrapbuffer_handle_t(
-                    handle,
-                    params.width,
-                    params.height,
-                    params.width_stride > 0 ? params.width_stride : params.width, 
-                    params.height_stride > 0 ? params.height_stride : params.height, 
-                    rga_format);
-            } else {
-                return nullptr;
-            }
         } else {
-            std::cerr << "rkrga: Hardware buffer requires fd or handle" << std::endl;
+            std::cerr << "rkrga: Hardware buffer requires fd" << std::endl;
             return nullptr;
         }
     }
     else if (type == BufferType::Mapped)
     {
-        if (params.host_ptr == nullptr)
+        if (plane.data == nullptr)
         {
             std::cerr << "rkrga: Mapped buffer requires host_ptr" << std::endl;
             return nullptr;
         }
 
-        g2dBuffer->host_ptr = static_cast<uint8_t*>(params.host_ptr);
-        g2dBuffer->buffer_size = params.buffer_size;
+        g2dBuffer->hostPtr = plane.data;
+        g2dBuffer->bufferSize = desc.dataSize;
         g2dBuffer->g2dBufferHandle = wrapbuffer_virtualaddr_t(
-            params.host_ptr, params.width, params.height,
-            params.width_stride, params.height_stride, rga_format);
+            plane.data, desc.width, desc.height,
+            widthStride, heightStride, rga_format);
     }
     else
     {
         return nullptr;
     }
 
-    return g2dBuffer;
+    return imageBuffer;
 }
 
-void rkrga::releaseBuffer(std::shared_ptr<G2DBuffer> buffer)
+void rkrga::releaseBuffer(std::shared_ptr<bsp_perf::image::ImageBuffer> buffer)
 {
     if (buffer == nullptr)
     {
@@ -83,7 +77,7 @@ void rkrga::releaseBuffer(std::shared_ptr<G2DBuffer> buffer)
     buffer.reset();
 }
 
-int rkrga::syncBuffer(std::shared_ptr<G2DBuffer> buffer, SyncDirection direction)
+int rkrga::syncBuffer(std::shared_ptr<bsp_perf::image::ImageBuffer> buffer, SyncDirection direction)
 {
     // RGA with virtualaddr doesn't need explicit sync
     // The driver handles cache coherency automatically
@@ -92,10 +86,11 @@ int rkrga::syncBuffer(std::shared_ptr<G2DBuffer> buffer, SyncDirection direction
 }
 
 void* rkrga::mapBuffer(
-    std::shared_ptr<G2DBuffer> buffer,
+    std::shared_ptr<bsp_perf::image::ImageBuffer> buffer,
     const std::string& access_mode)
 {
-    if (!buffer || buffer->bufferType != BufferType::Hardware) {
+    auto g2dBuffer = impl::getG2DBufferInternal(buffer);
+    if (!g2dBuffer || g2dBuffer->bufferType != BufferType::Hardware) {
         std::cerr << "rkrga: mapBuffer only works with Hardware buffers" << std::endl;
         return nullptr;
     }
@@ -106,7 +101,7 @@ void* rkrga::mapBuffer(
     return nullptr;
 }
 
-void rkrga::unmapBuffer(std::shared_ptr<G2DBuffer> buffer)
+void rkrga::unmapBuffer(std::shared_ptr<bsp_perf::image::ImageBuffer> buffer)
 {
     // No-op for RGA
 }
@@ -126,8 +121,13 @@ std::string rkrga::getPlatformName() const
 
 // ========== Image Operations ==========
 
-int rkrga::imageResize(std::shared_ptr<G2DBuffer> src, std::shared_ptr<G2DBuffer> dst)
+int rkrga::imageResize(std::shared_ptr<bsp_perf::image::ImageBuffer> src, std::shared_ptr<bsp_perf::image::ImageBuffer> dst)
 {
+    auto srcBuffer = impl::getG2DBufferInternal(src);
+    auto dstBuffer = impl::getG2DBufferInternal(dst);
+    if (!srcBuffer || !dstBuffer) {
+        return -1;
+    }
     // WAR: Set rga core affinity for each thread to avoid RGA2 core3 being scheduled
     static thread_local bool rga_core_affinity_set = false;
     if (!rga_core_affinity_set)
@@ -138,14 +138,14 @@ int rkrga::imageResize(std::shared_ptr<G2DBuffer> src, std::shared_ptr<G2DBuffer
 
     im_rect src_rect{};
     im_rect dst_rect{};
-    int ret = imcheck(std::any_cast<rga_buffer_t>(src->g2dBufferHandle), std::any_cast<rga_buffer_t>(dst->g2dBufferHandle), src_rect, dst_rect);
+    int ret = imcheck(std::any_cast<rga_buffer_t>(srcBuffer->g2dBufferHandle), std::any_cast<rga_buffer_t>(dstBuffer->g2dBufferHandle), src_rect, dst_rect);
     if (ret != IM_STATUS_NOERROR)
     {
         std::cerr << "imcheck failed" << std::endl;
         return ret;
     }
 
-    ret = imresize(std::any_cast<rga_buffer_t>(src->g2dBufferHandle), std::any_cast<rga_buffer_t>(dst->g2dBufferHandle));
+    ret = imresize(std::any_cast<rga_buffer_t>(srcBuffer->g2dBufferHandle), std::any_cast<rga_buffer_t>(dstBuffer->g2dBufferHandle));
     if (ret == IM_STATUS_SUCCESS)
     {
         return 0;
@@ -157,9 +157,14 @@ int rkrga::imageResize(std::shared_ptr<G2DBuffer> src, std::shared_ptr<G2DBuffer
     }
 }
 
-int rkrga::imageCopy(std::shared_ptr<G2DBuffer> src, std::shared_ptr<G2DBuffer> dst)
+int rkrga::imageCopy(std::shared_ptr<bsp_perf::image::ImageBuffer> src, std::shared_ptr<bsp_perf::image::ImageBuffer> dst)
 {
-    int ret = imcopy(std::any_cast<rga_buffer_t>(src->g2dBufferHandle), std::any_cast<rga_buffer_t>(dst->g2dBufferHandle));
+    auto srcBuffer = impl::getG2DBufferInternal(src);
+    auto dstBuffer = impl::getG2DBufferInternal(dst);
+    if (!srcBuffer || !dstBuffer) {
+        return -1;
+    }
+    int ret = imcopy(std::any_cast<rga_buffer_t>(srcBuffer->g2dBufferHandle), std::any_cast<rga_buffer_t>(dstBuffer->g2dBufferHandle));
     if (ret == IM_STATUS_SUCCESS)
     {
         return 0;
@@ -171,8 +176,12 @@ int rkrga::imageCopy(std::shared_ptr<G2DBuffer> src, std::shared_ptr<G2DBuffer> 
     }
 }
 
-int rkrga::imageDrawRectangle(std::shared_ptr<G2DBuffer> dst, ImageRect& rect, uint32_t color, int thickness)
+int rkrga::imageDrawRectangle(std::shared_ptr<bsp_perf::image::ImageBuffer> dst, ImageRect& rect, uint32_t color, int thickness)
 {
+    auto dstBuffer = impl::getG2DBufferInternal(dst);
+    if (!dstBuffer) {
+        return -1;
+    }
     // WAR: Set rga core affinity for each thread to avoid RGA2 core3 being scheduled
     static thread_local bool rga_core_affinity_set = false;
     if (!rga_core_affinity_set)
@@ -186,14 +195,14 @@ int rkrga::imageDrawRectangle(std::shared_ptr<G2DBuffer> dst, ImageRect& rect, u
     dst_rect.y = rect.y;
     dst_rect.width = rect.width;
     dst_rect.height = rect.height;
-    int ret = imcheck({}, std::any_cast<rga_buffer_t>(dst->g2dBufferHandle), {}, dst_rect, IM_COLOR_FILL);
+    int ret = imcheck({}, std::any_cast<rga_buffer_t>(dstBuffer->g2dBufferHandle), {}, dst_rect, IM_COLOR_FILL);
 
     if (ret != IM_STATUS_NOERROR)
     {
         std::cerr << "imageDrawRectangle imcheck failed" << std::endl;
         return ret;
     }
-    ret = imrectangle(std::any_cast<rga_buffer_t>(dst->g2dBufferHandle), dst_rect, color, thickness);
+    ret = imrectangle(std::any_cast<rga_buffer_t>(dstBuffer->g2dBufferHandle), dst_rect, color, thickness);
 
     if (ret == IM_STATUS_SUCCESS)
     {
@@ -206,9 +215,14 @@ int rkrga::imageDrawRectangle(std::shared_ptr<G2DBuffer> dst, ImageRect& rect, u
     }
 }
 
-int rkrga::imageCvtColor(std::shared_ptr<G2DBuffer> src, std::shared_ptr<G2DBuffer> dst,
+int rkrga::imageCvtColor(std::shared_ptr<bsp_perf::image::ImageBuffer> src, std::shared_ptr<bsp_perf::image::ImageBuffer> dst,
                     const std::string& src_format, const std::string& dst_format)
 {
+    auto srcBuffer = impl::getG2DBufferInternal(src);
+    auto dstBuffer = impl::getG2DBufferInternal(dst);
+    if (!srcBuffer || !dstBuffer) {
+        return -1;
+    }
     // WAR: Set rga core affinity for each thread to avoid RGA2 core3 being scheduled
     static thread_local bool rga_core_affinity_set = false;
     if (!rga_core_affinity_set)
@@ -220,7 +234,7 @@ int rkrga::imageCvtColor(std::shared_ptr<G2DBuffer> src, std::shared_ptr<G2DBuff
     int src_rga_format = rgaPixelFormat::getInstance().strToRgaPixFormat(src_format);
     int dst_rga_format = rgaPixelFormat::getInstance().strToRgaPixFormat(dst_format);
 
-    int ret = imcheck(std::any_cast<rga_buffer_t>(src->g2dBufferHandle), std::any_cast<rga_buffer_t>(dst->g2dBufferHandle), {}, {});
+    int ret = imcheck(std::any_cast<rga_buffer_t>(srcBuffer->g2dBufferHandle), std::any_cast<rga_buffer_t>(dstBuffer->g2dBufferHandle), {}, {});
 
     if (ret != IM_STATUS_NOERROR)
     {
@@ -228,7 +242,7 @@ int rkrga::imageCvtColor(std::shared_ptr<G2DBuffer> src, std::shared_ptr<G2DBuff
         return ret;
     }
 
-    ret = imcvtcolor(std::any_cast<rga_buffer_t>(src->g2dBufferHandle), std::any_cast<rga_buffer_t>(dst->g2dBufferHandle),
+    ret = imcvtcolor(std::any_cast<rga_buffer_t>(srcBuffer->g2dBufferHandle), std::any_cast<rga_buffer_t>(dstBuffer->g2dBufferHandle),
                 src_rga_format, dst_rga_format);
 
     if (ret == IM_STATUS_SUCCESS)

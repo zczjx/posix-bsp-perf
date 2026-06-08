@@ -6,6 +6,7 @@
 #include <nvbufsurface.h>
 #include <nvbufsurftransform.h>
 #include <v4l2_nv_extensions.h>
+#include <image/ImageFormat.hpp>
 
 namespace bsp_codec
 {
@@ -323,9 +324,8 @@ void nvVideoDec::captureThreadFunc()
         return;
     }
     
-    // Allocate frame buffer for output (contiguous YUV420SP data)
+    // Allocate frame buffer size for output (contiguous YUV420SP data)
     size_t frame_buffer_size = m_display_width * m_display_height * 3 / 2;
-    std::vector<uint8_t> m_frame_buffer(frame_buffer_size);
     
     // Main capture loop
     while (m_running && !m_got_error && !m_got_eos)
@@ -413,8 +413,16 @@ void nvVideoDec::captureThreadFunc()
         {
             std::cout << "Transform succeeded, processing frame..." << std::endl;
             
-            // Call user callback with decoded frame
-            std::shared_ptr<DecodeOutFrame> frame = std::make_shared<DecodeOutFrame>();
+            bsp_perf::image::ImageDesc frameDesc{};
+            frameDesc.width = m_display_width;
+            frameDesc.height = m_display_height;
+            frameDesc.widthStride = m_display_width;
+            frameDesc.heightStride = m_display_height;
+            frameDesc.format = "YUV420SP";
+            frameDesc.dataSize = frame_buffer_size;
+            auto frame = bsp_perf::image::makeHostImageBuffer(frameDesc);
+            frame->view.planes[0].fd = m_dst_dma_fd;
+            frame->nativeHandle = m_dst_dma_fd;
 
             // Map the transformed buffer to get virtual address
             NvBufSurface *surf = nullptr;
@@ -425,12 +433,6 @@ void nvVideoDec::captureThreadFunc()
                 ret = NvBufSurfaceMap(surf, 0, 0, NVBUF_MAP_READ);
                 if (ret == 0)
                 {
-                    frame->width = m_display_width;
-                    frame->height = m_display_height;
-                    frame->format = "YUV420SP";  // NV12
-                    frame->fd = m_dst_dma_fd;
-                    frame->eos_flag = 0;
-
                     uint8_t* y_src = (uint8_t*)surf->surfaceList[0].mappedAddr.addr[0];
                     uint32_t y_pitch = surf->surfaceList[0].planeParams.pitch[0];
                     uint32_t y_width = surf->surfaceList[0].planeParams.width[0];
@@ -441,7 +443,7 @@ void nvVideoDec::captureThreadFunc()
                     if (y_src != nullptr)
                     {
                         // Copy Y plane (row by row to remove padding)
-                        uint8_t* y_dst = m_frame_buffer.data();
+                        uint8_t* y_dst = frame->view.data();
                         for (uint32_t i = 0; i < y_height; i++)
                         {
                             memcpy(y_dst + i * y_width, 
@@ -468,7 +470,7 @@ void nvVideoDec::captureThreadFunc()
                         {
                             // Copy UV plane (row by row to remove padding)
                             // NV12: UV is interleaved, each row is width * bytesPerPix bytes
-                            uint8_t* uv_dst = m_frame_buffer.data() + m_display_width * m_display_height;
+                            uint8_t* uv_dst = frame->view.data() + m_display_width * m_display_height;
                             uint32_t uv_bytes_per_row = uv_width * uv_bytesPerPix;
                             
                             for (uint32_t i = 0; i < uv_height; i++)
@@ -480,10 +482,6 @@ void nvVideoDec::captureThreadFunc()
                         }
                         
                         NvBufSurfaceUnMap(surf, 0, 1);
-                        
-                        // Now we have complete frame data
-                        frame->virt_addr = m_frame_buffer.data();
-                        frame->valid_data_size = frame_buffer_size;
                         
                         std::cout << "Calling user callback with frame data, size=" << frame_buffer_size << std::endl;
                         

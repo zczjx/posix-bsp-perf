@@ -69,7 +69,7 @@ private:
         };
         m_decoder->setup(cfg);
         m_decoder->setDecodeReadyCallback(
-            [this](std::any userdata, std::shared_ptr<DecodeOutFrame> frame) {
+            [this](std::any userdata, std::shared_ptr<bsp_perf::image::ImageBuffer> frame) {
                 this->onDecodeReady(userdata, frame);
             },
             std::any(this)
@@ -197,7 +197,7 @@ private:
         m_out_fp.reset();
     }
 
-    void onDecodeReady(std::any userdata, std::shared_ptr<DecodeOutFrame> frame)
+    void onDecodeReady(std::any userdata, std::shared_ptr<bsp_perf::image::ImageBuffer> frame)
     {
         if (!frame)
         {
@@ -207,25 +207,17 @@ private:
             return;
         }
 
-        // Check for EOS
-        if (frame->eos_flag)
-        {
-            m_logger->printStdoutLog(bsp_perf::shared::BspLogger::LogLevel::Info,
-                "DecodeApp::onDecodeReady() Received EOS frame");
-            return;
-        }
-
         // 写入 YUV 数据到文件（带线程安全保护）
-        if (frame->virt_addr && frame->valid_data_size > 0)
+        if (frame->view.data() && frame->view.desc.dataSize > 0)
         {
             std::lock_guard<std::mutex> lock(m_file_mutex);
-            size_t written = fwrite(frame->virt_addr, 1, frame->valid_data_size, m_out_fp.get());
+            size_t written = fwrite(frame->view.data(), 1, frame->view.desc.dataSize, m_out_fp.get());
 
-            if (written != frame->valid_data_size)
+            if (written != frame->view.desc.dataSize)
             {
                 m_logger->printStdoutLog(bsp_perf::shared::BspLogger::LogLevel::Error,
                     "DecodeApp::onDecodeReady() Write failed, expected: {}, written: {}",
-                    frame->valid_data_size, written);
+                    frame->view.desc.dataSize, written);
                 m_decode_error = true;
                 return;
             }
@@ -237,7 +229,7 @@ private:
             {
                 m_logger->printStdoutLog(bsp_perf::shared::BspLogger::LogLevel::Info,
                     "DecodeApp::onDecodeReady() Decoded {} frames, current: {}x{}", 
-                    m_frame_count.load(), frame->width, frame->height);
+                    m_frame_count.load(), frame->view.desc.width, frame->view.desc.height);
             }
         }
         else

@@ -28,7 +28,7 @@ public:
 
     virtual ~CameraClient();
 
-    std::shared_ptr<DecodeOutFrame> getCameraVideoFrame();
+    std::shared_ptr<bsp_perf::image::ImageBuffer> getCameraVideoFrame();
 
 private:
 

@@ -57,43 +57,6 @@ public:
         Bidirectional   // 双向同步
     };
 
-    /**
-     * @brief 缓冲区参数
-     */
-    struct G2DBufferParams
-    {
-        // ===== 通用参数 =====
-        size_t width;
-        size_t height;
-        size_t width_stride{0};   // 0 = 自动计算
-        size_t height_stride{0};  // 0 = 自动计算
-        std::string format;       // "RGBA8888", "YUV420SP", etc.
-
-        // ===== Hardware 类型专用 =====
-        int fd{-1};               // RGA: fd-based buffer
-        std::any handle;          // Platform-specific handle
-
-        // ===== Mapped 类型专用 =====
-        void* host_ptr{nullptr};  // 用户提供的 CPU 可访问内存
-        size_t buffer_size{0};    // host_ptr 的大小
-    };
-
-    /**
-     * @brief G2D 缓冲区（不透明句柄）
-     */
-    struct G2DBuffer
-    {
-        std::string g2dPlatform;       // "rkrga" or "nvvic"
-        BufferType bufferType;         // Hardware or Mapped
-        std::any g2dBufferHandle;      // 平台特定的内部句柄
-
-        // 仅对 Mapped 类型有效
-        uint8_t* host_ptr{nullptr};    // CPU 可访问的指针
-        size_t buffer_size{0};
-        // 内部使用
-        void* platform_data{nullptr};  // 平台私有数据
-    };
-
     struct ImageRect
     {
         int x;        /* upper-left x */
@@ -101,37 +64,6 @@ public:
         int width;    /* width */
         int height;   /* height */
     };
-
-    static G2DBufferParams toG2DBufferParams(const bsp_perf::image::ImageView& image)
-    {
-        G2DBufferParams params;
-        params.width = image.desc.width;
-        params.height = image.desc.height;
-        params.width_stride = image.desc.widthStride;
-        params.height_stride = image.desc.heightStride;
-        params.format = image.desc.format;
-        params.fd = image.planes[0].fd;
-        params.host_ptr = image.planes[0].data;
-        params.buffer_size = image.desc.dataSize;
-        return params;
-    }
-
-    static bsp_perf::image::ImageView toImageView(const G2DBufferParams& params)
-    {
-        bsp_perf::image::ImageView image;
-        image.desc.width = static_cast<uint32_t>(params.width);
-        image.desc.height = static_cast<uint32_t>(params.height);
-        image.desc.widthStride = static_cast<uint32_t>(params.width_stride);
-        image.desc.heightStride = static_cast<uint32_t>(params.height_stride);
-        image.desc.format = params.format;
-        image.desc.dataSize = params.buffer_size;
-        image.memoryType = params.fd >= 0 ? bsp_perf::image::ImageMemoryType::DmaBuf : bsp_perf::image::ImageMemoryType::Host;
-        image.planeCount = 1;
-        image.planes[0].data = static_cast<uint8_t*>(params.host_ptr);
-        image.planes[0].size = params.buffer_size;
-        image.planes[0].fd = params.fd;
-        return image;
-    }
 
     // ========== Buffer Management (New Interface) ==========
     
@@ -150,24 +82,18 @@ public:
      *   - RGA: 包装 params.host_ptr（零拷贝）
      *   - VIC: 分配 NVBUF_MEM_SURFACE_ARRAY + 拷贝 params.host_ptr 数据
      * 
-     * @return std::shared_ptr<G2DBuffer>
+     * @return std::shared_ptr<bsp_perf::image::ImageBuffer>
      */
-    virtual std::shared_ptr<G2DBuffer> createBuffer(
-        BufferType type,
-        const G2DBufferParams& params) = 0;
-
-    std::shared_ptr<G2DBuffer> createBuffer(
+    virtual std::shared_ptr<bsp_perf::image::ImageBuffer> createBuffer(
         BufferType type,
         const bsp_perf::image::ImageView& image)
-    {
-        return createBuffer(type, toG2DBufferParams(image));
-    }
+        = 0;
 
     /**
      * @brief 释放 G2D 缓冲区（新接口）
      * @param buffer 要释放的缓冲区
      */
-    virtual void releaseBuffer(std::shared_ptr<G2DBuffer> buffer) = 0;
+    virtual void releaseBuffer(std::shared_ptr<bsp_perf::image::ImageBuffer> buffer) = 0;
 
     /**
      * @brief 同步 Mapped 缓冲区（关键新增接口！）
@@ -189,7 +115,7 @@ public:
      * ⚠️ 注意：仅对 Mapped 类型有效，Hardware 类型返回 -1
      */
     virtual int syncBuffer(
-        std::shared_ptr<G2DBuffer> buffer,
+        std::shared_ptr<bsp_perf::image::ImageBuffer> buffer,
         SyncDirection direction) = 0;
 
     /**
@@ -208,14 +134,14 @@ public:
      * ⚠️ 使用完毕后必须调用 unmapBuffer
      */
     virtual void* mapBuffer(
-        std::shared_ptr<G2DBuffer> buffer,
+        std::shared_ptr<bsp_perf::image::ImageBuffer> buffer,
         const std::string& access_mode = "readwrite") = 0;
 
     /**
      * @brief 解除 Hardware 缓冲区的 CPU 映射
      * @param buffer Hardware 类型缓冲区
      */
-    virtual void unmapBuffer(std::shared_ptr<G2DBuffer> buffer) = 0;
+    virtual void unmapBuffer(std::shared_ptr<bsp_perf::image::ImageBuffer> buffer) = 0;
 
     // ========== Platform Capabilities ==========
     
@@ -245,8 +171,8 @@ public:
      * ⚠️ 如果 src/dst 是 Mapped 类型且 CPU 修改过，需先调用 syncBuffer(CpuToDevice)
      */
     virtual int imageResize(
-        std::shared_ptr<G2DBuffer> src,
-        std::shared_ptr<G2DBuffer> dst) = 0;
+        std::shared_ptr<bsp_perf::image::ImageBuffer> src,
+        std::shared_ptr<bsp_perf::image::ImageBuffer> dst) = 0;
 
     int imageResize(const bsp_perf::image::ImageView& src,
                     const bsp_perf::image::ImageView& dst,
@@ -275,8 +201,8 @@ public:
      * ⚠️ 拷贝后，如需 CPU 读取 dst，需调用 syncBuffer(DeviceToCpu)
      */
     virtual int imageCopy(
-        std::shared_ptr<G2DBuffer> src,
-        std::shared_ptr<G2DBuffer> dst) = 0;
+        std::shared_ptr<bsp_perf::image::ImageBuffer> src,
+        std::shared_ptr<bsp_perf::image::ImageBuffer> dst) = 0;
 
     int imageCopy(const bsp_perf::image::ImageView& src,
                   const bsp_perf::image::ImageView& dst,
@@ -305,8 +231,8 @@ public:
      * @return 0 成功，-1 失败
      */
     virtual int imageCvtColor(
-        std::shared_ptr<G2DBuffer> src,
-        std::shared_ptr<G2DBuffer> dst,
+        std::shared_ptr<bsp_perf::image::ImageBuffer> src,
+        std::shared_ptr<bsp_perf::image::ImageBuffer> dst,
         const std::string& src_format,
         const std::string& dst_format) = 0;
 
@@ -342,7 +268,7 @@ public:
      * @return 0 成功，-1 失败/不支持
      */
     virtual int imageDrawRectangle(
-        std::shared_ptr<G2DBuffer> dst,
+        std::shared_ptr<bsp_perf::image::ImageBuffer> dst,
         ImageRect& rect,
         uint32_t color,
         int thickness) = 0;

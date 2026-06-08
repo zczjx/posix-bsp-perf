@@ -380,7 +380,7 @@ int rkmppEnc::setup(EncodeConfig& cfg)
     return setupMppEncCfg();
 }
 
-std::shared_ptr<EncodeInputBuffer> rkmppEnc::getInputBuffer()
+std::shared_ptr<bsp_perf::image::ImageBuffer> rkmppEnc::getInputBuffer()
 {
     if (m_ctx.frm_buf == nullptr)
     {
@@ -392,14 +392,24 @@ std::shared_ptr<EncodeInputBuffer> rkmppEnc::getInputBuffer()
         }
     }
 
-    std::shared_ptr<EncodeInputBuffer> inputBuffer = std::make_shared<EncodeInputBuffer>();
-    inputBuffer->internal_buf = m_ctx.frm_buf;
-    inputBuffer->input_buf_fd = mpp_buffer_get_fd(m_ctx.frm_buf);
-    inputBuffer->input_buf_addr = mpp_buffer_get_ptr(m_ctx.frm_buf);
+    auto inputBuffer = std::make_shared<bsp_perf::image::ImageBuffer>();
+    inputBuffer->view.desc.width = m_params.width;
+    inputBuffer->view.desc.height = m_params.height;
+    inputBuffer->view.desc.widthStride = m_params.hor_stride;
+    inputBuffer->view.desc.heightStride = m_params.ver_stride;
+    inputBuffer->view.desc.format = "YUV420SP";
+    inputBuffer->view.desc.dataSize = m_ctx.frame_size;
+    inputBuffer->view.memoryType = bsp_perf::image::ImageMemoryType::DmaBuf;
+    inputBuffer->view.planeCount = 1;
+    inputBuffer->view.planes[0].data = static_cast<uint8_t*>(mpp_buffer_get_ptr(m_ctx.frm_buf));
+    inputBuffer->view.planes[0].size = m_ctx.frame_size;
+    inputBuffer->view.planes[0].rowStride = m_params.hor_stride;
+    inputBuffer->view.planes[0].fd = mpp_buffer_get_fd(m_ctx.frm_buf);
+    inputBuffer->nativeHandle = m_ctx.frm_buf;
     return inputBuffer;
 }
 
-int rkmppEnc::encode(EncodeInputBuffer& input_buf, EncodePacket& out_pkt)
+int rkmppEnc::encode(bsp_perf::image::ImageBuffer& input_buf, EncodePacket& out_pkt)
 {
     MPP_RET ret;
     RK_U32 frm_eos = 0;
@@ -418,7 +428,7 @@ int rkmppEnc::encode(EncodeInputBuffer& input_buf, EncodePacket& out_pkt)
     mpp_frame_set_ver_stride(frame, m_params.ver_stride);
     mpp_frame_set_fmt(frame, m_params.frameFormat);
     mpp_frame_set_eos(frame, frm_eos);
-    MppBuffer mpp_buf = std::any_cast<MppBuffer>(input_buf.internal_buf);
+    MppBuffer mpp_buf = std::any_cast<MppBuffer>(input_buf.nativeHandle);
     mpp_frame_set_buffer(frame, mpp_buf);
     MppMeta meta = mpp_frame_get_meta(frame);
     MppPacket packet{nullptr};

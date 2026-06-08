@@ -2,6 +2,7 @@
 #define __NV_VIC_GRAPHICS2D_HPP__
 
 #include <bsp_g2d/IGraphics2D.hpp>
+#include <bsp_g2d/impl/G2DBufferInternal.hpp>
 #include "nvbufsurface.h"
 #include "nvbufsurftransform.h"
 #include <map>
@@ -39,21 +40,21 @@ public:
 
     // ========== New Interface ==========
 
-    std::shared_ptr<G2DBuffer> createBuffer(
+    std::shared_ptr<bsp_perf::image::ImageBuffer> createBuffer(
         BufferType type,
-        const G2DBufferParams& params) override;
+        const bsp_perf::image::ImageView& image) override;
 
-    void releaseBuffer(std::shared_ptr<G2DBuffer> buffer) override;
+    void releaseBuffer(std::shared_ptr<bsp_perf::image::ImageBuffer> buffer) override;
 
     int syncBuffer(
-        std::shared_ptr<G2DBuffer> buffer,
+        std::shared_ptr<bsp_perf::image::ImageBuffer> buffer,
         SyncDirection direction) override;
 
     void* mapBuffer(
-        std::shared_ptr<G2DBuffer> buffer,
+        std::shared_ptr<bsp_perf::image::ImageBuffer> buffer,
         const std::string& access_mode = "readwrite") override;
 
-    void unmapBuffer(std::shared_ptr<G2DBuffer> buffer) override;
+    void unmapBuffer(std::shared_ptr<bsp_perf::image::ImageBuffer> buffer) override;
 
     bool queryCapability(const std::string& capability) const override;
 
@@ -61,14 +62,14 @@ public:
 
     // ========== Image Operations ==========
 
-    int imageResize(std::shared_ptr<G2DBuffer> src, std::shared_ptr<G2DBuffer> dst) override;
+    int imageResize(std::shared_ptr<bsp_perf::image::ImageBuffer> src, std::shared_ptr<bsp_perf::image::ImageBuffer> dst) override;
 
-    int imageCopy(std::shared_ptr<G2DBuffer> src, std::shared_ptr<G2DBuffer> dst) override;
+    int imageCopy(std::shared_ptr<bsp_perf::image::ImageBuffer> src, std::shared_ptr<bsp_perf::image::ImageBuffer> dst) override;
 
-    int imageDrawRectangle(std::shared_ptr<G2DBuffer> dst, ImageRect& rect,
+    int imageDrawRectangle(std::shared_ptr<bsp_perf::image::ImageBuffer> dst, ImageRect& rect,
             uint32_t color, int thickness) override;
 
-    int imageCvtColor(std::shared_ptr<G2DBuffer> src, std::shared_ptr<G2DBuffer> dst,
+    int imageCvtColor(std::shared_ptr<bsp_perf::image::ImageBuffer> src, std::shared_ptr<bsp_perf::image::ImageBuffer> dst,
             const std::string& src_format, const std::string& dst_format) override;
 
 private:
@@ -78,9 +79,9 @@ private:
     NvBufSurfaceColorFormat mapFormatStringToNvFormat(const std::string& format);
 
     /**
-     * @brief Gets NvBufSurface from G2DBuffer.
+     * @brief Gets NvBufSurface from ImageBuffer.
      */
-    NvBufSurface* getNvBufSurface(std::shared_ptr<G2DBuffer> g2dBuffer);
+    NvBufSurface* getNvBufSurface(std::shared_ptr<bsp_perf::image::ImageBuffer> imageBuffer);
 
     /**
      * @brief Performs NV VIC transformation.
@@ -102,7 +103,7 @@ private:
      */
     int copyNvBufSurfaceToHost(NvBufSurface* surf, void* host_ptr, size_t buffer_size);
 
-    // Store NvBufSurface pointers for each G2DBuffer
+    // Store NvBufSurface pointers for each ImageBuffer
     std::map<void*, NvBufSurface*> m_bufferMap;
     std::mutex m_mapMutex;
     

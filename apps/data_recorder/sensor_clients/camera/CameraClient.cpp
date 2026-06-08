@@ -73,7 +73,7 @@ void CameraClient::fillCameraSensorMsg(CameraSensorMsg& msg, size_t data_size, s
     msg.slot_index = slot_index;
 }
 
-std::shared_ptr<DecodeOutFrame> CameraClient::getCameraVideoFrame()
+std::shared_ptr<bsp_perf::image::ImageBuffer> CameraClient::getCameraVideoFrame()
 {
     return m_video_dec_helper->getDecodedFrame();
 }
@@ -86,7 +86,7 @@ void CameraClient::consumerLoop()
     msgpack::sbuffer msg_buffer;
     while (!m_stopSignal.load())
     {
-        std::shared_ptr<DecodeOutFrame> frame = getCameraVideoFrame();
+        std::shared_ptr<bsp_perf::image::ImageBuffer> frame = getCameraVideoFrame();
         if (frame != nullptr)
         {
             frame_count++;
@@ -98,11 +98,11 @@ void CameraClient::consumerLoop()
                 frame_count = 0;
                 last_time = now;
             }
-            fillCameraSensorMsg(sensor_msg, frame->valid_data_size, m_output_shmem_port->getFreeSlotIndex());
+            fillCameraSensorMsg(sensor_msg, frame->view.desc.dataSize, m_output_shmem_port->getFreeSlotIndex());
             msg_buffer.clear();
             msgpack::pack(msg_buffer, sensor_msg);
             m_output_shmem_port->publishData(reinterpret_cast<const uint8_t*>(msg_buffer.data()),
-                                            msg_buffer.size(), frame->virt_addr,
+                                            msg_buffer.size(), frame->view.data(),
                                             sensor_msg.slot_index, sensor_msg.data_size);
             frame.reset();
         }

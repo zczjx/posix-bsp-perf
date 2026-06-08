@@ -17,7 +17,7 @@ class BufferMapper
 {
 public:
     BufferMapper(IGraphics2D* g2d,
-                 std::shared_ptr<IGraphics2D::G2DBuffer> buffer,
+                 std::shared_ptr<bsp_perf::image::ImageBuffer> buffer,
                  const std::string& access_mode = "readwrite")
         : m_g2d(g2d), m_buffer(buffer)
     {
@@ -42,7 +42,7 @@ public:
 
 private:
     IGraphics2D* m_g2d;
-    std::shared_ptr<IGraphics2D::G2DBuffer> m_buffer;
+    std::shared_ptr<bsp_perf::image::ImageBuffer> m_buffer;
     void* m_data{nullptr};
 };
 
@@ -60,7 +60,7 @@ class BufferSyncGuard
 {
 public:
     BufferSyncGuard(IGraphics2D* g2d,
-                    std::shared_ptr<IGraphics2D::G2DBuffer> buffer,
+                    std::shared_ptr<bsp_perf::image::ImageBuffer> buffer,
                     IGraphics2D::SyncDirection direction)
         : m_g2d(g2d), m_buffer(buffer), m_direction(direction)
     {
@@ -88,7 +88,7 @@ public:
 
 private:
     IGraphics2D* m_g2d;
-    std::shared_ptr<IGraphics2D::G2DBuffer> m_buffer;
+    std::shared_ptr<bsp_perf::image::ImageBuffer> m_buffer;
     IGraphics2D::SyncDirection m_direction;
 };
 

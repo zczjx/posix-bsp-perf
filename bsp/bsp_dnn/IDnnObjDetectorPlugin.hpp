@@ -14,19 +14,7 @@ namespace bsp_dnn
 
 struct ObjDetectInput
 {
-    /**
-     * @brief Handle type for the object detector plugin.
-     * Prefer image for new code. handleType/imageHandle are kept for legacy
-     * plugins that still consume opencv4 or DecodeOutFrame directly.
-     * Possible values:
-     * - "ImageView"
-     * - "opencv4"
-     * - "DecodeOutFrame"
-     */
-    std::string handleType{"ImageView"};
     bsp_perf::image::ImageView image{};
-    /// any should be a pointer to legacy image type
-    std::any imageHandle;
 };
 
 template <typename T>

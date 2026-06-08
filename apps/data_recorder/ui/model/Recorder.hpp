@@ -44,7 +44,7 @@ private:
     int addVideoStream(int width, int height);
 
     int convertImageFormat(uint8_t* input_data, int width, int height, std::string input_format,
-            std::shared_ptr<EncodeInputBuffer> output_buf, std::string out_format);
+            std::shared_ptr<bsp_perf::image::ImageBuffer> output_buf, std::string out_format);
 
     int muxerWriteStreamPacket(EncodePacket& enc_pkt);
 
@@ -53,7 +53,7 @@ private:
     std::string m_record_dir;;
     std::string m_current_filename;
     std::unique_ptr<IEncoder> m_encoder{nullptr};
-    std::shared_ptr<EncodeInputBuffer> m_enc_in_buf{nullptr};
+    std::shared_ptr<bsp_perf::image::ImageBuffer> m_enc_in_buf{nullptr};
     std::unique_ptr<IGraphics2D> m_g2d{nullptr};
     std::unique_ptr<IMuxer> m_muxer{nullptr};
     StreamPacket m_stream_packet{};

@@ -1,7 +1,5 @@
 #include "NvVicResnet18TrafficCamNet.hpp"
-#include <bsp_codec/IDecoder.hpp>
 #include <memory>
-#include <any>
 #include <iostream>
 #include <fstream>
 #include <algorithm>
@@ -10,25 +8,11 @@
 
 namespace bsp_dnn
 {
-using namespace bsp_codec;
-
 int NvVicResnet18TrafficCamNet::preProcess(ObjDetectParams& params, ObjDetectInput& inputData,
                                            IDnnEngine::dnnInput& outputData)
 {
-    // 验证输入类型
-    if (inputData.handleType != "ImageView" && inputData.handleType != "DecodeOutFrame")
-    {
-        std::cerr << "[NvVicResnet18TrafficCamNet] Error: Only ImageView or DecodeOutFrame handle type is supported" << std::endl;
-        return -1;
-    }
-
     // 获取输入的 YUV420 帧
     bsp_perf::image::ImageView inputImage = inputData.image;
-    if (inputImage.empty() && inputData.handleType == "DecodeOutFrame")
-    {
-        auto yuv420_frame = std::any_cast<std::shared_ptr<DecodeOutFrame>>(inputData.imageHandle);
-        inputImage = toImageView(yuv420_frame);
-    }
     if (inputImage.empty())
     {
         std::cerr << "[NvVicResnet18TrafficCamNet] Error: Input frame is nullptr" << std::endl;
@@ -63,18 +47,9 @@ int NvVicResnet18TrafficCamNet::preProcess(ObjDetectParams& params, ObjDetectInp
                                  static_cast<size_t>(inputImage.desc.heightStride) :
                                  static_cast<size_t>(inputImage.desc.height);
 
-    // 步骤1: 创建输入 YUV420 帧的 Mapped 缓冲区
-    IGraphics2D::G2DBufferParams yuv420_params;
-    yuv420_params.host_ptr = inputImage.planes[0].data;
-    yuv420_params.buffer_size = inputImage.desc.dataSize;
-    yuv420_params.width = static_cast<size_t>(inputImage.desc.width);
-    yuv420_params.height = static_cast<size_t>(inputImage.desc.height);
-    yuv420_params.width_stride = input_width_stride;
-    yuv420_params.height_stride = input_height_stride;
-    yuv420_params.format = inputImage.desc.format;
-    yuv420_params.fd = inputImage.planes[0].fd;
-    
-    auto yuv420_g2d_buf = m_g2d->createBuffer(IGraphics2D::BufferType::Mapped, yuv420_params);
+    inputImage.desc.widthStride = static_cast<uint32_t>(input_width_stride);
+    inputImage.desc.heightStride = static_cast<uint32_t>(input_height_stride);
+    auto yuv420_g2d_buf = m_g2d->createBuffer(IGraphics2D::BufferType::Mapped, inputImage);
     if (!yuv420_g2d_buf)
     {
         std::cerr << "[NvVicResnet18TrafficCamNet] Error: Failed to create YUV420 G2D buffer" << std::endl;
@@ -88,16 +63,21 @@ int NvVicResnet18TrafficCamNet::preProcess(ObjDetectParams& params, ObjDetectInp
         m_rgb_buffer.resize(rgba_buffer_size);
     }
 
-    IGraphics2D::G2DBufferParams rgba_params;
-    rgba_params.host_ptr = m_rgb_buffer.data();
-    rgba_params.buffer_size = rgba_buffer_size;
-    rgba_params.width = static_cast<size_t>(params.model_input_width);
-    rgba_params.height = static_cast<size_t>(params.model_input_height);
-    rgba_params.width_stride = static_cast<size_t>(params.model_input_width);
-    rgba_params.height_stride = static_cast<size_t>(params.model_input_height);
-    rgba_params.format = "RGBA8888";
-    
-    auto rgba_g2d_buf = m_g2d->createBuffer(IGraphics2D::BufferType::Mapped, rgba_params);
+    bsp_perf::image::ImageView rgbaImage{};
+    rgbaImage.desc.width = static_cast<uint32_t>(params.model_input_width);
+    rgbaImage.desc.height = static_cast<uint32_t>(params.model_input_height);
+    rgbaImage.desc.widthStride = static_cast<uint32_t>(params.model_input_width);
+    rgbaImage.desc.heightStride = static_cast<uint32_t>(params.model_input_height);
+    rgbaImage.desc.format = "RGBA8888";
+    rgbaImage.desc.dataSize = rgba_buffer_size;
+    rgbaImage.memoryType = bsp_perf::image::ImageMemoryType::Host;
+    rgbaImage.planeCount = 1;
+    rgbaImage.planes[0].data = m_rgb_buffer.data();
+    rgbaImage.planes[0].size = rgba_buffer_size;
+    rgbaImage.planes[0].rowStride = rgbaImage.desc.widthStride;
+    rgbaImage.planes[0].fd = -1;
+
+    auto rgba_g2d_buf = m_g2d->createBuffer(IGraphics2D::BufferType::Mapped, rgbaImage);
     if (!rgba_g2d_buf)
     {
         std::cerr << "[NvVicResnet18TrafficCamNet] Error: Failed to create RGBA G2D buffer" << std::endl;

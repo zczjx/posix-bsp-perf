@@ -2,7 +2,6 @@
 #include <opencv2/opencv.hpp>
 #include <opencv2/imgproc.hpp>
 #include <memory>
-#include <any>
 #include <iostream>
 #include <fstream>
 #include <algorithm>
@@ -15,26 +14,45 @@ namespace bsp_dnn
 int Resnet18TrafficCamNet::preProcess(ObjDetectParams& params, ObjDetectInput& inputData, 
                                       IDnnEngine::dnnInput& outputData)
 {
-    // 验证输入类型
-    if (inputData.handleType != "opencv4")
-    {
-        std::cerr << "[Resnet18TrafficCamNet] Error: Only opencv4 handle type is supported" << std::endl;
-        return -1;
-    }
-
     // 获取输入图像
-    auto imagePtr = std::any_cast<std::shared_ptr<cv::Mat>>(inputData.imageHandle);
-    if (!imagePtr || imagePtr->empty())
+    const auto& image = inputData.image;
+    if (image.empty())
     {
-        std::cerr << "[Resnet18TrafficCamNet] Error: Input image is nullptr or empty" << std::endl;
+        std::cerr << "[Resnet18TrafficCamNet] Error: Input image is empty" << std::endl;
         return -1;
     }
 
-    cv::Mat origImage = *imagePtr;
+    int cvType = CV_8UC3;
+    size_t channels = 3;
+    if (image.desc.format == "RGBA8888" || image.desc.format == "BGRA8888")
+    {
+        cvType = CV_8UC4;
+        channels = 4;
+    }
+
+    const size_t minStep = static_cast<size_t>(image.desc.width) * channels;
+    const size_t step = image.planes[0].rowStride > minStep ? image.planes[0].rowStride : minStep;
+    cv::Mat origImage(static_cast<int>(image.desc.height), static_cast<int>(image.desc.width),
+                      cvType, image.planes[0].data, step);
 
     // 步骤1: BGR转RGB
     cv::Mat rgbImage;
-    cv::cvtColor(origImage, rgbImage, cv::COLOR_BGR2RGB);
+    if (image.desc.format == "RGB888")
+    {
+        rgbImage = origImage;
+    }
+    else if (image.desc.format == "RGBA8888")
+    {
+        cv::cvtColor(origImage, rgbImage, cv::COLOR_RGBA2RGB);
+    }
+    else if (image.desc.format == "BGRA8888")
+    {
+        cv::cvtColor(origImage, rgbImage, cv::COLOR_BGRA2RGB);
+    }
+    else
+    {
+        cv::cvtColor(origImage, rgbImage, cv::COLOR_BGR2RGB);
+    }
 
     // 步骤2: 计算缩放比例（保持宽高比的letterbox）
     float scaleWidth = static_cast<float>(params.model_input_width) / origImage.cols;

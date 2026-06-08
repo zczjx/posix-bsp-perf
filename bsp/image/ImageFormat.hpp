@@ -3,6 +3,7 @@
 
 #include "ImageTypes.hpp"
 #include <cstddef>
+#include <cstring>
 #include <mutex>
 #include <string>
 #include <unordered_map>
@@ -88,6 +89,30 @@ inline float bytesPerPixel(const std::string& format)
 inline size_t imageDataSize(const ImageDesc& desc)
 {
     return ImageFormat::getInstance().imageDataSize(desc);
+}
+
+inline std::shared_ptr<ImageBuffer> makeHostImageBuffer(const ImageDesc& desc)
+{
+    auto buffer = std::make_shared<ImageBuffer>();
+    buffer->view.desc = desc;
+    if (buffer->view.desc.dataSize == 0) {
+        buffer->view.desc.dataSize = imageDataSize(desc);
+    }
+
+    auto data = std::shared_ptr<uint8_t>(
+        new uint8_t[buffer->view.desc.dataSize],
+        std::default_delete<uint8_t[]>());
+    std::memset(data.get(), 0, buffer->view.desc.dataSize);
+
+    buffer->owner = data;
+    buffer->view.owner = data;
+    buffer->view.memoryType = ImageMemoryType::Host;
+    buffer->view.planeCount = 1;
+    buffer->view.planes[0].data = data.get();
+    buffer->view.planes[0].size = buffer->view.desc.dataSize;
+    buffer->view.planes[0].rowStride = buffer->view.desc.widthStride > 0 ? buffer->view.desc.widthStride : buffer->view.desc.width;
+    buffer->view.planes[0].fd = -1;
+    return buffer;
 }
 
 } // namespace image

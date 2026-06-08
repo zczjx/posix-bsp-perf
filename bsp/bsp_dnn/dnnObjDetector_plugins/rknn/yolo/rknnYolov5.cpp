@@ -1,7 +1,6 @@
 #include "rknnYolov5.hpp"
 #include <opencv2/opencv.hpp>
 #include <memory>
-#include <any>
 #include <iostream>
 
 namespace bsp_dnn
@@ -9,19 +8,41 @@ namespace bsp_dnn
 
 int rknnYolov5::preProcess(ObjDetectParams& params, ObjDetectInput& inputData, IDnnEngine::dnnInput& outputData)
 {
-    if (inputData.handleType.compare("opencv4") != 0)
+    const auto& image = inputData.image;
+    if (image.empty())
     {
-        throw std::invalid_argument("Only opencv4 is supported.");
+        throw std::invalid_argument("inputData.image is empty.");
     }
 
-    auto orig_image_ptr = std::any_cast<std::shared_ptr<cv::Mat>>(inputData.imageHandle);
-    if (orig_image_ptr == nullptr)
+    int cvType = CV_8UC3;
+    size_t channels = 3;
+    if (image.desc.format == "RGBA8888" || image.desc.format == "BGRA8888")
     {
-        throw std::invalid_argument("inputData.imageHandle is nullptr.");
+        cvType = CV_8UC4;
+        channels = 4;
     }
-    cv::Mat orig_image = *orig_image_ptr;
+
+    const size_t minStep = static_cast<size_t>(image.desc.width) * channels;
+    const size_t step = image.planes[0].rowStride > minStep ? image.planes[0].rowStride : minStep;
+    cv::Mat orig_image(static_cast<int>(image.desc.height), static_cast<int>(image.desc.width),
+                       cvType, image.planes[0].data, step);
     cv::Mat rgb_image;
-    cv::cvtColor(orig_image, rgb_image, cv::COLOR_BGR2RGB);
+    if (image.desc.format == "RGB888")
+    {
+        rgb_image = orig_image;
+    }
+    else if (image.desc.format == "RGBA8888")
+    {
+        cv::cvtColor(orig_image, rgb_image, cv::COLOR_RGBA2RGB);
+    }
+    else if (image.desc.format == "BGRA8888")
+    {
+        cv::cvtColor(orig_image, rgb_image, cv::COLOR_BGRA2RGB);
+    }
+    else
+    {
+        cv::cvtColor(orig_image, rgb_image, cv::COLOR_BGR2RGB);
+    }
     cv::Size target_size(params.model_input_width, params.model_input_height);
     cv::Mat padded_image(target_size.height, target_size.width, CV_8UC3);
     float min_scale = std::min(params.scale_width, params.scale_height);

@@ -1,6 +1,7 @@
 #ifndef __RK_RGA_HPP__
 #define __RK_RGA_HPP__
 #include <bsp_g2d/IGraphics2D.hpp>
+#include <bsp_g2d/impl/G2DBufferInternal.hpp>
 #include <rga/im2d.h>
 #include <rga/rga.h>
 #include <rga/RgaUtils.h>
@@ -103,21 +104,21 @@ public:
     ~rkrga() = default;
 
     // ========== New Interface ==========
-    std::shared_ptr<G2DBuffer> createBuffer(
+    std::shared_ptr<bsp_perf::image::ImageBuffer> createBuffer(
         BufferType type,
-        const G2DBufferParams& params) override;
+        const bsp_perf::image::ImageView& image) override;
 
-    void releaseBuffer(std::shared_ptr<G2DBuffer> buffer) override;
+    void releaseBuffer(std::shared_ptr<bsp_perf::image::ImageBuffer> buffer) override;
 
     int syncBuffer(
-        std::shared_ptr<G2DBuffer> buffer,
+        std::shared_ptr<bsp_perf::image::ImageBuffer> buffer,
         SyncDirection direction) override;
 
     void* mapBuffer(
-        std::shared_ptr<G2DBuffer> buffer,
+        std::shared_ptr<bsp_perf::image::ImageBuffer> buffer,
         const std::string& access_mode = "readwrite") override;
 
-    void unmapBuffer(std::shared_ptr<G2DBuffer> buffer) override;
+    void unmapBuffer(std::shared_ptr<bsp_perf::image::ImageBuffer> buffer) override;
 
     bool queryCapability(const std::string& capability) const override;
 
@@ -125,13 +126,13 @@ public:
 
     // ========== Image Operations ==========
 
-    int imageCopy(std::shared_ptr<G2DBuffer> src, std::shared_ptr<G2DBuffer> dst) override;
+    int imageCopy(std::shared_ptr<bsp_perf::image::ImageBuffer> src, std::shared_ptr<bsp_perf::image::ImageBuffer> dst) override;
 
-    int imageResize(std::shared_ptr<G2DBuffer> src, std::shared_ptr<G2DBuffer> dst) override;
+    int imageResize(std::shared_ptr<bsp_perf::image::ImageBuffer> src, std::shared_ptr<bsp_perf::image::ImageBuffer> dst) override;
 
-    int imageDrawRectangle(std::shared_ptr<G2DBuffer> dst, ImageRect& rect, uint32_t color, int thickness) override;
+    int imageDrawRectangle(std::shared_ptr<bsp_perf::image::ImageBuffer> dst, ImageRect& rect, uint32_t color, int thickness) override;
 
-    int imageCvtColor(std::shared_ptr<G2DBuffer> src, std::shared_ptr<G2DBuffer> dst,
+    int imageCvtColor(std::shared_ptr<bsp_perf::image::ImageBuffer> src, std::shared_ptr<bsp_perf::image::ImageBuffer> dst,
                     const std::string& src_format, const std::string& dst_format) override;
 };
 

@@ -26,7 +26,6 @@ public:
 private:
     YoloPostProcess m_yoloPostProcess{};
     std::unique_ptr<IGraphics2D> m_g2d{nullptr};
-    std::shared_ptr<IGraphics2D::G2DBuffer> m_g2dBuffer{nullptr};
     std::vector<uint8_t> m_rknn_input_buf{};
 
 };
