@@ -41,10 +41,10 @@ public:
         m_callback = callback;
         m_userdata = userdata;
     }
-    int encode(bsp_perf::image::ImageBuffer& input_buf, EncodePacket& out_pkt) override;
+    int encode(bsp_perf::bsp_image::ImageBuffer& input_buf, EncodePacket& out_pkt) override;
     int getEncoderHeader(std::string& headBuf) override;
     int tearDown() override;
-    std::shared_ptr<bsp_perf::image::ImageBuffer> getInputBuffer() override;
+    std::shared_ptr<bsp_perf::bsp_image::ImageBuffer> getInputBuffer() override;
     size_t getFrameSize() override;
 
 private:
@@ -74,7 +74,7 @@ private:
     struct InputBufferInfo
     {
         std::shared_ptr<uint8_t> buffer;     // Allocated buffer
-        std::shared_ptr<bsp_perf::image::ImageBuffer> input_buf;  // Associated input image
+        std::shared_ptr<bsp_perf::bsp_image::ImageBuffer> input_buf;  // Associated input image
         bool in_use{false};
     };
 

@@ -69,7 +69,7 @@ private:
         };
         m_decoder->setup(cfg);
         m_decoder->setDecodeReadyCallback(
-            [this](std::any userdata, std::shared_ptr<bsp_perf::image::ImageBuffer> frame) {
+            [this](std::any userdata, std::shared_ptr<bsp_perf::bsp_image::ImageBuffer> frame) {
                 this->onDecodeReady(userdata, frame);
             },
             std::any(this)
@@ -197,7 +197,7 @@ private:
         m_out_fp.reset();
     }
 
-    void onDecodeReady(std::any userdata, std::shared_ptr<bsp_perf::image::ImageBuffer> frame)
+    void onDecodeReady(std::any userdata, std::shared_ptr<bsp_perf::bsp_image::ImageBuffer> frame)
     {
         if (!frame)
         {

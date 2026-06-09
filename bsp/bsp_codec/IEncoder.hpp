@@ -6,7 +6,7 @@
 #include <any>
 #include <functional>
 #include <vector>
-#include <image/ImageTypes.hpp>
+#include <bsp_image/ImageTypes.hpp>
 
 namespace bsp_codec
 {
@@ -74,10 +74,10 @@ public:
      *   encoder->encode(*buf, out_pkt);
      *   // Buffer automatically returned to pool
      * 
-     * @return std::shared_ptr<bsp_perf::image::ImageBuffer> A shared pointer to the input buffer,
+     * @return std::shared_ptr<bsp_perf::bsp_image::ImageBuffer> A shared pointer to the input buffer,
      *         or nullptr if no buffer is available (pool exhausted)
      */
-    virtual std::shared_ptr<bsp_perf::image::ImageBuffer> getInputBuffer() = 0;
+    virtual std::shared_ptr<bsp_perf::bsp_image::ImageBuffer> getInputBuffer() = 0;
     
     /**
      * @brief Encode a frame and return the encoded data.
@@ -114,7 +114,7 @@ public:
      * @param out_pkt Output packet to be filled with encoded data
      * @return 0 on success, negative on error
      */
-    virtual int encode(bsp_perf::image::ImageBuffer& input_buf, EncodePacket& out_pkt) = 0;
+    virtual int encode(bsp_perf::bsp_image::ImageBuffer& input_buf, EncodePacket& out_pkt) = 0;
     virtual int getEncoderHeader(std::string& headBuf) = 0;
     virtual int tearDown() = 0;
 

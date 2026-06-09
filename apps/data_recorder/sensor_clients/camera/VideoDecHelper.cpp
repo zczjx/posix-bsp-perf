@@ -1,5 +1,5 @@
 #include "VideoDecHelper.hpp"
-#include <image/ImageFormat.hpp>
+#include <bsp_image/ImageFormat.hpp>
 #include <bsp_g2d/BufferHelper.hpp>
 #include <stdexcept>
 #include <iostream>
@@ -21,7 +21,7 @@ VideoDecHelper::VideoDecHelper(const std::string& decoder_name, const std::strin
 
 int VideoDecHelper::setupAndStartDecoder(DecodeConfig& cfg)
 {
-    auto decoderCallback = [this](std::any userdata, std::shared_ptr<bsp_perf::image::ImageBuffer> frame)
+    auto decoderCallback = [this](std::any userdata, std::shared_ptr<bsp_perf::bsp_image::ImageBuffer> frame)
     {
         std::lock_guard<std::mutex> lock(m_decoded_frame_queue_mutex);
         std::cout << "VideoDecHelper::decoderCallback() frame width: " << frame->view.desc.width << " frame height: " << frame->view.desc.height << std::endl;
@@ -100,16 +100,16 @@ int VideoDecHelper::sendToDecoder(std::shared_ptr<VideoDecHelper::RtpBuffer> rtp
     return 0;
 }
 
-std::shared_ptr<bsp_perf::image::ImageBuffer> VideoDecHelper::convertPixelFormat(std::shared_ptr<bsp_perf::image::ImageBuffer> frame)
+std::shared_ptr<bsp_perf::bsp_image::ImageBuffer> VideoDecHelper::convertPixelFormat(std::shared_ptr<bsp_perf::bsp_image::ImageBuffer> frame)
 {
     auto in_g2d_buf = m_g2d->createBuffer(IGraphics2D::BufferType::Mapped, frame->view);
 
-    bsp_perf::image::ImageDesc outDesc = frame->view.desc;
+    bsp_perf::bsp_image::ImageDesc outDesc = frame->view.desc;
     outDesc.format = m_out_pixel_format;
     outDesc.widthStride = outDesc.width;
     outDesc.heightStride = outDesc.height;
-    outDesc.dataSize = bsp_perf::image::imageDataSize(outDesc);
-    auto out_frame = bsp_perf::image::makeHostImageBuffer(outDesc);
+    outDesc.dataSize = bsp_perf::bsp_image::imageDataSize(outDesc);
+    auto out_frame = bsp_perf::bsp_image::makeHostImageBuffer(outDesc);
 
     auto out_g2d_buf = m_g2d->createBuffer(IGraphics2D::BufferType::Mapped, out_frame->view);
     m_g2d->imageCvtColor(in_g2d_buf, out_g2d_buf, frame->view.desc.format, out_frame->view.desc.format);
@@ -127,7 +127,7 @@ std::shared_ptr<bsp_perf::image::ImageBuffer> VideoDecHelper::convertPixelFormat
     return out_frame;
 }
 
-std::shared_ptr<bsp_perf::image::ImageBuffer> VideoDecHelper::getDecodedFrame()
+std::shared_ptr<bsp_perf::bsp_image::ImageBuffer> VideoDecHelper::getDecodedFrame()
 {
     std::lock_guard<std::mutex> lock(m_decoded_frame_queue_mutex);
 

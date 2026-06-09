@@ -251,7 +251,7 @@ private:
         };
         m_decoder->setup(cfg);
 
-        auto decoderCallback = [this](std::any /*userdata*/, std::shared_ptr<bsp_perf::image::ImageBuffer> frame)
+        auto decoderCallback = [this](std::any /*userdata*/, std::shared_ptr<bsp_perf::bsp_image::ImageBuffer> frame)
         {
             if (m_encoder == nullptr)
             {
@@ -331,7 +331,7 @@ private:
         m_decoder->setDecodeReadyCallback(decoderCallback, nullptr);
     }
 
-    void setObjDetectParams(ObjDetectParams& objDetectParams, const bsp_perf::image::ImageView& frame)
+    void setObjDetectParams(ObjDetectParams& objDetectParams, const bsp_perf::bsp_image::ImageView& frame)
     {
         IDnnEngine::dnnInputShape shape;
         m_dnnObjDetector->getInputShape(shape);
@@ -350,7 +350,7 @@ private:
         m_dnnObjDetector->getOutputQuantParams(objDetectParams.quantize_zero_points, objDetectParams.quantize_scales);
     }
 
-    std::vector<ObjDetectOutputBox> dnnInference(const bsp_perf::image::ImageView& frame)
+    std::vector<ObjDetectOutputBox> dnnInference(const bsp_perf::bsp_image::ImageView& frame)
     {
         bsp_dnn::ObjDetectInput objDetectInput = {
             .image = frame,
@@ -502,14 +502,14 @@ private:
             }
 
             // 执行 DNN 推理（在推理线程中，不阻塞解码器）
-            bsp_perf::image::ImageView frame{};
+            bsp_perf::bsp_image::ImageView frame{};
             frame.desc.width = task.width;
             frame.desc.height = task.height;
             frame.desc.widthStride = task.width_stride;
             frame.desc.heightStride = task.height_stride;
             frame.desc.format = task.format;
             frame.desc.dataSize = task.frame_data.size();
-            frame.memoryType = bsp_perf::image::ImageMemoryType::Host;
+            frame.memoryType = bsp_perf::bsp_image::ImageMemoryType::Host;
             frame.planeCount = 1;
             frame.planes[0].data = task.frame_data.data();
             frame.planes[0].size = task.frame_data.size();
@@ -550,14 +550,14 @@ private:
                 m_rgba_buf.resize(rgba_buffer_size);
             }
 
-            bsp_perf::image::ImageView rgbaImage{};
+            bsp_perf::bsp_image::ImageView rgbaImage{};
             rgbaImage.desc.width = task.width;
             rgbaImage.desc.height = task.height;
             rgbaImage.desc.widthStride = task.width;
             rgbaImage.desc.heightStride = task.height;
             rgbaImage.desc.format = "RGBA8888";
             rgbaImage.desc.dataSize = rgba_buffer_size;
-            rgbaImage.memoryType = bsp_perf::image::ImageMemoryType::Host;
+            rgbaImage.memoryType = bsp_perf::bsp_image::ImageMemoryType::Host;
             rgbaImage.planeCount = 1;
             rgbaImage.planes[0].data = m_rgba_buf.data();
             rgbaImage.planes[0].size = rgba_buffer_size;
@@ -630,14 +630,14 @@ private:
                 m_yuv420_buf.resize(yuv420_buffer_size);
             }
 
-            bsp_perf::image::ImageView yuvOutImage{};
+            bsp_perf::bsp_image::ImageView yuvOutImage{};
             yuvOutImage.desc.width = task.width;
             yuvOutImage.desc.height = task.height;
             yuvOutImage.desc.widthStride = static_cast<uint32_t>(input_width_stride);
             yuvOutImage.desc.heightStride = static_cast<uint32_t>(input_height_stride);
             yuvOutImage.desc.format = task.format;
             yuvOutImage.desc.dataSize = yuv420_buffer_size;
-            yuvOutImage.memoryType = bsp_perf::image::ImageMemoryType::Host;
+            yuvOutImage.memoryType = bsp_perf::bsp_image::ImageMemoryType::Host;
             yuvOutImage.planeCount = 1;
             yuvOutImage.planes[0].data = m_yuv420_buf.data();
             yuvOutImage.planes[0].size = yuv420_buffer_size;
@@ -681,7 +681,7 @@ private:
             m_g2d->releaseBuffer(yuv_in_buf);
 
             // 步骤8: 发送到编码器
-            std::shared_ptr<bsp_perf::image::ImageBuffer> enc_in_buf = m_encoder->getInputBuffer();
+            std::shared_ptr<bsp_perf::bsp_image::ImageBuffer> enc_in_buf = m_encoder->getInputBuffer();
             if (!enc_in_buf)
             {
                 m_logger->printStdoutLog(bsp_perf::shared::BspLogger::LogLevel::Error,
@@ -717,7 +717,7 @@ private:
 
         if (m_encoder)
         {
-            std::shared_ptr<bsp_perf::image::ImageBuffer> inputBuf = m_encoder->getInputBuffer();
+            std::shared_ptr<bsp_perf::bsp_image::ImageBuffer> inputBuf = m_encoder->getInputBuffer();
             if (inputBuf)
             {
                 EncodePacket eosPkt;

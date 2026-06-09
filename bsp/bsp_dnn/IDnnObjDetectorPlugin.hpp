@@ -7,14 +7,14 @@
 #include <vector>
 #include <any>
 #include <msgpack.hpp>
-#include <image/ImageTypes.hpp>
+#include <bsp_image/ImageTypes.hpp>
 
 namespace bsp_dnn
 {
 
 struct ObjDetectInput
 {
-    bsp_perf::image::ImageView image{};
+    bsp_perf::bsp_image::ImageView image{};
 };
 
 template <typename T>

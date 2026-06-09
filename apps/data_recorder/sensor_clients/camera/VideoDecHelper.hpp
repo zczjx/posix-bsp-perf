@@ -41,7 +41,7 @@ public:
 
     int sendToDecoder(std::shared_ptr<VideoDecHelper::RtpBuffer> rtp_pkt);
 
-    std::shared_ptr<bsp_perf::image::ImageBuffer> getDecodedFrame();
+    std::shared_ptr<bsp_perf::bsp_image::ImageBuffer> getDecodedFrame();
 
     ~VideoDecHelper();
 
@@ -50,7 +50,7 @@ private:
 
     bool needPixelConverter(const std::string& pixel_format);
 
-    std::shared_ptr<bsp_perf::image::ImageBuffer> convertPixelFormat(std::shared_ptr<bsp_perf::image::ImageBuffer> frame);
+    std::shared_ptr<bsp_perf::bsp_image::ImageBuffer> convertPixelFormat(std::shared_ptr<bsp_perf::bsp_image::ImageBuffer> frame);
 
     std::shared_ptr<VideoDecHelper::RtpBuffer> createNewRtpBuffer(size_t min_size);
 
@@ -64,7 +64,7 @@ private:
     std::mutex m_free_buffer_sort_queue_mutex;
     const size_t m_free_buffer_sort_queue_size{30};
 
-    std::queue<std::shared_ptr<bsp_perf::image::ImageBuffer>> m_decoded_frame_queue;
+    std::queue<std::shared_ptr<bsp_perf::bsp_image::ImageBuffer>> m_decoded_frame_queue;
     std::mutex m_decoded_frame_queue_mutex;
     const size_t m_reserved_frame_num{30};
 

@@ -4,7 +4,7 @@
 #include <array>
 #include <cstddef>
 #include <cstdint>
-#include <image/ImageTypes.hpp>
+#include <bsp_image/ImageTypes.hpp>
 #include <string>
 #include <vector>
 
@@ -31,7 +31,7 @@ struct CameraParameters
     Matrix cameraMatrix;
     Matrix projectMatrix;
     Matrix transMatrix;
-    bsp_perf::image::ImageSize size;
+    bsp_perf::bsp_image::ImageSize size;
     Matrix scaleXY;
     Matrix shiftXY;
 };
@@ -60,7 +60,7 @@ struct ProjectionLayout
     int vehicleRight() const { return totalWidth() - vehicleLeft(); }
     int vehicleTop() const { return shiftHeight + vehicleOffsetHeight + innerShiftHeight; }
     int vehicleBottom() const { return totalHeight() - vehicleTop(); }
-    bsp_perf::image::ImageSize outputSize() const
+    bsp_perf::bsp_image::ImageSize outputSize() const
     {
         return {
             static_cast<uint32_t>(totalWidth()),
@@ -87,12 +87,12 @@ struct SurroundViewConfig
 
 struct FrameSet
 {
-    std::array<bsp_perf::image::ImageView, kCameraCount> cameras;
+    std::array<bsp_perf::bsp_image::ImageView, kCameraCount> cameras;
 };
 
 struct OutputFrame
 {
-    bsp_perf::image::ImageView image;
+    bsp_perf::bsp_image::ImageView image;
 };
 
 } // namespace svs

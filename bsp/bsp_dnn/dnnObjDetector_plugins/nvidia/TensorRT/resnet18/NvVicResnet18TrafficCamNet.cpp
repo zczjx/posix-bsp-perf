@@ -12,7 +12,7 @@ int NvVicResnet18TrafficCamNet::preProcess(ObjDetectParams& params, ObjDetectInp
                                            IDnnEngine::dnnInput& outputData)
 {
     // 获取输入的 YUV420 帧
-    bsp_perf::image::ImageView inputImage = inputData.image;
+    bsp_perf::bsp_image::ImageView inputImage = inputData.image;
     if (inputImage.empty())
     {
         std::cerr << "[NvVicResnet18TrafficCamNet] Error: Input frame is nullptr" << std::endl;
@@ -63,14 +63,14 @@ int NvVicResnet18TrafficCamNet::preProcess(ObjDetectParams& params, ObjDetectInp
         m_rgb_buffer.resize(rgba_buffer_size);
     }
 
-    bsp_perf::image::ImageView rgbaImage{};
+    bsp_perf::bsp_image::ImageView rgbaImage{};
     rgbaImage.desc.width = static_cast<uint32_t>(params.model_input_width);
     rgbaImage.desc.height = static_cast<uint32_t>(params.model_input_height);
     rgbaImage.desc.widthStride = static_cast<uint32_t>(params.model_input_width);
     rgbaImage.desc.heightStride = static_cast<uint32_t>(params.model_input_height);
     rgbaImage.desc.format = "RGBA8888";
     rgbaImage.desc.dataSize = rgba_buffer_size;
-    rgbaImage.memoryType = bsp_perf::image::ImageMemoryType::Host;
+    rgbaImage.memoryType = bsp_perf::bsp_image::ImageMemoryType::Host;
     rgbaImage.planeCount = 1;
     rgbaImage.planes[0].data = m_rgb_buffer.data();
     rgbaImage.planes[0].size = rgba_buffer_size;

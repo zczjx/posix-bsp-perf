@@ -5,7 +5,7 @@
 #include <string>
 #include <any>
 #include <functional>
-#include <image/ImageTypes.hpp>
+#include <bsp_image/ImageTypes.hpp>
 
 namespace bsp_codec
 {
@@ -35,7 +35,7 @@ struct DecodePacket
     int pkt_eos;
 };
 
-using decodeReadyCallback = std::function<void(std::any userdata, std::shared_ptr<bsp_perf::image::ImageBuffer> frame)>;
+using decodeReadyCallback = std::function<void(std::any userdata, std::shared_ptr<bsp_perf::bsp_image::ImageBuffer> frame)>;
 
 class IDecoder
 {

@@ -73,7 +73,7 @@ void ObjDetector::setObjDetectParams(ArgParser& args, std::unique_ptr<bsp_dnn::d
     dnnObjDetector->getOutputQuantParams(m_objDetectParams.quantize_zero_points, m_objDetectParams.quantize_scales);
 }
 
-std::vector<bsp_dnn::ObjDetectOutputBox> ObjDetector::runDnnInference(std::shared_ptr<bsp_perf::image::ImageBuffer> frame)
+std::vector<bsp_dnn::ObjDetectOutputBox> ObjDetector::runDnnInference(std::shared_ptr<bsp_perf::bsp_image::ImageBuffer> frame)
 {
     // 验证输入参数
     if (!frame || !frame->view.data() || frame->view.desc.dataSize <= 0)
@@ -131,7 +131,7 @@ std::vector<bsp_dnn::ObjDetectOutputBox> ObjDetector::runDnnInference(std::share
     }
 }
 
-void ObjDetector::publishObjDetectResults(const std::vector<bsp_dnn::ObjDetectOutputBox>& output_boxes, std::shared_ptr<bsp_perf::image::ImageBuffer> frame)
+void ObjDetector::publishObjDetectResults(const std::vector<bsp_dnn::ObjDetectOutputBox>& output_boxes, std::shared_ptr<bsp_perf::bsp_image::ImageBuffer> frame)
 {
     msgpack::sbuffer msg_buffer;
     ObjDetectMsg objDetectMsg;
@@ -157,7 +157,7 @@ void ObjDetector::publishObjDetectResults(const std::vector<bsp_dnn::ObjDetectOu
 
 void ObjDetector::inferenceLoop()
 {
-    std::shared_ptr<bsp_perf::image::ImageBuffer> inference_frame{nullptr};
+    std::shared_ptr<bsp_perf::bsp_image::ImageBuffer> inference_frame{nullptr};
 
     size_t frame_count = 0;
     auto start_time = std::chrono::steady_clock::now();
@@ -212,7 +212,7 @@ void ObjDetector::runLoop()
     const size_t MAX_MSG_SIZE = 4096; // 4KB 应该足够
     std::shared_ptr<uint8_t[]> msg_buffer(new uint8_t[MAX_MSG_SIZE]);
     std::shared_ptr<uint8_t[]> data_buffer{nullptr};
-    std::shared_ptr<bsp_perf::image::ImageBuffer> inference_frame{nullptr};
+    std::shared_ptr<bsp_perf::bsp_image::ImageBuffer> inference_frame{nullptr};
 
     while (!m_stopSignal.load())
     {
@@ -228,7 +228,7 @@ void ObjDetector::runLoop()
             std::lock_guard<std::mutex> lock(m_inference_frames_queue_mutex);
             while (m_inference_frames_queue.size() >= m_inference_frames_queue_size)
             {
-                std::shared_ptr<bsp_perf::image::ImageBuffer> temp_frame = m_inference_frames_queue.front();
+                std::shared_ptr<bsp_perf::bsp_image::ImageBuffer> temp_frame = m_inference_frames_queue.front();
                 m_inference_frames_queue.pop();
                 temp_frame.reset();
             }
@@ -240,7 +240,7 @@ void ObjDetector::runLoop()
 
         if(m_free_frames_queue.empty())
         {
-            inference_frame = std::make_shared<bsp_perf::image::ImageBuffer>();
+            inference_frame = std::make_shared<bsp_perf::bsp_image::ImageBuffer>();
             inference_frame->owner = std::shared_ptr<uint8_t>(
                 new uint8_t[shmem_msg.data_size],
                 std::default_delete<uint8_t[]>());
@@ -251,7 +251,7 @@ void ObjDetector::runLoop()
             inference_frame->view.desc.widthStride = shmem_msg.width;
             inference_frame->view.desc.heightStride = shmem_msg.height;
             inference_frame->view.desc.format = shmem_msg.pixel_format;
-            inference_frame->view.memoryType = bsp_perf::image::ImageMemoryType::Host;
+            inference_frame->view.memoryType = bsp_perf::bsp_image::ImageMemoryType::Host;
             inference_frame->view.planeCount = 1;
             inference_frame->view.planes[0].data = static_cast<uint8_t*>(inference_frame->owner.get());
             inference_frame->view.planes[0].size = shmem_msg.data_size;
@@ -277,7 +277,7 @@ void ObjDetector::runLoop()
             std::lock_guard<std::mutex> lock(m_free_frames_queue_mutex);
             while (m_free_frames_queue.size() >= m_free_frames_queue_size)
             {
-                std::shared_ptr<bsp_perf::image::ImageBuffer> temp_frame = m_free_frames_queue.front();
+                std::shared_ptr<bsp_perf::bsp_image::ImageBuffer> temp_frame = m_free_frames_queue.front();
                 m_free_frames_queue.pop();
                 temp_frame.reset();
             }

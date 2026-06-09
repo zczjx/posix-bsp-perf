@@ -6,7 +6,7 @@
 #include <nvbufsurface.h>
 #include <nvbufsurftransform.h>
 #include <v4l2_nv_extensions.h>
-#include <image/ImageFormat.hpp>
+#include <bsp_image/ImageFormat.hpp>
 
 namespace bsp_codec
 {
@@ -413,14 +413,14 @@ void nvVideoDec::captureThreadFunc()
         {
             std::cout << "Transform succeeded, processing frame..." << std::endl;
             
-            bsp_perf::image::ImageDesc frameDesc{};
+            bsp_perf::bsp_image::ImageDesc frameDesc{};
             frameDesc.width = m_display_width;
             frameDesc.height = m_display_height;
             frameDesc.widthStride = m_display_width;
             frameDesc.heightStride = m_display_height;
             frameDesc.format = "YUV420SP";
             frameDesc.dataSize = frame_buffer_size;
-            auto frame = bsp_perf::image::makeHostImageBuffer(frameDesc);
+            auto frame = bsp_perf::bsp_image::makeHostImageBuffer(frameDesc);
             frame->view.planes[0].fd = m_dst_dma_fd;
             frame->nativeHandle = m_dst_dma_fd;
 

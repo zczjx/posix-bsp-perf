@@ -10,7 +10,7 @@
 #include <iostream>
 #include <vector>
 #include <shared/BspFileUtils.hpp>
-#include <image/ImageFormat.hpp>
+#include <bsp_image/ImageFormat.hpp>
 
 namespace bsp_perf {
 namespace perf_cases {
@@ -115,7 +115,7 @@ private:
 
         // 获取每帧的大小
         // m_frame_size = m_encoder->getFrameSize();
-        m_frame_size = width * height * bsp_perf::image::bytesPerPixel(frameFormat);
+        m_frame_size = width * height * bsp_perf::bsp_image::bytesPerPixel(frameFormat);
         m_logger->printStdoutLog(bsp_perf::shared::BspLogger::LogLevel::Info,
             "EncodeApp::onInit() Frame size: {} bytes", m_frame_size);
 
@@ -143,7 +143,7 @@ private:
         while (offset + m_frame_size <= total_size)
         {
             // 获取编码器输入缓冲区
-            std::shared_ptr<bsp_perf::image::ImageBuffer> inputBuf = m_encoder->getInputBuffer();
+            std::shared_ptr<bsp_perf::bsp_image::ImageBuffer> inputBuf = m_encoder->getInputBuffer();
             if (!inputBuf)
             {
                 m_logger->printStdoutLog(bsp_perf::shared::BspLogger::LogLevel::Error,
@@ -186,7 +186,7 @@ private:
         m_logger->printStdoutLog(bsp_perf::shared::BspLogger::LogLevel::Info,
             "EncodeApp::onProcess() Sending EOS after {} frames", m_frame_count);
 
-        std::shared_ptr<bsp_perf::image::ImageBuffer> inputBuf = m_encoder->getInputBuffer();
+        std::shared_ptr<bsp_perf::bsp_image::ImageBuffer> inputBuf = m_encoder->getInputBuffer();
         if (inputBuf)
         {
             EncodePacket eosPkt;

@@ -263,7 +263,7 @@ int nvVideoEnc::setupCapturePlane()
     return 0;
 }
 
-int nvVideoEnc::encode(bsp_perf::image::ImageBuffer& input_buf, EncodePacket& out_pkt)
+int nvVideoEnc::encode(bsp_perf::bsp_image::ImageBuffer& input_buf, EncodePacket& out_pkt)
 {
     if (!m_encoder) {
         std::cerr << "Encoder not initialized" << std::endl;
@@ -511,7 +511,7 @@ int nvVideoEnc::tearDown()
     return 0;
 }
 
-std::shared_ptr<bsp_perf::image::ImageBuffer> nvVideoEnc::getInputBuffer()
+std::shared_ptr<bsp_perf::bsp_image::ImageBuffer> nvVideoEnc::getInputBuffer()
 {
     std::lock_guard<std::mutex> lock(m_buffer_pool_mutex);
 
@@ -541,7 +541,7 @@ std::shared_ptr<bsp_perf::image::ImageBuffer> nvVideoEnc::getInputBuffer()
             [](uint8_t* p) { free(p); }
         );
 
-        info.input_buf = std::make_shared<bsp_perf::image::ImageBuffer>();
+        info.input_buf = std::make_shared<bsp_perf::bsp_image::ImageBuffer>();
         info.input_buf->owner = info.buffer;
         info.input_buf->view.owner = info.buffer;
         info.input_buf->view.desc.width = m_params.width;
@@ -550,7 +550,7 @@ std::shared_ptr<bsp_perf::image::ImageBuffer> nvVideoEnc::getInputBuffer()
         info.input_buf->view.desc.heightStride = m_params.height;
         info.input_buf->view.desc.format = m_params.frame_format;
         info.input_buf->view.desc.dataSize = m_frame_size;
-        info.input_buf->view.memoryType = bsp_perf::image::ImageMemoryType::Host;
+        info.input_buf->view.memoryType = bsp_perf::bsp_image::ImageMemoryType::Host;
         info.input_buf->view.planeCount = 1;
         info.input_buf->view.planes[0].data = info.buffer.get();
         info.input_buf->view.planes[0].size = m_frame_size;

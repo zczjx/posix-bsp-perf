@@ -7,7 +7,7 @@ namespace bsp_dnn
 {
 int RGArknnYolov5::preProcess(ObjDetectParams& params, ObjDetectInput& inputData, IDnnEngine::dnnInput& outputData)
 {
-    bsp_perf::image::ImageView inputImage = inputData.image;
+    bsp_perf::bsp_image::ImageView inputImage = inputData.image;
     if (inputImage.empty())
     {
         throw std::invalid_argument("inputData.image is empty.");
@@ -31,14 +31,14 @@ int RGArknnYolov5::preProcess(ObjDetectParams& params, ObjDetectInput& inputData
         throw std::runtime_error("Failed to create YUV420 G2D buffer");
     }
 
-    bsp_perf::image::ImageView rgb888Image{};
+    bsp_perf::bsp_image::ImageView rgb888Image{};
     rgb888Image.desc.width = static_cast<uint32_t>(params.model_input_width);
     rgb888Image.desc.height = static_cast<uint32_t>(params.model_input_height);
     rgb888Image.desc.widthStride = static_cast<uint32_t>(params.model_input_width);
     rgb888Image.desc.heightStride = static_cast<uint32_t>(params.model_input_height);
     rgb888Image.desc.format = "RGB888";
     rgb888Image.desc.dataSize = rknn_input_size;
-    rgb888Image.memoryType = bsp_perf::image::ImageMemoryType::Host;
+    rgb888Image.memoryType = bsp_perf::bsp_image::ImageMemoryType::Host;
     rgb888Image.planeCount = 1;
     rgb888Image.planes[0].data = m_rknn_input_buf.data();
     rgb888Image.planes[0].size = rknn_input_size;

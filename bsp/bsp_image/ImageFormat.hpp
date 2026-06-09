@@ -10,7 +10,7 @@
 
 namespace bsp_perf
 {
-namespace image
+namespace bsp_image
 {
 
 class ImageFormat
@@ -115,7 +115,7 @@ inline std::shared_ptr<ImageBuffer> makeHostImageBuffer(const ImageDesc& desc)
     return buffer;
 }
 
-} // namespace image
+} // namespace bsp_image
 } // namespace bsp_perf
 
 #endif // __BSP_IMAGE_FORMAT_HPP__

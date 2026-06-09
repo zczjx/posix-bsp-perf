@@ -1,6 +1,6 @@
 #include "rkmppCodecHeader.hpp"
 #include "rkmppDec.hpp"
-#include <image/ImageFormat.hpp>
+#include <bsp_image/ImageFormat.hpp>
 #include <iostream>
 #include <cstring>
 #include <sys/time.h>
@@ -263,15 +263,15 @@ int rkmppDec::decode(DecodePacket& pkt_data)
                         MppFrameFormat format = mpp_frame_get_fmt(m_frame);
                         uint8_t *data_vir =(uint8_t *) mpp_buffer_get_ptr(mpp_frame_get_buffer(m_frame));
                         int fd = mpp_buffer_get_fd(mpp_frame_get_buffer(m_frame));
-                        bsp_perf::image::ImageDesc desc{};
+                        bsp_perf::bsp_image::ImageDesc desc{};
                         desc.width = static_cast<uint32_t>(hor_width);
                         desc.height = static_cast<uint32_t>(ver_height);
                         desc.widthStride = static_cast<uint32_t>(hor_stride);
                         desc.heightStride = static_cast<uint32_t>(ver_stride);
                         desc.format = rkmppCodecHeader::getInstance().mppFrameFormatToStr(format);
                         desc.dataSize = static_cast<size_t>(hor_width) * static_cast<size_t>(ver_height) *
-                            bsp_perf::image::bytesPerPixel(desc.format);
-                        auto frame = bsp_perf::image::makeHostImageBuffer(desc);
+                            bsp_perf::bsp_image::bytesPerPixel(desc.format);
+                        auto frame = bsp_perf::bsp_image::makeHostImageBuffer(desc);
                         std::memcpy(frame->view.data(), data_vir, desc.dataSize);
                         frame->nativeHandle = fd;
                         m_callback(m_userdata, frame);

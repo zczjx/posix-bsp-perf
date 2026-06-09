@@ -108,16 +108,16 @@ int Recorder::addVideoStream(int width, int height)
 }
 
 int Recorder::convertImageFormat(uint8_t* input_data, int width, int height, std::string input_format,
-    std::shared_ptr<bsp_perf::image::ImageBuffer> output_buf, std::string out_format)
+    std::shared_ptr<bsp_perf::bsp_image::ImageBuffer> output_buf, std::string out_format)
 {
-    bsp_perf::image::ImageView inputImage{};
+    bsp_perf::bsp_image::ImageView inputImage{};
     inputImage.desc.width = static_cast<uint32_t>(width);
     inputImage.desc.height = static_cast<uint32_t>(height);
     inputImage.desc.widthStride = static_cast<uint32_t>(width);
     inputImage.desc.heightStride = static_cast<uint32_t>(height);
     inputImage.desc.format = input_format;
     inputImage.desc.dataSize = static_cast<size_t>(width) * height * bytesPerPixel(input_format);
-    inputImage.memoryType = bsp_perf::image::ImageMemoryType::Host;
+    inputImage.memoryType = bsp_perf::bsp_image::ImageMemoryType::Host;
     inputImage.planeCount = 1;
     inputImage.planes[0].data = input_data;
     inputImage.planes[0].size = inputImage.desc.dataSize;

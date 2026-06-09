@@ -11,11 +11,11 @@ namespace bsp_g2d
 
 // ========== New Interface Implementation ==========
 
-std::shared_ptr<bsp_perf::image::ImageBuffer> rkrga::createBuffer(
+std::shared_ptr<bsp_perf::bsp_image::ImageBuffer> rkrga::createBuffer(
     BufferType type,
-    const bsp_perf::image::ImageView& image)
+    const bsp_perf::bsp_image::ImageView& image)
 {
-    auto imageBuffer = std::make_shared<bsp_perf::image::ImageBuffer>();
+    auto imageBuffer = std::make_shared<bsp_perf::bsp_image::ImageBuffer>();
     imageBuffer->view = image;
     auto g2dBuffer = std::make_shared<impl::G2DBufferInternal>();
     g2dBuffer->g2dPlatform = "rkrga";
@@ -66,7 +66,7 @@ std::shared_ptr<bsp_perf::image::ImageBuffer> rkrga::createBuffer(
     return imageBuffer;
 }
 
-void rkrga::releaseBuffer(std::shared_ptr<bsp_perf::image::ImageBuffer> buffer)
+void rkrga::releaseBuffer(std::shared_ptr<bsp_perf::bsp_image::ImageBuffer> buffer)
 {
     if (buffer == nullptr)
     {
@@ -77,7 +77,7 @@ void rkrga::releaseBuffer(std::shared_ptr<bsp_perf::image::ImageBuffer> buffer)
     buffer.reset();
 }
 
-int rkrga::syncBuffer(std::shared_ptr<bsp_perf::image::ImageBuffer> buffer, SyncDirection direction)
+int rkrga::syncBuffer(std::shared_ptr<bsp_perf::bsp_image::ImageBuffer> buffer, SyncDirection direction)
 {
     // RGA with virtualaddr doesn't need explicit sync
     // The driver handles cache coherency automatically
@@ -86,7 +86,7 @@ int rkrga::syncBuffer(std::shared_ptr<bsp_perf::image::ImageBuffer> buffer, Sync
 }
 
 void* rkrga::mapBuffer(
-    std::shared_ptr<bsp_perf::image::ImageBuffer> buffer,
+    std::shared_ptr<bsp_perf::bsp_image::ImageBuffer> buffer,
     const std::string& access_mode)
 {
     auto g2dBuffer = impl::getG2DBufferInternal(buffer);
@@ -101,7 +101,7 @@ void* rkrga::mapBuffer(
     return nullptr;
 }
 
-void rkrga::unmapBuffer(std::shared_ptr<bsp_perf::image::ImageBuffer> buffer)
+void rkrga::unmapBuffer(std::shared_ptr<bsp_perf::bsp_image::ImageBuffer> buffer)
 {
     // No-op for RGA
 }
@@ -121,7 +121,7 @@ std::string rkrga::getPlatformName() const
 
 // ========== Image Operations ==========
 
-int rkrga::imageResize(std::shared_ptr<bsp_perf::image::ImageBuffer> src, std::shared_ptr<bsp_perf::image::ImageBuffer> dst)
+int rkrga::imageResize(std::shared_ptr<bsp_perf::bsp_image::ImageBuffer> src, std::shared_ptr<bsp_perf::bsp_image::ImageBuffer> dst)
 {
     auto srcBuffer = impl::getG2DBufferInternal(src);
     auto dstBuffer = impl::getG2DBufferInternal(dst);
@@ -157,7 +157,7 @@ int rkrga::imageResize(std::shared_ptr<bsp_perf::image::ImageBuffer> src, std::s
     }
 }
 
-int rkrga::imageCopy(std::shared_ptr<bsp_perf::image::ImageBuffer> src, std::shared_ptr<bsp_perf::image::ImageBuffer> dst)
+int rkrga::imageCopy(std::shared_ptr<bsp_perf::bsp_image::ImageBuffer> src, std::shared_ptr<bsp_perf::bsp_image::ImageBuffer> dst)
 {
     auto srcBuffer = impl::getG2DBufferInternal(src);
     auto dstBuffer = impl::getG2DBufferInternal(dst);
@@ -176,7 +176,7 @@ int rkrga::imageCopy(std::shared_ptr<bsp_perf::image::ImageBuffer> src, std::sha
     }
 }
 
-int rkrga::imageDrawRectangle(std::shared_ptr<bsp_perf::image::ImageBuffer> dst, ImageRect& rect, uint32_t color, int thickness)
+int rkrga::imageDrawRectangle(std::shared_ptr<bsp_perf::bsp_image::ImageBuffer> dst, ImageRect& rect, uint32_t color, int thickness)
 {
     auto dstBuffer = impl::getG2DBufferInternal(dst);
     if (!dstBuffer) {
@@ -215,7 +215,7 @@ int rkrga::imageDrawRectangle(std::shared_ptr<bsp_perf::image::ImageBuffer> dst,
     }
 }
 
-int rkrga::imageCvtColor(std::shared_ptr<bsp_perf::image::ImageBuffer> src, std::shared_ptr<bsp_perf::image::ImageBuffer> dst,
+int rkrga::imageCvtColor(std::shared_ptr<bsp_perf::bsp_image::ImageBuffer> src, std::shared_ptr<bsp_perf::bsp_image::ImageBuffer> dst,
                     const std::string& src_format, const std::string& dst_format)
 {
     auto srcBuffer = impl::getG2DBufferInternal(src);

@@ -24,7 +24,7 @@ struct G2DBufferInternal
 };
 
 inline std::shared_ptr<G2DBufferInternal> getG2DBufferInternal(
-    const std::shared_ptr<bsp_perf::image::ImageBuffer>& buffer)
+    const std::shared_ptr<bsp_perf::bsp_image::ImageBuffer>& buffer)
 {
     if (!buffer || !buffer->nativeHandle.has_value()) {
         return nullptr;
@@ -32,7 +32,7 @@ inline std::shared_ptr<G2DBufferInternal> getG2DBufferInternal(
     return std::any_cast<std::shared_ptr<G2DBufferInternal>>(buffer->nativeHandle);
 }
 
-inline const bsp_perf::image::ImageView& imageView(const bsp_perf::image::ImageBuffer& buffer)
+inline const bsp_perf::bsp_image::ImageView& imageView(const bsp_perf::bsp_image::ImageBuffer& buffer)
 {
     return buffer.view;
 }

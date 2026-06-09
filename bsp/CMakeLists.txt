@@ -2,7 +2,7 @@ cmake_minimum_required(VERSION 3.12)
 
 option(BUILD_SRC_FRAMEWORK "Build bsp/framework" ON)
 option(BUILD_SRC_SHARED "Build bsp/shared" ON)
-option(BUILD_SRC_IMAGE "Build bsp/image" ON)
+option(BUILD_SRC_IMAGE "Build bsp/bsp_image" ON)
 option(BUILD_SRC_CORE "Build bsp/core" OFF)
 option(BUILD_SRC_PROFILER "Build profiler" ON)
 option(BUILD_SRC_BSP_SOCKETS "Build bsp_sockets" ON)
@@ -34,7 +34,7 @@ if(BUILD_SRC_SHARED)
 endif()
 
 if(BUILD_SRC_IMAGE)
-    add_subdirectory(image)
+    add_subdirectory(bsp_image)
 endif()
 
 if(BUILD_SRC_CORE)

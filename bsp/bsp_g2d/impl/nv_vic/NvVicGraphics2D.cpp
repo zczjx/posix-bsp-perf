@@ -216,11 +216,11 @@ int NvVicGraphics2D::copyNvBufSurfaceToHost(NvBufSurface* surf, void* host_ptr, 
 
 // ========== New Interface Implementation ==========
 
-std::shared_ptr<bsp_perf::image::ImageBuffer> NvVicGraphics2D::createBuffer(
+std::shared_ptr<bsp_perf::bsp_image::ImageBuffer> NvVicGraphics2D::createBuffer(
     BufferType type,
-    const bsp_perf::image::ImageView& image)
+    const bsp_perf::bsp_image::ImageView& image)
 {
-    auto imageBuffer = std::make_shared<bsp_perf::image::ImageBuffer>();
+    auto imageBuffer = std::make_shared<bsp_perf::bsp_image::ImageBuffer>();
     imageBuffer->view = image;
     auto g2dBuffer = std::make_shared<impl::G2DBufferInternal>();
     g2dBuffer->g2dPlatform = "nvvic";
@@ -296,7 +296,7 @@ std::shared_ptr<bsp_perf::image::ImageBuffer> NvVicGraphics2D::createBuffer(
     return imageBuffer;
 }
 
-void NvVicGraphics2D::releaseBuffer(std::shared_ptr<bsp_perf::image::ImageBuffer> buffer)
+void NvVicGraphics2D::releaseBuffer(std::shared_ptr<bsp_perf::bsp_image::ImageBuffer> buffer)
 {
     if (!buffer) return;
 
@@ -323,7 +323,7 @@ void NvVicGraphics2D::releaseBuffer(std::shared_ptr<bsp_perf::image::ImageBuffer
 }
 
 int NvVicGraphics2D::syncBuffer(
-    std::shared_ptr<bsp_perf::image::ImageBuffer> buffer,
+    std::shared_ptr<bsp_perf::bsp_image::ImageBuffer> buffer,
     SyncDirection direction)
 {
     auto g2dBuffer = impl::getG2DBufferInternal(buffer);
@@ -371,7 +371,7 @@ int NvVicGraphics2D::syncBuffer(
 }
 
 void* NvVicGraphics2D::mapBuffer(
-    std::shared_ptr<bsp_perf::image::ImageBuffer> buffer,
+    std::shared_ptr<bsp_perf::bsp_image::ImageBuffer> buffer,
     const std::string& access_mode)
 {
     auto g2dBuffer = impl::getG2DBufferInternal(buffer);
@@ -414,7 +414,7 @@ void* NvVicGraphics2D::mapBuffer(
     return mapped_addr;
 }
 
-void NvVicGraphics2D::unmapBuffer(std::shared_ptr<bsp_perf::image::ImageBuffer> buffer)
+void NvVicGraphics2D::unmapBuffer(std::shared_ptr<bsp_perf::bsp_image::ImageBuffer> buffer)
 {
     if (!buffer) return;
     
@@ -446,7 +446,7 @@ std::string NvVicGraphics2D::getPlatformName() const
 
 // ========== Helper Methods ==========
 
-NvBufSurface* NvVicGraphics2D::getNvBufSurface(std::shared_ptr<bsp_perf::image::ImageBuffer> imageBuffer)
+NvBufSurface* NvVicGraphics2D::getNvBufSurface(std::shared_ptr<bsp_perf::bsp_image::ImageBuffer> imageBuffer)
 {
     if (!imageBuffer) return nullptr;
 
@@ -481,7 +481,7 @@ int NvVicGraphics2D::performTransform(NvBufSurface* src, NvBufSurface* dst, NvBu
 
 // ========== Image Operations ==========
 
-int NvVicGraphics2D::imageResize(std::shared_ptr<bsp_perf::image::ImageBuffer> src, std::shared_ptr<bsp_perf::image::ImageBuffer> dst)
+int NvVicGraphics2D::imageResize(std::shared_ptr<bsp_perf::bsp_image::ImageBuffer> src, std::shared_ptr<bsp_perf::bsp_image::ImageBuffer> dst)
 {
     NvBufSurface* src_surf = getNvBufSurface(src);
     NvBufSurface* dst_surf = getNvBufSurface(dst);
@@ -516,7 +516,7 @@ int NvVicGraphics2D::imageResize(std::shared_ptr<bsp_perf::image::ImageBuffer> s
     return performTransform(src_surf, dst_surf, transform_params);
 }
 
-int NvVicGraphics2D::imageCopy(std::shared_ptr<bsp_perf::image::ImageBuffer> src, std::shared_ptr<bsp_perf::image::ImageBuffer> dst)
+int NvVicGraphics2D::imageCopy(std::shared_ptr<bsp_perf::bsp_image::ImageBuffer> src, std::shared_ptr<bsp_perf::bsp_image::ImageBuffer> dst)
 {
     NvBufSurface* src_surf = getNvBufSurface(src);
     NvBufSurface* dst_surf = getNvBufSurface(dst);
@@ -537,7 +537,7 @@ int NvVicGraphics2D::imageCopy(std::shared_ptr<bsp_perf::image::ImageBuffer> src
 }
 
 int NvVicGraphics2D::imageDrawRectangle(
-    std::shared_ptr<bsp_perf::image::ImageBuffer> dst,
+    std::shared_ptr<bsp_perf::bsp_image::ImageBuffer> dst,
     ImageRect& rect,
     uint32_t color,
     int thickness)
@@ -547,7 +547,7 @@ int NvVicGraphics2D::imageDrawRectangle(
     return -1;
 }
 
-int NvVicGraphics2D::imageCvtColor(std::shared_ptr<bsp_perf::image::ImageBuffer> src, std::shared_ptr<bsp_perf::image::ImageBuffer> dst,
+int NvVicGraphics2D::imageCvtColor(std::shared_ptr<bsp_perf::bsp_image::ImageBuffer> src, std::shared_ptr<bsp_perf::bsp_image::ImageBuffer> dst,
         const std::string& src_format, const std::string& dst_format)
 {
     NvBufSurface* src_surf = getNvBufSurface(src);

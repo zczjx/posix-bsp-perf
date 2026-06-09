@@ -73,7 +73,7 @@ void CameraClient::fillCameraSensorMsg(CameraSensorMsg& msg, size_t data_size, s
     msg.slot_index = slot_index;
 }
 
-std::shared_ptr<bsp_perf::image::ImageBuffer> CameraClient::getCameraVideoFrame()
+std::shared_ptr<bsp_perf::bsp_image::ImageBuffer> CameraClient::getCameraVideoFrame()
 {
     return m_video_dec_helper->getDecodedFrame();
 }
@@ -86,7 +86,7 @@ void CameraClient::consumerLoop()
     msgpack::sbuffer msg_buffer;
     while (!m_stopSignal.load())
     {
-        std::shared_ptr<bsp_perf::image::ImageBuffer> frame = getCameraVideoFrame();
+        std::shared_ptr<bsp_perf::bsp_image::ImageBuffer> frame = getCameraVideoFrame();
         if (frame != nullptr)
         {
             frame_count++;

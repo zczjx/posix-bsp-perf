@@ -4,7 +4,7 @@
 #include <memory>
 #include <string>
 #include <any>
-#include <image/ImageTypes.hpp>
+#include <bsp_image/ImageTypes.hpp>
 
 namespace bsp_g2d
 {
@@ -82,18 +82,18 @@ public:
      *   - RGA: 包装 params.host_ptr（零拷贝）
      *   - VIC: 分配 NVBUF_MEM_SURFACE_ARRAY + 拷贝 params.host_ptr 数据
      * 
-     * @return std::shared_ptr<bsp_perf::image::ImageBuffer>
+     * @return std::shared_ptr<bsp_perf::bsp_image::ImageBuffer>
      */
-    virtual std::shared_ptr<bsp_perf::image::ImageBuffer> createBuffer(
+    virtual std::shared_ptr<bsp_perf::bsp_image::ImageBuffer> createBuffer(
         BufferType type,
-        const bsp_perf::image::ImageView& image)
+        const bsp_perf::bsp_image::ImageView& image)
         = 0;
 
     /**
      * @brief 释放 G2D 缓冲区（新接口）
      * @param buffer 要释放的缓冲区
      */
-    virtual void releaseBuffer(std::shared_ptr<bsp_perf::image::ImageBuffer> buffer) = 0;
+    virtual void releaseBuffer(std::shared_ptr<bsp_perf::bsp_image::ImageBuffer> buffer) = 0;
 
     /**
      * @brief 同步 Mapped 缓冲区（关键新增接口！）
@@ -115,7 +115,7 @@ public:
      * ⚠️ 注意：仅对 Mapped 类型有效，Hardware 类型返回 -1
      */
     virtual int syncBuffer(
-        std::shared_ptr<bsp_perf::image::ImageBuffer> buffer,
+        std::shared_ptr<bsp_perf::bsp_image::ImageBuffer> buffer,
         SyncDirection direction) = 0;
 
     /**
@@ -134,14 +134,14 @@ public:
      * ⚠️ 使用完毕后必须调用 unmapBuffer
      */
     virtual void* mapBuffer(
-        std::shared_ptr<bsp_perf::image::ImageBuffer> buffer,
+        std::shared_ptr<bsp_perf::bsp_image::ImageBuffer> buffer,
         const std::string& access_mode = "readwrite") = 0;
 
     /**
      * @brief 解除 Hardware 缓冲区的 CPU 映射
      * @param buffer Hardware 类型缓冲区
      */
-    virtual void unmapBuffer(std::shared_ptr<bsp_perf::image::ImageBuffer> buffer) = 0;
+    virtual void unmapBuffer(std::shared_ptr<bsp_perf::bsp_image::ImageBuffer> buffer) = 0;
 
     // ========== Platform Capabilities ==========
     
@@ -171,11 +171,11 @@ public:
      * ⚠️ 如果 src/dst 是 Mapped 类型且 CPU 修改过，需先调用 syncBuffer(CpuToDevice)
      */
     virtual int imageResize(
-        std::shared_ptr<bsp_perf::image::ImageBuffer> src,
-        std::shared_ptr<bsp_perf::image::ImageBuffer> dst) = 0;
+        std::shared_ptr<bsp_perf::bsp_image::ImageBuffer> src,
+        std::shared_ptr<bsp_perf::bsp_image::ImageBuffer> dst) = 0;
 
-    int imageResize(const bsp_perf::image::ImageView& src,
-                    const bsp_perf::image::ImageView& dst,
+    int imageResize(const bsp_perf::bsp_image::ImageView& src,
+                    const bsp_perf::bsp_image::ImageView& dst,
                     BufferType type = BufferType::Mapped)
     {
         auto srcBuffer = createBuffer(type, src);
@@ -201,11 +201,11 @@ public:
      * ⚠️ 拷贝后，如需 CPU 读取 dst，需调用 syncBuffer(DeviceToCpu)
      */
     virtual int imageCopy(
-        std::shared_ptr<bsp_perf::image::ImageBuffer> src,
-        std::shared_ptr<bsp_perf::image::ImageBuffer> dst) = 0;
+        std::shared_ptr<bsp_perf::bsp_image::ImageBuffer> src,
+        std::shared_ptr<bsp_perf::bsp_image::ImageBuffer> dst) = 0;
 
-    int imageCopy(const bsp_perf::image::ImageView& src,
-                  const bsp_perf::image::ImageView& dst,
+    int imageCopy(const bsp_perf::bsp_image::ImageView& src,
+                  const bsp_perf::bsp_image::ImageView& dst,
                   BufferType type = BufferType::Mapped)
     {
         auto srcBuffer = createBuffer(type, src);
@@ -231,13 +231,13 @@ public:
      * @return 0 成功，-1 失败
      */
     virtual int imageCvtColor(
-        std::shared_ptr<bsp_perf::image::ImageBuffer> src,
-        std::shared_ptr<bsp_perf::image::ImageBuffer> dst,
+        std::shared_ptr<bsp_perf::bsp_image::ImageBuffer> src,
+        std::shared_ptr<bsp_perf::bsp_image::ImageBuffer> dst,
         const std::string& src_format,
         const std::string& dst_format) = 0;
 
-    int imageCvtColor(const bsp_perf::image::ImageView& src,
-                      const bsp_perf::image::ImageView& dst,
+    int imageCvtColor(const bsp_perf::bsp_image::ImageView& src,
+                      const bsp_perf::bsp_image::ImageView& dst,
                       BufferType type = BufferType::Mapped)
     {
         auto srcBuffer = createBuffer(type, src);
@@ -268,7 +268,7 @@ public:
      * @return 0 成功，-1 失败/不支持
      */
     virtual int imageDrawRectangle(
-        std::shared_ptr<bsp_perf::image::ImageBuffer> dst,
+        std::shared_ptr<bsp_perf::bsp_image::ImageBuffer> dst,
         ImageRect& rect,
         uint32_t color,
         int thickness) = 0;

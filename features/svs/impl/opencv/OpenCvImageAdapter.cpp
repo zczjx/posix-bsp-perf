@@ -22,17 +22,17 @@ int cvTypeForFormat(const std::string& format)
     return -1;
 }
 
-size_t defaultRowStride(const bsp_perf::image::ImageDesc& desc, int cvType)
+size_t defaultRowStride(const bsp_perf::bsp_image::ImageDesc& desc, int cvType)
 {
     const size_t channels = static_cast<size_t>(CV_MAT_CN(cvType));
     return desc.widthStride > 0 ? desc.widthStride * channels : desc.width * channels;
 }
 } // namespace
 
-bool OpenCvImageAdapter::toMat(const bsp_perf::image::ImageView& view, cv::Mat& mat)
+bool OpenCvImageAdapter::toMat(const bsp_perf::bsp_image::ImageView& view, cv::Mat& mat)
 {
     const int cvType = cvTypeForFormat(view.desc.format);
-    if (view.empty() || cvType < 0 || view.memoryType != bsp_perf::image::ImageMemoryType::Host) {
+    if (view.empty() || cvType < 0 || view.memoryType != bsp_perf::bsp_image::ImageMemoryType::Host) {
         return false;
     }
 
@@ -45,7 +45,7 @@ bool OpenCvImageAdapter::toMat(const bsp_perf::image::ImageView& view, cv::Mat& 
     return !mat.empty();
 }
 
-bool OpenCvImageAdapter::fromMat(const cv::Mat& mat, const std::string& format, bsp_perf::image::ImageView& view)
+bool OpenCvImageAdapter::fromMat(const cv::Mat& mat, const std::string& format, bsp_perf::bsp_image::ImageView& view)
 {
     if (mat.empty()) {
         return false;
@@ -68,8 +68,8 @@ bool OpenCvImageAdapter::fromMat(const cv::Mat& mat, const std::string& format, 
     view.desc.heightStride = static_cast<uint32_t>(mat.rows);
     view.desc.format = format;
     view.desc.dataSize = data->size();
-    view.memoryType = bsp_perf::image::ImageMemoryType::Host;
-    view.access = bsp_perf::image::ImageAccess::ReadWrite;
+    view.memoryType = bsp_perf::bsp_image::ImageMemoryType::Host;
+    view.access = bsp_perf::bsp_image::ImageAccess::ReadWrite;
     view.planeCount = 1;
     view.planes[0].data = data->data();
     view.planes[0].size = data->size();

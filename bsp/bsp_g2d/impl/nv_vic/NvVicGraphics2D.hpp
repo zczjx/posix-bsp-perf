@@ -40,21 +40,21 @@ public:
 
     // ========== New Interface ==========
 
-    std::shared_ptr<bsp_perf::image::ImageBuffer> createBuffer(
+    std::shared_ptr<bsp_perf::bsp_image::ImageBuffer> createBuffer(
         BufferType type,
-        const bsp_perf::image::ImageView& image) override;
+        const bsp_perf::bsp_image::ImageView& image) override;
 
-    void releaseBuffer(std::shared_ptr<bsp_perf::image::ImageBuffer> buffer) override;
+    void releaseBuffer(std::shared_ptr<bsp_perf::bsp_image::ImageBuffer> buffer) override;
 
     int syncBuffer(
-        std::shared_ptr<bsp_perf::image::ImageBuffer> buffer,
+        std::shared_ptr<bsp_perf::bsp_image::ImageBuffer> buffer,
         SyncDirection direction) override;
 
     void* mapBuffer(
-        std::shared_ptr<bsp_perf::image::ImageBuffer> buffer,
+        std::shared_ptr<bsp_perf::bsp_image::ImageBuffer> buffer,
         const std::string& access_mode = "readwrite") override;
 
-    void unmapBuffer(std::shared_ptr<bsp_perf::image::ImageBuffer> buffer) override;
+    void unmapBuffer(std::shared_ptr<bsp_perf::bsp_image::ImageBuffer> buffer) override;
 
     bool queryCapability(const std::string& capability) const override;
 
@@ -62,14 +62,14 @@ public:
 
     // ========== Image Operations ==========
 
-    int imageResize(std::shared_ptr<bsp_perf::image::ImageBuffer> src, std::shared_ptr<bsp_perf::image::ImageBuffer> dst) override;
+    int imageResize(std::shared_ptr<bsp_perf::bsp_image::ImageBuffer> src, std::shared_ptr<bsp_perf::bsp_image::ImageBuffer> dst) override;
 
-    int imageCopy(std::shared_ptr<bsp_perf::image::ImageBuffer> src, std::shared_ptr<bsp_perf::image::ImageBuffer> dst) override;
+    int imageCopy(std::shared_ptr<bsp_perf::bsp_image::ImageBuffer> src, std::shared_ptr<bsp_perf::bsp_image::ImageBuffer> dst) override;
 
-    int imageDrawRectangle(std::shared_ptr<bsp_perf::image::ImageBuffer> dst, ImageRect& rect,
+    int imageDrawRectangle(std::shared_ptr<bsp_perf::bsp_image::ImageBuffer> dst, ImageRect& rect,
             uint32_t color, int thickness) override;
 
-    int imageCvtColor(std::shared_ptr<bsp_perf::image::ImageBuffer> src, std::shared_ptr<bsp_perf::image::ImageBuffer> dst,
+    int imageCvtColor(std::shared_ptr<bsp_perf::bsp_image::ImageBuffer> src, std::shared_ptr<bsp_perf::bsp_image::ImageBuffer> dst,
             const std::string& src_format, const std::string& dst_format) override;
 
 private:
@@ -81,7 +81,7 @@ private:
     /**
      * @brief Gets NvBufSurface from ImageBuffer.
      */
-    NvBufSurface* getNvBufSurface(std::shared_ptr<bsp_perf::image::ImageBuffer> imageBuffer);
+    NvBufSurface* getNvBufSurface(std::shared_ptr<bsp_perf::bsp_image::ImageBuffer> imageBuffer);
 
     /**
      * @brief Performs NV VIC transformation.

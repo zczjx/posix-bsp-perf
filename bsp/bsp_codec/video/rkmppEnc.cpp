@@ -380,7 +380,7 @@ int rkmppEnc::setup(EncodeConfig& cfg)
     return setupMppEncCfg();
 }
 
-std::shared_ptr<bsp_perf::image::ImageBuffer> rkmppEnc::getInputBuffer()
+std::shared_ptr<bsp_perf::bsp_image::ImageBuffer> rkmppEnc::getInputBuffer()
 {
     if (m_ctx.frm_buf == nullptr)
     {
@@ -392,14 +392,14 @@ std::shared_ptr<bsp_perf::image::ImageBuffer> rkmppEnc::getInputBuffer()
         }
     }
 
-    auto inputBuffer = std::make_shared<bsp_perf::image::ImageBuffer>();
+    auto inputBuffer = std::make_shared<bsp_perf::bsp_image::ImageBuffer>();
     inputBuffer->view.desc.width = m_params.width;
     inputBuffer->view.desc.height = m_params.height;
     inputBuffer->view.desc.widthStride = m_params.hor_stride;
     inputBuffer->view.desc.heightStride = m_params.ver_stride;
     inputBuffer->view.desc.format = "YUV420SP";
     inputBuffer->view.desc.dataSize = m_ctx.frame_size;
-    inputBuffer->view.memoryType = bsp_perf::image::ImageMemoryType::DmaBuf;
+    inputBuffer->view.memoryType = bsp_perf::bsp_image::ImageMemoryType::DmaBuf;
     inputBuffer->view.planeCount = 1;
     inputBuffer->view.planes[0].data = static_cast<uint8_t*>(mpp_buffer_get_ptr(m_ctx.frm_buf));
     inputBuffer->view.planes[0].size = m_ctx.frame_size;
@@ -409,7 +409,7 @@ std::shared_ptr<bsp_perf::image::ImageBuffer> rkmppEnc::getInputBuffer()
     return inputBuffer;
 }
 
-int rkmppEnc::encode(bsp_perf::image::ImageBuffer& input_buf, EncodePacket& out_pkt)
+int rkmppEnc::encode(bsp_perf::bsp_image::ImageBuffer& input_buf, EncodePacket& out_pkt)
 {
     MPP_RET ret;
     RK_U32 frm_eos = 0;

@@ -8,7 +8,7 @@
 #include <shared/BspLogger.hpp>
 #include <shared/ArgParser.hpp>
 #include <bsp_dnn/dnnObjDetector.hpp>
-#include <image/ImageTypes.hpp>
+#include <bsp_image/ImageTypes.hpp>
 #include <atomic>
 #include <mutex>
 #include <queue>
@@ -36,9 +36,9 @@ private:
 
     void setObjDetectParams(ArgParser& args, std::unique_ptr<bsp_dnn::dnnObjDetector>& dnnObjDetector);
 
-    std::vector<bsp_dnn::ObjDetectOutputBox> runDnnInference(std::shared_ptr<bsp_perf::image::ImageBuffer> frame);
+    std::vector<bsp_dnn::ObjDetectOutputBox> runDnnInference(std::shared_ptr<bsp_perf::bsp_image::ImageBuffer> frame);
 
-    void publishObjDetectResults(const std::vector<bsp_dnn::ObjDetectOutputBox>& output_boxes, std::shared_ptr<bsp_perf::image::ImageBuffer> frame);
+    void publishObjDetectResults(const std::vector<bsp_dnn::ObjDetectOutputBox>& output_boxes, std::shared_ptr<bsp_perf::bsp_image::ImageBuffer> frame);
 
 private:
     std::string m_name;
@@ -47,11 +47,11 @@ private:
     std::unique_ptr<bsp_dnn::dnnObjDetector> m_dnnObjDetector;
     bsp_dnn::ObjDetectParams m_objDetectParams{};
 
-    std::queue<std::shared_ptr<bsp_perf::image::ImageBuffer>> m_free_frames_queue;
+    std::queue<std::shared_ptr<bsp_perf::bsp_image::ImageBuffer>> m_free_frames_queue;
     std::mutex m_free_frames_queue_mutex;
     const size_t m_free_frames_queue_size{50};
 
-    std::queue<std::shared_ptr<bsp_perf::image::ImageBuffer>> m_inference_frames_queue;
+    std::queue<std::shared_ptr<bsp_perf::bsp_image::ImageBuffer>> m_inference_frames_queue;
     std::mutex m_inference_frames_queue_mutex;
     const size_t m_inference_frames_queue_size{50};
 

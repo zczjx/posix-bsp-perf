@@ -11,7 +11,7 @@
 
 namespace bsp_perf
 {
-namespace image
+namespace bsp_image
 {
 
 enum class ImageMemoryType
@@ -99,17 +99,17 @@ struct ImageBuffer
     ImageBuffer& operator=(ImageBuffer&&) = default;
 };
 
-} // namespace image
+} // namespace bsp_image
 
 namespace shared
 {
-using image::ImageAccess;
-using image::ImageDesc;
-using image::ImageMemoryType;
-using image::ImageBuffer;
-using image::ImagePlane;
-using image::ImageSize;
-using image::ImageView;
+using bsp_image::ImageAccess;
+using bsp_image::ImageDesc;
+using bsp_image::ImageMemoryType;
+using bsp_image::ImageBuffer;
+using bsp_image::ImagePlane;
+using bsp_image::ImageSize;
+using bsp_image::ImageView;
 } // namespace shared
 } // namespace bsp_perf
 
