@@ -6,7 +6,7 @@
 #include <nvbufsurface.h>
 #include <nvbufsurftransform.h>
 #include <v4l2_nv_extensions.h>
-#include <bsp_image/ImageFormat.hpp>
+#include <bsp_image/ImageBuffer.hpp>
 
 namespace bsp_codec
 {

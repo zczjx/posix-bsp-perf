@@ -8,7 +8,7 @@
 #include <shared/BspLogger.hpp>
 #include <shared/ArgParser.hpp>
 #include <bsp_dnn/dnnObjDetector.hpp>
-#include <bsp_image/ImageTypes.hpp>
+#include <bsp_image/ImageBuffer.hpp>
 #include <atomic>
 #include <mutex>
 #include <queue>

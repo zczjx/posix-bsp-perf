@@ -2,10 +2,8 @@
 #define __BSP_IMAGE_TYPES_HPP__
 
 #include <array>
-#include <any>
 #include <cstddef>
 #include <cstdint>
-#include <functional>
 #include <memory>
 #include <string>
 
@@ -13,7 +11,6 @@ namespace bsp_perf
 {
 namespace bsp_image
 {
-
 enum class ImageMemoryType
 {
     Host,
@@ -78,39 +75,7 @@ struct ImageView
     }
 };
 
-struct ImageBuffer
-{
-    ImageView view{};
-    std::shared_ptr<void> owner{};
-    std::any nativeHandle{};
-    std::function<void()> release{};
-
-    ~ImageBuffer()
-    {
-        if (release) {
-            release();
-        }
-    }
-
-    ImageBuffer() = default;
-    ImageBuffer(const ImageBuffer&) = delete;
-    ImageBuffer& operator=(const ImageBuffer&) = delete;
-    ImageBuffer(ImageBuffer&&) = default;
-    ImageBuffer& operator=(ImageBuffer&&) = default;
-};
-
 } // namespace bsp_image
-
-namespace shared
-{
-using bsp_image::ImageAccess;
-using bsp_image::ImageDesc;
-using bsp_image::ImageMemoryType;
-using bsp_image::ImageBuffer;
-using bsp_image::ImagePlane;
-using bsp_image::ImageSize;
-using bsp_image::ImageView;
-} // namespace shared
 } // namespace bsp_perf
 
 #endif // __BSP_IMAGE_TYPES_HPP__

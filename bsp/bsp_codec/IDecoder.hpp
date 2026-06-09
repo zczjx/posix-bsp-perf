@@ -5,7 +5,7 @@
 #include <string>
 #include <any>
 #include <functional>
-#include <bsp_image/ImageTypes.hpp>
+#include <bsp_image/ImageBuffer.hpp>
 
 namespace bsp_codec
 {

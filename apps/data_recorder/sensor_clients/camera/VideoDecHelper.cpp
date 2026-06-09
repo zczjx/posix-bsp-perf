@@ -1,5 +1,5 @@
 #include "VideoDecHelper.hpp"
-#include <bsp_image/ImageFormat.hpp>
+#include <bsp_image/ImageBuffer.hpp>
 #include <bsp_g2d/BufferHelper.hpp>
 #include <stdexcept>
 #include <iostream>

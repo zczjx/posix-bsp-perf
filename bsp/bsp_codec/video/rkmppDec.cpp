@@ -1,6 +1,6 @@
 #include "rkmppCodecHeader.hpp"
 #include "rkmppDec.hpp"
-#include <bsp_image/ImageFormat.hpp>
+#include <bsp_image/ImageBuffer.hpp>
 #include <iostream>
 #include <cstring>
 #include <sys/time.h>
