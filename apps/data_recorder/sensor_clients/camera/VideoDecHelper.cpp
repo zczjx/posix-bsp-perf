@@ -1,6 +1,5 @@
 #include "VideoDecHelper.hpp"
 #include <bsp_image/ImageBuffer.hpp>
-#include <bsp_g2d/BufferHelper.hpp>
 #include <stdexcept>
 #include <iostream>
 #include <thread>
@@ -102,8 +101,6 @@ int VideoDecHelper::sendToDecoder(std::shared_ptr<VideoDecHelper::RtpBuffer> rtp
 
 std::shared_ptr<bsp_perf::bsp_image::ImageBuffer> VideoDecHelper::convertPixelFormat(std::shared_ptr<bsp_perf::bsp_image::ImageBuffer> frame)
 {
-    auto in_g2d_buf = m_g2d->createBuffer(IGraphics2D::BufferType::Mapped, frame->view);
-
     bsp_perf::bsp_image::ImageDesc outDesc = frame->view.desc;
     outDesc.format = m_out_pixel_format;
     outDesc.widthStride = outDesc.width;
@@ -111,19 +108,9 @@ std::shared_ptr<bsp_perf::bsp_image::ImageBuffer> VideoDecHelper::convertPixelFo
     outDesc.dataSize = bsp_perf::bsp_image::imageDataSize(outDesc);
     auto out_frame = bsp_perf::bsp_image::makeHostImageBuffer(outDesc);
 
-    auto out_g2d_buf = m_g2d->createBuffer(IGraphics2D::BufferType::Mapped, out_frame->view);
-    m_g2d->imageCvtColor(in_g2d_buf, out_g2d_buf, frame->view.desc.format, out_frame->view.desc.format);
-
-    {
-        bsp_g2d::BufferSyncGuard sync(
-            m_g2d.get(),
-            out_g2d_buf,
-            IGraphics2D::SyncDirection::Bidirectional);
+    if (m_g2d->imageCvtColorToHost(frame->view, out_frame->view) != 0) {
+        return nullptr;
     }
-    // 显式释放 G2D buffer 资源，防止 NvBufSurface 泄漏
-    m_g2d->releaseBuffer(in_g2d_buf);
-    m_g2d->releaseBuffer(out_g2d_buf);
-
     return out_frame;
 }
 

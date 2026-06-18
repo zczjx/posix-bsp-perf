@@ -9,7 +9,6 @@
 #include <bsp_codec/IDecoder.hpp>
 #include <bsp_codec/IEncoder.hpp>
 #include <bsp_g2d/IGraphics2D.hpp>
-#include <bsp_g2d/BufferHelper.hpp>
 #include <memory>
 #include <string>
 #include <iostream>
@@ -531,13 +530,6 @@ private:
 
             frame.desc.widthStride = static_cast<uint32_t>(input_width_stride);
             frame.desc.heightStride = static_cast<uint32_t>(input_height_stride);
-            auto yuv_in_buf = m_g2d->createBuffer(IGraphics2D::BufferType::Mapped, frame);
-            if (!yuv_in_buf)
-            {
-                m_logger->printStdoutLog(bsp_perf::shared::BspLogger::LogLevel::Error,
-                    "Failed to create YUV input buffer");
-                continue;
-            }
 
             // // 步骤2: 创建或复用 RGBA Mapped 缓冲区（CPU 和硬件都可以访问）
             size_t rgba_buffer_size = task.width * task.height * 4;  // RGBA8888: 4 字节/像素
@@ -555,38 +547,19 @@ private:
             rgbaDesc.dataSize = rgba_buffer_size;
             auto rgbaImage = bsp_perf::bsp_image::makeHostImageView(m_rgba_buf.data(), rgbaDesc, task.width);
 
-            auto rgba_mapped_buf = m_g2d->createBuffer(IGraphics2D::BufferType::Mapped, rgbaImage);
-            if (!rgba_mapped_buf)
-            {
-                m_logger->printStdoutLog(bsp_perf::shared::BspLogger::LogLevel::Error,
-                    "Failed to create RGBA mapped buffer");
-                m_g2d->releaseBuffer(yuv_in_buf);
-                continue;
-            }
-
             // // 步骤3: 硬件加速颜色转换 YUV → RGBA
 
-            int ret = m_g2d->imageCvtColor(yuv_in_buf, rgba_mapped_buf, task.format, "RGBA8888");
+            int ret = m_g2d->imageCvtColorToHost(frame, rgbaImage);
 
             if (ret != 0)
             {
                 m_logger->printStdoutLog(bsp_perf::shared::BspLogger::LogLevel::Error,
                     "YUV to RGBA conversion failed: {}", ret);
-                m_g2d->releaseBuffer(rgba_mapped_buf);
-                m_g2d->releaseBuffer(yuv_in_buf);
                 continue;
             }
 
-            // 步骤4: 使用 BufferSync RAII 自动管理同步 + OpenCV 绘制
+            // 步骤4: OpenCV 绘制
             {
-                // ✨ 进入作用域：自动 Device → CPU
-                // ✨ 退出作用域：自动 CPU → Device
-                bsp_g2d::BufferSyncGuard sync(
-                    m_g2d.get(),
-                    rgba_mapped_buf,
-                    IGraphics2D::SyncDirection::Bidirectional);
-
-                // 在这个作用域内，m_rgba_buf 的数据已经同步到 CPU，可以安全使用
                 cv::Mat cvRGBAImage(task.height, task.width, CV_8UC4, m_rgba_buf.data());
 
                 // 绘制检测框
@@ -631,41 +604,15 @@ private:
             auto yuvOutImage = bsp_perf::bsp_image::makeHostImageView(
                 m_yuv420_buf.data(), yuvOutDesc, static_cast<uint32_t>(input_width_stride));
 
-            auto yuv_out_buf = m_g2d->createBuffer(IGraphics2D::BufferType::Mapped, yuvOutImage);
-            if (!yuv_out_buf)
-            {
-                m_logger->printStdoutLog(bsp_perf::shared::BspLogger::LogLevel::Error,
-                    "Failed to create YUV output buffer");
-                m_g2d->releaseBuffer(rgba_mapped_buf);
-                m_g2d->releaseBuffer(yuv_in_buf);
-                continue;
-            }
-
-            // // 步骤6: 硬件加速颜色转换 RGBA → YUV（画好框的数据已经在 rgba_mapped_buf 中）
-            ret = m_g2d->imageCvtColor(rgba_mapped_buf, yuv_out_buf, "RGBA8888", task.format);
+            // // 步骤6: 硬件加速颜色转换 RGBA → YUV（画好框的数据已经在 m_rgba_buf 中）
+            ret = m_g2d->imageCvtColorToHost(rgbaImage, yuvOutImage);
 
             if (ret != 0)
             {
                 m_logger->printStdoutLog(bsp_perf::shared::BspLogger::LogLevel::Error,
                     "RGBA to YUV conversion failed: {}", ret);
-                m_g2d->releaseBuffer(yuv_out_buf);
-                m_g2d->releaseBuffer(rgba_mapped_buf);
-                m_g2d->releaseBuffer(yuv_in_buf);
                 continue;
             }
-
-            // 步骤7: 同步 YUV 数据到 CPU（供编码器使用）
-            ret = m_g2d->syncBuffer(yuv_out_buf, IGraphics2D::SyncDirection::DeviceToCpu);
-            if (ret != 0)
-            {
-                m_logger->printStdoutLog(bsp_perf::shared::BspLogger::LogLevel::Warn,
-                    "YUV sync to CPU returned {}, continuing anyway", ret);
-            }
-
-            // 释放所有 G2D buffers
-            m_g2d->releaseBuffer(yuv_out_buf);
-            m_g2d->releaseBuffer(rgba_mapped_buf);
-            m_g2d->releaseBuffer(yuv_in_buf);
 
             // 步骤8: 发送到编码器
             std::shared_ptr<bsp_perf::bsp_image::ImageBuffer> enc_in_buf = m_encoder->getInputBuffer();

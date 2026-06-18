@@ -1,5 +1,4 @@
 #include "Recorder.hpp"
-#include <bsp_g2d/BufferHelper.hpp>
 #include <shared/ArgParser.hpp>
 #include <filesystem>
 #include <shared/BspTimeUtils.hpp>
@@ -120,20 +119,7 @@ int Recorder::convertImageFormat(uint8_t* input_data, int width, int height, std
     auto inputImage = bsp_perf::bsp_image::makeHostImageView(input_data, inputDesc, static_cast<uint32_t>(width));
 
     output_buf->view.desc.format = out_format;
-
-    auto in_g2d_buf = m_g2d->createBuffer(IGraphics2D::BufferType::Mapped, inputImage);
-    auto out_g2d_buf = m_g2d->createBuffer(IGraphics2D::BufferType::Mapped, output_buf->view);
-
-    m_g2d->imageCvtColor(in_g2d_buf, out_g2d_buf, input_format, out_format);
-    {
-        bsp_g2d::BufferSyncGuard sync(
-            m_g2d.get(),
-            out_g2d_buf,
-            IGraphics2D::SyncDirection::Bidirectional);
-    }
-    m_g2d->releaseBuffer(in_g2d_buf);
-    m_g2d->releaseBuffer(out_g2d_buf);
-    return 0;
+    return m_g2d->imageCvtColorToHost(inputImage, output_buf->view);
 }
 
 

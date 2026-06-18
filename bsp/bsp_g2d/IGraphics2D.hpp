@@ -254,6 +254,29 @@ public:
         return ret;
     }
 
+    int imageCvtColorToHost(const bsp_perf::bsp_image::ImageView& src,
+                            const bsp_perf::bsp_image::ImageView& dst,
+                            BufferType type = BufferType::Mapped,
+                            bool syncDstToCpu = true)
+    {
+        auto srcBuffer = createBuffer(type, src);
+        auto dstBuffer = createBuffer(type, dst);
+        if (!srcBuffer || !dstBuffer) {
+            releaseBuffer(srcBuffer);
+            releaseBuffer(dstBuffer);
+            return -1;
+        }
+
+        int ret = imageCvtColor(srcBuffer, dstBuffer, src.desc.format, dst.desc.format);
+        if (ret == 0 && syncDstToCpu && type == BufferType::Mapped) {
+            ret = syncBuffer(dstBuffer, SyncDirection::DeviceToCpu);
+        }
+
+        releaseBuffer(srcBuffer);
+        releaseBuffer(dstBuffer);
+        return ret;
+    }
+
     /**
      * @brief 绘制矩形（硬件加速，如果支持）
      * 
