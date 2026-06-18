@@ -262,7 +262,6 @@ int rkmppDec::decode(DecodePacket& pkt_data)
                     {
                         MppFrameFormat format = mpp_frame_get_fmt(m_frame);
                         uint8_t *data_vir =(uint8_t *) mpp_buffer_get_ptr(mpp_frame_get_buffer(m_frame));
-                        int fd = mpp_buffer_get_fd(mpp_frame_get_buffer(m_frame));
                         bsp_perf::bsp_image::ImageDesc desc{};
                         desc.width = static_cast<uint32_t>(hor_width);
                         desc.height = static_cast<uint32_t>(ver_height);
@@ -273,7 +272,6 @@ int rkmppDec::decode(DecodePacket& pkt_data)
                             bsp_perf::bsp_image::bytesPerPixel(desc.format);
                         auto frame = bsp_perf::bsp_image::makeHostImageBuffer(desc);
                         std::memcpy(frame->view.data(), data_vir, desc.dataSize);
-                        frame->nativeHandle = fd;
                         m_callback(m_userdata, frame);
                     }
                     unsigned long cur_time_ms = GetCurrentTimeMS();

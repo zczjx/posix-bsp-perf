@@ -421,8 +421,6 @@ void nvVideoDec::captureThreadFunc()
             frameDesc.format = "YUV420SP";
             frameDesc.dataSize = frame_buffer_size;
             auto frame = bsp_perf::bsp_image::makeHostImageBuffer(frameDesc);
-            frame->view.planes[0].fd = m_dst_dma_fd;
-            frame->nativeHandle = m_dst_dma_fd;
 
             // Map the transformed buffer to get virtual address
             NvBufSurface *surf = nullptr;
