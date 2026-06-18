@@ -543,7 +543,6 @@ std::shared_ptr<bsp_perf::bsp_image::ImageBuffer> nvVideoEnc::getInputBuffer()
 
         info.input_buf = std::make_shared<bsp_perf::bsp_image::ImageBuffer>();
         info.input_buf->owner = info.buffer;
-        info.input_buf->view.owner = info.buffer;
         info.input_buf->view.desc.width = m_params.width;
         info.input_buf->view.desc.height = m_params.height;
         info.input_buf->view.desc.widthStride = m_params.width;

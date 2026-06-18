@@ -4,7 +4,7 @@
 #include <array>
 #include <cstddef>
 #include <cstdint>
-#include <bsp_image/ImageTypes.hpp>
+#include <bsp_image/ImageBuffer.hpp>
 #include <string>
 #include <vector>
 
@@ -92,7 +92,7 @@ struct FrameSet
 
 struct OutputFrame
 {
-    bsp_perf::bsp_image::ImageView image;
+    bsp_perf::bsp_image::ImageBuffer image;
 };
 
 } // namespace svs

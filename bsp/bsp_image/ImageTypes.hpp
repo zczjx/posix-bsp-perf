@@ -4,7 +4,6 @@
 #include <array>
 #include <cstddef>
 #include <cstdint>
-#include <memory>
 #include <string>
 
 namespace bsp_perf
@@ -62,7 +61,6 @@ struct ImageView
     ImageAccess access{ImageAccess::ReadWrite};
     std::array<ImagePlane, 4> planes{};
     uint32_t planeCount{1};
-    std::shared_ptr<void> owner{};
 
     uint8_t* data(size_t plane = 0) const
     {

@@ -45,7 +45,7 @@ bool OpenCvImageAdapter::toMat(const bsp_perf::bsp_image::ImageView& view, cv::M
     return !mat.empty();
 }
 
-bool OpenCvImageAdapter::fromMat(const cv::Mat& mat, const std::string& format, bsp_perf::bsp_image::ImageView& view)
+bool OpenCvImageAdapter::fromMat(const cv::Mat& mat, const std::string& format, bsp_perf::bsp_image::ImageBuffer& buffer)
 {
     if (mat.empty()) {
         return false;
@@ -61,6 +61,7 @@ bool OpenCvImageAdapter::fromMat(const cv::Mat& mat, const std::string& format, 
         }
     }
 
+    auto& view = buffer.view;
     view = {};
     view.desc.width = static_cast<uint32_t>(mat.cols);
     view.desc.height = static_cast<uint32_t>(mat.rows);
@@ -74,7 +75,7 @@ bool OpenCvImageAdapter::fromMat(const cv::Mat& mat, const std::string& format, 
     view.planes[0].data = data->data();
     view.planes[0].size = data->size();
     view.planes[0].rowStride = static_cast<uint32_t>(mat.cols * mat.elemSize());
-    view.owner = data;
+    buffer.owner = data;
     return true;
 }
 

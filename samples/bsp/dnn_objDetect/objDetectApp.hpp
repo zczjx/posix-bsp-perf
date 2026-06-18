@@ -73,7 +73,6 @@ private:
         image.planes[0].size = image.desc.dataSize;
         image.planes[0].rowStride = static_cast<uint32_t>(m_orig_image_ptr->step);
         image.planes[0].fd = -1;
-        image.owner = m_orig_image_ptr;
 
         bsp_dnn::ObjDetectInput objDetectInput = {
             .image = image,

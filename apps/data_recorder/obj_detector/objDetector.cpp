@@ -244,7 +244,6 @@ void ObjDetector::runLoop()
             inference_frame->owner = std::shared_ptr<uint8_t>(
                 new uint8_t[shmem_msg.data_size],
                 std::default_delete<uint8_t[]>());
-            inference_frame->view.owner = inference_frame->owner;
             inference_frame->view.desc.dataSize = shmem_msg.data_size;
             inference_frame->view.desc.width = shmem_msg.width;
             inference_frame->view.desc.height = shmem_msg.height;

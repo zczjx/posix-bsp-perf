@@ -88,13 +88,15 @@ int main(int argc, char** argv)
     }
 
     bsp_perf::svs::OutputFrame output;
-    if (svs->process(input, output) != 0 || output.image.empty()) {
+    if (svs->process(input, output) != 0 || output.image.view.empty())
+    {
         std::cerr << "failed to process surround view\n";
         return -1;
     }
 
-    cv::Mat outputImage = toBgrMat(output.image);
-    if (outputImage.empty() || !cv::imwrite(outputPath, outputImage)) {
+    cv::Mat outputImage = toBgrMat(output.image.view);
+    if (outputImage.empty() || !cv::imwrite(outputPath, outputImage))
+    {
         std::cerr << "failed to write output: " << outputPath << "\n";
         return -1;
     }
