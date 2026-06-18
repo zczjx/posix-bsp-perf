@@ -1,4 +1,5 @@
 #include "NvVicResnet18TrafficCamNet.hpp"
+#include <bsp_dnn/dnnObjDetector_plugins/common/G2dPreprocessHelper.hpp>
 #include <memory>
 #include <iostream>
 #include <fstream>
@@ -37,8 +38,6 @@ int NvVicResnet18TrafficCamNet::preProcess(ObjDetectParams& params, ObjDetectInp
               << " → Model: " << params.model_input_width << "x" << params.model_input_height 
               << ", Scale: " << params.scale_width << "x" << params.scale_height << std::endl;
 
-    // ========== 使用新的 IGraphics2D API ==========
-    
     // 修复 stride 为 0 的问题
     size_t input_width_stride = inputImage.desc.widthStride > 0 ?
                                 static_cast<size_t>(inputImage.desc.widthStride) :
@@ -49,58 +48,17 @@ int NvVicResnet18TrafficCamNet::preProcess(ObjDetectParams& params, ObjDetectInp
 
     inputImage.desc.widthStride = static_cast<uint32_t>(input_width_stride);
     inputImage.desc.heightStride = static_cast<uint32_t>(input_height_stride);
-    auto yuv420_g2d_buf = m_g2d->createBuffer(IGraphics2D::BufferType::Mapped, inputImage);
-    if (!yuv420_g2d_buf)
-    {
-        std::cerr << "[NvVicResnet18TrafficCamNet] Error: Failed to create YUV420 G2D buffer" << std::endl;
-        return -1;
-    }
 
-    // 步骤2: 创建输出 RGBA8888 帧的 Mapped 缓冲区
-    size_t rgba_buffer_size = params.model_input_width * params.model_input_height * 4;
-    if (m_rgb_buffer.size() != rgba_buffer_size)
-    {
-        m_rgb_buffer.resize(rgba_buffer_size);
-    }
-
-    bsp_perf::bsp_image::ImageDesc rgbaDesc{};
-    rgbaDesc.width = static_cast<uint32_t>(params.model_input_width);
-    rgbaDesc.height = static_cast<uint32_t>(params.model_input_height);
-    rgbaDesc.widthStride = static_cast<uint32_t>(params.model_input_width);
-    rgbaDesc.heightStride = static_cast<uint32_t>(params.model_input_height);
-    rgbaDesc.format = "RGBA8888";
-    rgbaDesc.dataSize = rgba_buffer_size;
-    auto rgbaImage = bsp_perf::bsp_image::makeHostImageView(
-        m_rgb_buffer.data(), rgbaDesc, rgbaDesc.widthStride);
-
-    auto rgba_g2d_buf = m_g2d->createBuffer(IGraphics2D::BufferType::Mapped, rgbaImage);
-    if (!rgba_g2d_buf)
-    {
-        std::cerr << "[NvVicResnet18TrafficCamNet] Error: Failed to create RGBA G2D buffer" << std::endl;
-        m_g2d->releaseBuffer(yuv420_g2d_buf);
-        return -1;
-    }
-
-    // 步骤3: 硬件加速：YUV → RGBA + Resize
-    int ret = m_g2d->imageResize(yuv420_g2d_buf, rgba_g2d_buf);
+    bsp_perf::bsp_image::ImageView rgbaImage{};
+    int ret = g2dResizeToHost(*m_g2d, inputImage, m_rgb_buffer,
+                              static_cast<uint32_t>(params.model_input_width),
+                              static_cast<uint32_t>(params.model_input_height),
+                              "RGBA8888", rgbaImage);
     if (ret != 0)
     {
         std::cerr << "[NvVicResnet18TrafficCamNet] Error: imageResize failed with code " << ret << std::endl;
-        m_g2d->releaseBuffer(rgba_g2d_buf);
-        m_g2d->releaseBuffer(yuv420_g2d_buf);
         return ret;
     }
-
-    // 步骤4: 同步 Device → CPU（VIC 需要显式同步）
-    ret = m_g2d->syncBuffer(rgba_g2d_buf, IGraphics2D::SyncDirection::DeviceToCpu);
-    if (ret != 0)
-    {
-        std::cerr << "[NvVicResnet18TrafficCamNet] Warning: syncBuffer returned " << ret << ", continuing anyway" << std::endl;
-    }
-
-    // 释放 G2D 缓冲区
-    m_g2d->releaseBuffer(rgba_g2d_buf);
-    m_g2d->releaseBuffer(yuv420_g2d_buf);
 
     std::cout << "[NvVicResnet18TrafficCamNet] Hardware conversion completed" << std::endl;
 

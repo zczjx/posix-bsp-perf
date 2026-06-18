@@ -1,4 +1,5 @@
 #include "RGArknnYolov5.hpp"
+#include <bsp_dnn/dnnObjDetector_plugins/common/G2dPreprocessHelper.hpp>
 #include <memory>
 #include <iostream>
 #include <cstring>
@@ -18,51 +19,20 @@ int RGArknnYolov5::preProcess(ObjDetectParams& params, ObjDetectInput& inputData
         throw std::invalid_argument("m_g2d is nullptr.");
     }
 
-    // 准备输出缓冲区
-    size_t rknn_input_size = params.model_input_width * params.model_input_height * params.model_input_channel;
-    if (m_rknn_input_buf.size() != rknn_input_size)
-    {
-        m_rknn_input_buf.resize(rknn_input_size);
-    }
-
-    auto yuv420_g2d_buf = m_g2d->createBuffer(IGraphics2D::BufferType::Mapped, inputImage);
-    if (!yuv420_g2d_buf)
-    {
-        throw std::runtime_error("Failed to create YUV420 G2D buffer");
-    }
-
-    bsp_perf::bsp_image::ImageDesc rgb888Desc{};
-    rgb888Desc.width = static_cast<uint32_t>(params.model_input_width);
-    rgb888Desc.height = static_cast<uint32_t>(params.model_input_height);
-    rgb888Desc.widthStride = static_cast<uint32_t>(params.model_input_width);
-    rgb888Desc.heightStride = static_cast<uint32_t>(params.model_input_height);
-    rgb888Desc.format = "RGB888";
-    rgb888Desc.dataSize = rknn_input_size;
-    auto rgb888Image = bsp_perf::bsp_image::makeHostImageView(
-        m_rknn_input_buf.data(), rgb888Desc, rgb888Desc.widthStride);
-
-    auto rgb888_g2d_buf = m_g2d->createBuffer(IGraphics2D::BufferType::Mapped, rgb888Image);
-    if (!rgb888_g2d_buf)
-    {
-        m_g2d->releaseBuffer(yuv420_g2d_buf);
-        throw std::runtime_error("Failed to create RGB888 G2D buffer");
-    }
-
+    bsp_perf::bsp_image::ImageView rgb888Image{};
     // 硬件加速：YUV → RGB + Resize
     // 注意：RGA 是零拷贝，直接操作 m_rknn_input_buf 内存
-    int ret = m_g2d->imageResize(yuv420_g2d_buf, rgb888_g2d_buf);
+    int ret = g2dResizeToHost(*m_g2d, inputImage, m_rknn_input_buf,
+                              static_cast<uint32_t>(params.model_input_width),
+                              static_cast<uint32_t>(params.model_input_height),
+                              "RGB888", rgb888Image);
     if (ret != 0)
     {
-        m_g2d->releaseBuffer(rgb888_g2d_buf);
-        m_g2d->releaseBuffer(yuv420_g2d_buf);
         throw std::runtime_error("imageResize failed with code: " + std::to_string(ret));
     }
 
-    // 释放 G2D 缓冲区
-    m_g2d->releaseBuffer(rgb888_g2d_buf);
-    m_g2d->releaseBuffer(yuv420_g2d_buf);
-
     // 准备 DNN 输入数据
+    size_t rknn_input_size = rgb888Image.desc.dataSize;
     outputData.index = 0;
     outputData.shape.width = params.model_input_width;
     outputData.shape.height = params.model_input_height;
