@@ -61,20 +61,15 @@ bool OpenCvImageAdapter::fromMat(const cv::Mat& mat, const std::string& format, 
         }
     }
 
-    auto& view = buffer.view;
-    view = {};
-    view.desc.width = static_cast<uint32_t>(mat.cols);
-    view.desc.height = static_cast<uint32_t>(mat.rows);
-    view.desc.widthStride = static_cast<uint32_t>(mat.cols);
-    view.desc.heightStride = static_cast<uint32_t>(mat.rows);
-    view.desc.format = format;
-    view.desc.dataSize = data->size();
-    view.memoryType = bsp_perf::bsp_image::ImageMemoryType::Host;
-    view.access = bsp_perf::bsp_image::ImageAccess::ReadWrite;
-    view.planeCount = 1;
-    view.planes[0].data = data->data();
-    view.planes[0].size = data->size();
-    view.planes[0].rowStride = static_cast<uint32_t>(mat.cols * mat.elemSize());
+    bsp_perf::bsp_image::ImageDesc desc{};
+    desc.width = static_cast<uint32_t>(mat.cols);
+    desc.height = static_cast<uint32_t>(mat.rows);
+    desc.widthStride = static_cast<uint32_t>(mat.cols);
+    desc.heightStride = static_cast<uint32_t>(mat.rows);
+    desc.format = format;
+    desc.dataSize = data->size();
+    buffer.view = bsp_perf::bsp_image::makeHostImageView(
+        data->data(), desc, static_cast<uint32_t>(mat.cols * mat.elemSize()));
     buffer.owner = data;
     return true;
 }

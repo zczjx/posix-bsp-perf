@@ -73,6 +73,28 @@ struct ImageView
     }
 };
 
+inline ImageView makeHostImageView(uint8_t* data, const ImageDesc& desc,
+                                   uint32_t rowStride = 0,
+                                   ImageAccess access = ImageAccess::ReadWrite)
+{
+    ImageView view{};
+    view.desc = desc;
+    if (view.desc.widthStride == 0) {
+        view.desc.widthStride = view.desc.width;
+    }
+    if (view.desc.heightStride == 0) {
+        view.desc.heightStride = view.desc.height;
+    }
+    view.memoryType = ImageMemoryType::Host;
+    view.access = access;
+    view.planeCount = 1;
+    view.planes[0].data = data;
+    view.planes[0].size = view.desc.dataSize;
+    view.planes[0].rowStride = rowStride > 0 ? rowStride : view.desc.widthStride;
+    view.planes[0].fd = -1;
+    return view;
+}
+
 } // namespace bsp_image
 } // namespace bsp_perf
 

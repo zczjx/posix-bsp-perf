@@ -63,19 +63,15 @@ int NvVicResnet18TrafficCamNet::preProcess(ObjDetectParams& params, ObjDetectInp
         m_rgb_buffer.resize(rgba_buffer_size);
     }
 
-    bsp_perf::bsp_image::ImageView rgbaImage{};
-    rgbaImage.desc.width = static_cast<uint32_t>(params.model_input_width);
-    rgbaImage.desc.height = static_cast<uint32_t>(params.model_input_height);
-    rgbaImage.desc.widthStride = static_cast<uint32_t>(params.model_input_width);
-    rgbaImage.desc.heightStride = static_cast<uint32_t>(params.model_input_height);
-    rgbaImage.desc.format = "RGBA8888";
-    rgbaImage.desc.dataSize = rgba_buffer_size;
-    rgbaImage.memoryType = bsp_perf::bsp_image::ImageMemoryType::Host;
-    rgbaImage.planeCount = 1;
-    rgbaImage.planes[0].data = m_rgb_buffer.data();
-    rgbaImage.planes[0].size = rgba_buffer_size;
-    rgbaImage.planes[0].rowStride = rgbaImage.desc.widthStride;
-    rgbaImage.planes[0].fd = -1;
+    bsp_perf::bsp_image::ImageDesc rgbaDesc{};
+    rgbaDesc.width = static_cast<uint32_t>(params.model_input_width);
+    rgbaDesc.height = static_cast<uint32_t>(params.model_input_height);
+    rgbaDesc.widthStride = static_cast<uint32_t>(params.model_input_width);
+    rgbaDesc.heightStride = static_cast<uint32_t>(params.model_input_height);
+    rgbaDesc.format = "RGBA8888";
+    rgbaDesc.dataSize = rgba_buffer_size;
+    auto rgbaImage = bsp_perf::bsp_image::makeHostImageView(
+        m_rgb_buffer.data(), rgbaDesc, rgbaDesc.widthStride);
 
     auto rgba_g2d_buf = m_g2d->createBuffer(IGraphics2D::BufferType::Mapped, rgbaImage);
     if (!rgba_g2d_buf)

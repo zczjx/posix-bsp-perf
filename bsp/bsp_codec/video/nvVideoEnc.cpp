@@ -543,18 +543,14 @@ std::shared_ptr<bsp_perf::bsp_image::ImageBuffer> nvVideoEnc::getInputBuffer()
 
         info.input_buf = std::make_shared<bsp_perf::bsp_image::ImageBuffer>();
         info.input_buf->owner = info.buffer;
-        info.input_buf->view.desc.width = m_params.width;
-        info.input_buf->view.desc.height = m_params.height;
-        info.input_buf->view.desc.widthStride = m_params.width;
-        info.input_buf->view.desc.heightStride = m_params.height;
-        info.input_buf->view.desc.format = m_params.frame_format;
-        info.input_buf->view.desc.dataSize = m_frame_size;
-        info.input_buf->view.memoryType = bsp_perf::bsp_image::ImageMemoryType::Host;
-        info.input_buf->view.planeCount = 1;
-        info.input_buf->view.planes[0].data = info.buffer.get();
-        info.input_buf->view.planes[0].size = m_frame_size;
-        info.input_buf->view.planes[0].rowStride = m_params.width;
-        info.input_buf->view.planes[0].fd = -1;  // nvenc 不使用 fd
+        bsp_perf::bsp_image::ImageDesc inputDesc{};
+        inputDesc.width = m_params.width;
+        inputDesc.height = m_params.height;
+        inputDesc.widthStride = m_params.width;
+        inputDesc.heightStride = m_params.height;
+        inputDesc.format = m_params.frame_format;
+        inputDesc.dataSize = m_frame_size;
+        info.input_buf->view = bsp_perf::bsp_image::makeHostImageView(info.buffer.get(), inputDesc, m_params.width);
         info.in_use = true;
 
         m_input_buffer_pool.push_back(info);

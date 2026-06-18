@@ -244,18 +244,15 @@ void ObjDetector::runLoop()
             inference_frame->owner = std::shared_ptr<uint8_t>(
                 new uint8_t[shmem_msg.data_size],
                 std::default_delete<uint8_t[]>());
-            inference_frame->view.desc.dataSize = shmem_msg.data_size;
-            inference_frame->view.desc.width = shmem_msg.width;
-            inference_frame->view.desc.height = shmem_msg.height;
-            inference_frame->view.desc.widthStride = shmem_msg.width;
-            inference_frame->view.desc.heightStride = shmem_msg.height;
-            inference_frame->view.desc.format = shmem_msg.pixel_format;
-            inference_frame->view.memoryType = bsp_perf::bsp_image::ImageMemoryType::Host;
-            inference_frame->view.planeCount = 1;
-            inference_frame->view.planes[0].data = static_cast<uint8_t*>(inference_frame->owner.get());
-            inference_frame->view.planes[0].size = shmem_msg.data_size;
-            inference_frame->view.planes[0].rowStride = shmem_msg.width;
-            inference_frame->view.planes[0].fd = -1;
+            bsp_perf::bsp_image::ImageDesc frameDesc{};
+            frameDesc.dataSize = shmem_msg.data_size;
+            frameDesc.width = shmem_msg.width;
+            frameDesc.height = shmem_msg.height;
+            frameDesc.widthStride = shmem_msg.width;
+            frameDesc.heightStride = shmem_msg.height;
+            frameDesc.format = shmem_msg.pixel_format;
+            inference_frame->view = bsp_perf::bsp_image::makeHostImageView(
+                static_cast<uint8_t*>(inference_frame->owner.get()), frameDesc, shmem_msg.width);
         }
         else
         {

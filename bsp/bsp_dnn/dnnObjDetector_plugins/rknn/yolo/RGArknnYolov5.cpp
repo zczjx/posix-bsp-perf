@@ -31,19 +31,15 @@ int RGArknnYolov5::preProcess(ObjDetectParams& params, ObjDetectInput& inputData
         throw std::runtime_error("Failed to create YUV420 G2D buffer");
     }
 
-    bsp_perf::bsp_image::ImageView rgb888Image{};
-    rgb888Image.desc.width = static_cast<uint32_t>(params.model_input_width);
-    rgb888Image.desc.height = static_cast<uint32_t>(params.model_input_height);
-    rgb888Image.desc.widthStride = static_cast<uint32_t>(params.model_input_width);
-    rgb888Image.desc.heightStride = static_cast<uint32_t>(params.model_input_height);
-    rgb888Image.desc.format = "RGB888";
-    rgb888Image.desc.dataSize = rknn_input_size;
-    rgb888Image.memoryType = bsp_perf::bsp_image::ImageMemoryType::Host;
-    rgb888Image.planeCount = 1;
-    rgb888Image.planes[0].data = m_rknn_input_buf.data();
-    rgb888Image.planes[0].size = rknn_input_size;
-    rgb888Image.planes[0].rowStride = rgb888Image.desc.widthStride;
-    rgb888Image.planes[0].fd = -1;
+    bsp_perf::bsp_image::ImageDesc rgb888Desc{};
+    rgb888Desc.width = static_cast<uint32_t>(params.model_input_width);
+    rgb888Desc.height = static_cast<uint32_t>(params.model_input_height);
+    rgb888Desc.widthStride = static_cast<uint32_t>(params.model_input_width);
+    rgb888Desc.heightStride = static_cast<uint32_t>(params.model_input_height);
+    rgb888Desc.format = "RGB888";
+    rgb888Desc.dataSize = rknn_input_size;
+    auto rgb888Image = bsp_perf::bsp_image::makeHostImageView(
+        m_rknn_input_buf.data(), rgb888Desc, rgb888Desc.widthStride);
 
     auto rgb888_g2d_buf = m_g2d->createBuffer(IGraphics2D::BufferType::Mapped, rgb888Image);
     if (!rgb888_g2d_buf)

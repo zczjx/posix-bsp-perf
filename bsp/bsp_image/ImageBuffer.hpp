@@ -47,12 +47,7 @@ inline std::shared_ptr<ImageBuffer> makeHostImageBuffer(const ImageDesc& desc)
     std::memset(data.get(), 0, buffer->view.desc.dataSize);
 
     buffer->owner = data;
-    buffer->view.memoryType = ImageMemoryType::Host;
-    buffer->view.planeCount = 1;
-    buffer->view.planes[0].data = data.get();
-    buffer->view.planes[0].size = buffer->view.desc.dataSize;
-    buffer->view.planes[0].rowStride = buffer->view.desc.widthStride > 0 ? buffer->view.desc.widthStride : buffer->view.desc.width;
-    buffer->view.planes[0].fd = -1;
+    buffer->view = makeHostImageView(data.get(), buffer->view.desc);
     return buffer;
 }
 

@@ -60,19 +60,15 @@ private:
 
     void onProcess() override
     {
-        bsp_perf::bsp_image::ImageView image{};
-        image.desc.width = static_cast<uint32_t>(m_orig_image_ptr->cols);
-        image.desc.height = static_cast<uint32_t>(m_orig_image_ptr->rows);
-        image.desc.widthStride = static_cast<uint32_t>(m_orig_image_ptr->cols);
-        image.desc.heightStride = static_cast<uint32_t>(m_orig_image_ptr->rows);
-        image.desc.format = "BGR888";
-        image.desc.dataSize = m_orig_image_ptr->total() * m_orig_image_ptr->elemSize();
-        image.memoryType = bsp_perf::bsp_image::ImageMemoryType::Host;
-        image.planeCount = 1;
-        image.planes[0].data = m_orig_image_ptr->data;
-        image.planes[0].size = image.desc.dataSize;
-        image.planes[0].rowStride = static_cast<uint32_t>(m_orig_image_ptr->step);
-        image.planes[0].fd = -1;
+        bsp_perf::bsp_image::ImageDesc imageDesc{};
+        imageDesc.width = static_cast<uint32_t>(m_orig_image_ptr->cols);
+        imageDesc.height = static_cast<uint32_t>(m_orig_image_ptr->rows);
+        imageDesc.widthStride = static_cast<uint32_t>(m_orig_image_ptr->cols);
+        imageDesc.heightStride = static_cast<uint32_t>(m_orig_image_ptr->rows);
+        imageDesc.format = "BGR888";
+        imageDesc.dataSize = m_orig_image_ptr->total() * m_orig_image_ptr->elemSize();
+        auto image = bsp_perf::bsp_image::makeHostImageView(
+            m_orig_image_ptr->data, imageDesc, static_cast<uint32_t>(m_orig_image_ptr->step));
 
         bsp_dnn::ObjDetectInput objDetectInput = {
             .image = image,

@@ -502,19 +502,15 @@ private:
             }
 
             // 执行 DNN 推理（在推理线程中，不阻塞解码器）
-            bsp_perf::bsp_image::ImageView frame{};
-            frame.desc.width = task.width;
-            frame.desc.height = task.height;
-            frame.desc.widthStride = task.width_stride;
-            frame.desc.heightStride = task.height_stride;
-            frame.desc.format = task.format;
-            frame.desc.dataSize = task.frame_data.size();
-            frame.memoryType = bsp_perf::bsp_image::ImageMemoryType::Host;
-            frame.planeCount = 1;
-            frame.planes[0].data = task.frame_data.data();
-            frame.planes[0].size = task.frame_data.size();
-            frame.planes[0].rowStride = task.width_stride > 0 ? task.width_stride : task.width;
-            frame.planes[0].fd = -1;
+            bsp_perf::bsp_image::ImageDesc frameDesc{};
+            frameDesc.width = task.width;
+            frameDesc.height = task.height;
+            frameDesc.widthStride = task.width_stride;
+            frameDesc.heightStride = task.height_stride;
+            frameDesc.format = task.format;
+            frameDesc.dataSize = task.frame_data.size();
+            auto frame = bsp_perf::bsp_image::makeHostImageView(
+                task.frame_data.data(), frameDesc, task.width_stride > 0 ? task.width_stride : task.width);
 
             // 执行 DNN 推理
             auto objDetectOutput = dnnInference(frame);
@@ -550,19 +546,14 @@ private:
                 m_rgba_buf.resize(rgba_buffer_size);
             }
 
-            bsp_perf::bsp_image::ImageView rgbaImage{};
-            rgbaImage.desc.width = task.width;
-            rgbaImage.desc.height = task.height;
-            rgbaImage.desc.widthStride = task.width;
-            rgbaImage.desc.heightStride = task.height;
-            rgbaImage.desc.format = "RGBA8888";
-            rgbaImage.desc.dataSize = rgba_buffer_size;
-            rgbaImage.memoryType = bsp_perf::bsp_image::ImageMemoryType::Host;
-            rgbaImage.planeCount = 1;
-            rgbaImage.planes[0].data = m_rgba_buf.data();
-            rgbaImage.planes[0].size = rgba_buffer_size;
-            rgbaImage.planes[0].rowStride = task.width;
-            rgbaImage.planes[0].fd = -1;
+            bsp_perf::bsp_image::ImageDesc rgbaDesc{};
+            rgbaDesc.width = task.width;
+            rgbaDesc.height = task.height;
+            rgbaDesc.widthStride = task.width;
+            rgbaDesc.heightStride = task.height;
+            rgbaDesc.format = "RGBA8888";
+            rgbaDesc.dataSize = rgba_buffer_size;
+            auto rgbaImage = bsp_perf::bsp_image::makeHostImageView(m_rgba_buf.data(), rgbaDesc, task.width);
 
             auto rgba_mapped_buf = m_g2d->createBuffer(IGraphics2D::BufferType::Mapped, rgbaImage);
             if (!rgba_mapped_buf)
@@ -630,19 +621,15 @@ private:
                 m_yuv420_buf.resize(yuv420_buffer_size);
             }
 
-            bsp_perf::bsp_image::ImageView yuvOutImage{};
-            yuvOutImage.desc.width = task.width;
-            yuvOutImage.desc.height = task.height;
-            yuvOutImage.desc.widthStride = static_cast<uint32_t>(input_width_stride);
-            yuvOutImage.desc.heightStride = static_cast<uint32_t>(input_height_stride);
-            yuvOutImage.desc.format = task.format;
-            yuvOutImage.desc.dataSize = yuv420_buffer_size;
-            yuvOutImage.memoryType = bsp_perf::bsp_image::ImageMemoryType::Host;
-            yuvOutImage.planeCount = 1;
-            yuvOutImage.planes[0].data = m_yuv420_buf.data();
-            yuvOutImage.planes[0].size = yuv420_buffer_size;
-            yuvOutImage.planes[0].rowStride = static_cast<uint32_t>(input_width_stride);
-            yuvOutImage.planes[0].fd = -1;
+            bsp_perf::bsp_image::ImageDesc yuvOutDesc{};
+            yuvOutDesc.width = task.width;
+            yuvOutDesc.height = task.height;
+            yuvOutDesc.widthStride = static_cast<uint32_t>(input_width_stride);
+            yuvOutDesc.heightStride = static_cast<uint32_t>(input_height_stride);
+            yuvOutDesc.format = task.format;
+            yuvOutDesc.dataSize = yuv420_buffer_size;
+            auto yuvOutImage = bsp_perf::bsp_image::makeHostImageView(
+                m_yuv420_buf.data(), yuvOutDesc, static_cast<uint32_t>(input_width_stride));
 
             auto yuv_out_buf = m_g2d->createBuffer(IGraphics2D::BufferType::Mapped, yuvOutImage);
             if (!yuv_out_buf)

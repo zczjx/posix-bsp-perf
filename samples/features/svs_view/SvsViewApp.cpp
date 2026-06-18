@@ -18,20 +18,14 @@ std::string joinPath(const std::string& root, const std::string& path)
 
 bsp_perf::bsp_image::ImageView toImageView(cv::Mat& image, const std::string& format)
 {
-    bsp_perf::bsp_image::ImageView view;
-    view.desc.width = static_cast<uint32_t>(image.cols);
-    view.desc.height = static_cast<uint32_t>(image.rows);
-    view.desc.widthStride = static_cast<uint32_t>(image.cols);
-    view.desc.heightStride = static_cast<uint32_t>(image.rows);
-    view.desc.format = format;
-    view.desc.dataSize = image.total() * image.elemSize();
-    view.memoryType = bsp_perf::bsp_image::ImageMemoryType::Host;
-    view.access = bsp_perf::bsp_image::ImageAccess::ReadWrite;
-    view.planeCount = 1;
-    view.planes[0].data = image.data;
-    view.planes[0].size = view.desc.dataSize;
-    view.planes[0].rowStride = static_cast<uint32_t>(image.step);
-    return view;
+    bsp_perf::bsp_image::ImageDesc desc{};
+    desc.width = static_cast<uint32_t>(image.cols);
+    desc.height = static_cast<uint32_t>(image.rows);
+    desc.widthStride = static_cast<uint32_t>(image.cols);
+    desc.heightStride = static_cast<uint32_t>(image.rows);
+    desc.format = format;
+    desc.dataSize = image.total() * image.elemSize();
+    return bsp_perf::bsp_image::makeHostImageView(image.data, desc, static_cast<uint32_t>(image.step));
 }
 
 cv::Mat toBgrMat(const bsp_perf::bsp_image::ImageView& view)
