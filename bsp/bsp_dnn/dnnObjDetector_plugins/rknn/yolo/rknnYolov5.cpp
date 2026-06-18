@@ -1,5 +1,7 @@
 #include "rknnYolov5.hpp"
+#include <bsp_image/OpenCvImageAdapter.hpp>
 #include <opencv2/opencv.hpp>
+#include <cstring>
 #include <memory>
 #include <iostream>
 
@@ -14,35 +16,11 @@ int rknnYolov5::preProcess(ObjDetectParams& params, ObjDetectInput& inputData, I
         throw std::invalid_argument("inputData.image is empty.");
     }
 
-    int cvType = CV_8UC3;
-    size_t channels = 3;
-    if (image.desc.format == "RGBA8888" || image.desc.format == "BGRA8888")
-    {
-        cvType = CV_8UC4;
-        channels = 4;
+    cv::Mat rgb_image;
+    if (!bsp_perf::bsp_image::OpenCvImageAdapter::toRgbMat(image, rgb_image)) {
+        throw std::invalid_argument("Failed to convert inputData.image to RGB cv::Mat.");
     }
 
-    const size_t minStep = static_cast<size_t>(image.desc.width) * channels;
-    const size_t step = image.planes[0].rowStride > minStep ? image.planes[0].rowStride : minStep;
-    cv::Mat orig_image(static_cast<int>(image.desc.height), static_cast<int>(image.desc.width),
-                       cvType, image.planes[0].data, step);
-    cv::Mat rgb_image;
-    if (image.desc.format == "RGB888")
-    {
-        rgb_image = orig_image;
-    }
-    else if (image.desc.format == "RGBA8888")
-    {
-        cv::cvtColor(orig_image, rgb_image, cv::COLOR_RGBA2RGB);
-    }
-    else if (image.desc.format == "BGRA8888")
-    {
-        cv::cvtColor(orig_image, rgb_image, cv::COLOR_BGRA2RGB);
-    }
-    else
-    {
-        cv::cvtColor(orig_image, rgb_image, cv::COLOR_BGR2RGB);
-    }
     cv::Size target_size(params.model_input_width, params.model_input_height);
     cv::Mat padded_image(target_size.height, target_size.width, CV_8UC3);
     float min_scale = std::min(params.scale_width, params.scale_height);

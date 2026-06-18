@@ -19,7 +19,6 @@ set(SOURCES
     SvsParamLoader.cpp
     SvsProjector.cpp
     SvsBlender.cpp
-    impl/opencv/OpenCvImageAdapter.cpp
     impl/opencv/OpenCvSurroundView.cpp
 )
 

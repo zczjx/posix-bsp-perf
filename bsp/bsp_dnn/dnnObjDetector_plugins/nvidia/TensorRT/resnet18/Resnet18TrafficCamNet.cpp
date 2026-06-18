@@ -1,4 +1,5 @@
 #include "Resnet18TrafficCamNet.hpp"
+#include <bsp_image/OpenCvImageAdapter.hpp>
 #include <opencv2/opencv.hpp>
 #include <opencv2/imgproc.hpp>
 #include <memory>
@@ -22,41 +23,16 @@ int Resnet18TrafficCamNet::preProcess(ObjDetectParams& params, ObjDetectInput& i
         return -1;
     }
 
-    int cvType = CV_8UC3;
-    size_t channels = 3;
-    if (image.desc.format == "RGBA8888" || image.desc.format == "BGRA8888")
-    {
-        cvType = CV_8UC4;
-        channels = 4;
-    }
-
-    const size_t minStep = static_cast<size_t>(image.desc.width) * channels;
-    const size_t step = image.planes[0].rowStride > minStep ? image.planes[0].rowStride : minStep;
-    cv::Mat origImage(static_cast<int>(image.desc.height), static_cast<int>(image.desc.width),
-                      cvType, image.planes[0].data, step);
-
-    // 步骤1: BGR转RGB
     cv::Mat rgbImage;
-    if (image.desc.format == "RGB888")
+    if (!bsp_perf::bsp_image::OpenCvImageAdapter::toRgbMat(image, rgbImage))
     {
-        rgbImage = origImage;
-    }
-    else if (image.desc.format == "RGBA8888")
-    {
-        cv::cvtColor(origImage, rgbImage, cv::COLOR_RGBA2RGB);
-    }
-    else if (image.desc.format == "BGRA8888")
-    {
-        cv::cvtColor(origImage, rgbImage, cv::COLOR_BGRA2RGB);
-    }
-    else
-    {
-        cv::cvtColor(origImage, rgbImage, cv::COLOR_BGR2RGB);
+        std::cerr << "[Resnet18TrafficCamNet] Error: Failed to convert input image to RGB cv::Mat" << std::endl;
+        return -1;
     }
 
     // 步骤2: 计算缩放比例（保持宽高比的letterbox）
-    float scaleWidth = static_cast<float>(params.model_input_width) / origImage.cols;
-    float scaleHeight = static_cast<float>(params.model_input_height) / origImage.rows;
+    float scaleWidth = static_cast<float>(params.model_input_width) / rgbImage.cols;
+    float scaleHeight = static_cast<float>(params.model_input_height) / rgbImage.rows;
 
     // 使用最小缩放比例以保持宽高比
     float minScale = std::min(scaleWidth, scaleHeight);
@@ -64,8 +40,8 @@ int Resnet18TrafficCamNet::preProcess(ObjDetectParams& params, ObjDetectInput& i
     params.scale_height = minScale;
 
     // 计算缩放后的尺寸
-    int newWidth = static_cast<int>(origImage.cols * minScale);
-    int newHeight = static_cast<int>(origImage.rows * minScale);
+    int newWidth = static_cast<int>(rgbImage.cols * minScale);
+    int newHeight = static_cast<int>(rgbImage.rows * minScale);
 
     // Resize图像
     cv::Mat resizedImage;
