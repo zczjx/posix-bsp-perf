@@ -8,7 +8,7 @@
             "shm_name": "/svs_left.rgb",
             "shm_slots": 32,
             "shm_single_buffer_size": 2764800,
-            "subscriber": ["yolov5_detector"]
+            "subscriber": ["yolov5_detector", "svs"]
         },
         {
             "name": "svs_front",
@@ -17,7 +17,7 @@
             "shm_name": "/svs_front.rgb",
             "shm_slots": 32,
             "shm_single_buffer_size": 2764800,
-            "subscriber": ["yolov5_detector"]
+            "subscriber": ["yolov5_detector", "svs"]
         },
         {
             "name": "svs_rear",
@@ -26,7 +26,7 @@
             "shm_name": "/svs_rear.rgb",
             "shm_slots": 32,
             "shm_single_buffer_size": 2764800,
-            "subscriber": ["yolov5_detector"]
+            "subscriber": ["yolov5_detector", "svs"]
         },
         {
             "name": "svs_right",
@@ -35,7 +35,16 @@
             "shm_name": "/svs_right.rgb",
             "shm_slots": 32,
             "shm_single_buffer_size": 2764800,
-            "subscriber": ["yolov5_detector"]
+            "subscriber": ["yolov5_detector", "svs"]
+        },
+        {
+            "name": "svs",
+            "publisher": "svs",
+            "status": "enabled",
+            "shm_name": "/svs.rgb",
+            "shm_slots": 8,
+            "shm_single_buffer_size": 691200,
+            "subscriber": ["gui"]
         }
 
     ],
@@ -55,7 +64,7 @@
             "status": "enabled",
             "image_size_x": 1280,
             "image_size_y": 720,
-            "fov": 90.0,
+            "fov": 110.0,
             "output_pixel_format": "RGB888",
             "display_position": [1, 0],
             "publisher": {
@@ -72,7 +81,7 @@
             "status": "enabled",
             "image_size_x": 1280,
             "image_size_y": 720,
-            "fov": 90.0,
+            "fov": 110.0,
             "output_pixel_format": "RGB888",
             "display_position": [0, 1],
             "publisher": {
@@ -89,7 +98,7 @@
             "status": "enabled",
             "image_size_x": 1280,
             "image_size_y": 720,
-            "fov": 90.0,
+            "fov": 110.0,
             "output_pixel_format": "RGB888",
             "display_position": [2, 1],
             "publisher": {
@@ -106,7 +115,7 @@
             "status": "enabled",
             "image_size_x": 1280,
             "image_size_y": 720,
-            "fov": 90.0,
+            "fov": 110.0,
             "output_pixel_format": "RGB888",
             "display_position": [1, 2],
             "publisher": {
@@ -115,6 +124,47 @@
                 "shmem": "/svs_right.rgb",
                 "shmem_slots": 32,
                 "shmem_single_buffer_size": 2764800
+            }
+        }
+    ],
+    "svs":
+    [
+        {
+            "name": "svs",
+            "type": "svs",
+            "status": "enabled",
+            "backend": "geometry_bev",
+            "output_pixel_format": "RGB888",
+            "output_size": [640, 360],
+            "display_position": [1, 1],
+            "input_cameras": ["svs_front", "svs_rear", "svs_left", "svs_right"],
+            "ground_z": 0.0,
+            "ground_extent_m": {
+                "front": 7.0,
+                "rear": 7.0,
+                "left": 12.5,
+                "right": 12.5
+            },
+            "vehicle_size_m": {
+                "length": 4.7,
+                "width": 1.9
+            },
+            "projection_region_m": {
+                "near_distance": 3.0,
+                "near_half_width": 1.5,
+                "far_distance": 12.0,
+                "far_half_width": 6.0
+            },
+            "vehicle_image": "",
+            "fill_uncovered": true,
+            "inpaint_radius": 5.0,
+            "feather_power": 0.5,
+            "publisher": {
+                "topic": "ipc:///tmp/svs.info",
+                "msg_type": "common/msg/CameraSensorMsg",
+                "shmem": "/svs.rgb",
+                "shmem_slots": 8,
+                "shmem_single_buffer_size": 691200
             }
         }
     ],

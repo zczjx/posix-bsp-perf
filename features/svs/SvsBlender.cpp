@@ -1,241 +1,176 @@
 #include "SvsBlender.hpp"
+
 #include <algorithm>
+#include <cmath>
 #include <opencv2/imgcodecs.hpp>
 #include <opencv2/imgproc.hpp>
+#include <opencv2/photo.hpp>
 
 namespace bsp_perf
 {
 namespace svs
 {
 
-namespace
-{
-struct BgrStats
-{
-    int b{0};
-    int g{0};
-    int r{0};
-};
-
-uint8_t clipToByte(float value)
-{
-    return static_cast<uint8_t>(std::max(0.0f, std::min(255.0f, value)));
-}
-
-bool calcBgrStats(const cv::Mat& image, BgrStats& stats)
-{
-    if (image.empty() || image.channels() != 3) {
-        return false;
-    }
-
-    const int pixelCount = image.rows * image.cols;
-    if (pixelCount == 0) {
-        return false;
-    }
-
-    int64_t b = 0;
-    int64_t g = 0;
-    int64_t r = 0;
-    for (int row = 0; row < image.rows; ++row) {
-        const auto* pixel = image.ptr<uint8_t>(row);
-        for (int col = 0; col < image.cols; ++col) {
-            b += pixel[0];
-            g += pixel[1];
-            r += pixel[2];
-            pixel += 3;
-        }
-    }
-
-    stats.b = static_cast<int>(b / pixelCount);
-    stats.g = static_cast<int>(g / pixelCount);
-    stats.r = static_cast<int>(r / pixelCount);
-    return true;
-}
-
-void applyBgrGain(cv::Mat& image, float rGain, float gGain, float bGain)
-{
-    for (int row = 0; row < image.rows; ++row) {
-        auto* pixel = image.ptr<uint8_t>(row);
-        for (int col = 0; col < image.cols; ++col) {
-            pixel[0] = clipToByte(static_cast<float>(pixel[0]) * bGain);
-            pixel[1] = clipToByte(static_cast<float>(pixel[1]) * gGain);
-            pixel[2] = clipToByte(static_cast<float>(pixel[2]) * rGain);
-            pixel += 3;
-        }
-    }
-}
-
-std::string joinPath(const std::string& root, const std::string& path)
-{
-    if (path.empty() || root.empty() || path.front() == '/') {
-        return path;
-    }
-    if (root.back() == '/') {
-        return root + path;
-    }
-    return root + "/" + path;
-}
-} // namespace
-
 bool SvsBlender::setup(const SurroundViewConfig& config)
 {
     reset();
-    m_layout = config.layout;
-
-    if (!loadWeights(joinPath(config.dataRoot, config.weightImagePath))) {
+    if (config.outputWidth == 0 || config.outputHeight == 0 ||
+        config.vehicleSize.length <= 0.0 || config.vehicleSize.width <= 0.0 ||
+        config.inpaintRadius <= 0.0) {
         return false;
     }
 
-    if (!config.carImagePath.empty()) {
-        m_hasVehicleImage = loadVehicleImage(joinPath(config.dataRoot, config.carImagePath));
+    m_config = config;
+    if (!config.vehicleImagePath.empty()) {
+        cv::Mat image = cv::imread(config.vehicleImagePath, cv::IMREAD_UNCHANGED);
+        if (!image.empty() && image.channels() == 4) {
+            cv::cvtColor(image, m_vehicleImage, cv::COLOR_BGRA2RGBA);
+        } else if (!image.empty() && image.channels() == 3) {
+            cv::cvtColor(image, m_vehicleImage, cv::COLOR_BGR2RGB);
+        }
     }
 
     m_ready = true;
     return true;
 }
 
-void SvsBlender::applyAwbAndLuminanceBalance(std::array<cv::Mat, kCameraCount>& images) const
-{
-    std::array<BgrStats, kCameraCount> stats;
-    std::array<int, kCameraCount> gray{};
-    float grayAverage = 0.0f;
-
-    for (size_t i = 0; i < kCameraCount; ++i) {
-        if (!calcBgrStats(images[i], stats[i])) {
-            return;
-        }
-        gray[i] = stats[i].r * 20 + stats[i].g * 60 + stats[i].b;
-        if (gray[i] == 0 || stats[i].r == 0 || stats[i].g == 0 || stats[i].b == 0) {
-            return;
-        }
-        grayAverage += static_cast<float>(gray[i]);
-    }
-
-    grayAverage /= static_cast<float>(kCameraCount);
-    for (size_t i = 0; i < kCameraCount; ++i) {
-        const float lumGain = grayAverage / static_cast<float>(gray[i]);
-        const float rGain = static_cast<float>(stats[i].g) * lumGain / static_cast<float>(stats[i].r);
-        const float gGain = lumGain;
-        const float bGain = static_cast<float>(stats[i].g) * lumGain / static_cast<float>(stats[i].b);
-        applyBgrGain(images[i], rGain, gGain, bGain);
-    }
-}
-
-bool SvsBlender::blend(const std::array<cv::Mat, kCameraCount>& projectedImages, cv::Mat& output) const
+bool SvsBlender::blend(const std::array<cv::Mat, kCameraCount>& warpedImages,
+                       const std::array<cv::Mat, kCameraCount>& weights,
+                       cv::Mat& output) const
 {
     if (!m_ready) {
         return false;
     }
 
-    const int totalW = m_layout.totalWidth();
-    const int totalH = m_layout.totalHeight();
-    const int xl = m_layout.vehicleLeft();
-    const int xr = m_layout.vehicleRight();
-    const int yt = m_layout.vehicleTop();
-    const int yb = m_layout.vehicleBottom();
+    const int width = static_cast<int>(m_config.outputWidth);
+    const int height = static_cast<int>(m_config.outputHeight);
+    cv::Mat accumulator(height, width, CV_32FC3, cv::Scalar::all(0));
+    cv::Mat weightSum(height, width, CV_32FC1, cv::Scalar(0));
 
-    output = cv::Mat(cv::Size(totalW, totalH), CV_8UC3, cv::Scalar(0, 0, 0));
+    for (size_t cameraIndex = 0; cameraIndex < kCameraCount; ++cameraIndex) {
+        const auto& image = warpedImages[cameraIndex];
+        const auto& weight = weights[cameraIndex];
+        if (image.empty() || image.type() != CV_8UC3 || image.size() != accumulator.size() ||
+            weight.empty() || weight.type() != CV_32FC1 || weight.size() != weightSum.size()) {
+            return false;
+        }
 
-    if (m_hasVehicleImage) {
-        m_vehicleImage.copyTo(output(cv::Rect(xl, yt, m_vehicleImage.cols, m_vehicleImage.rows)));
+        for (int row = 0; row < height; ++row) {
+            const auto* source = image.ptr<cv::Vec3b>(row);
+            const auto* sourceWeight = weight.ptr<float>(row);
+            auto* accumulated = accumulator.ptr<cv::Vec3f>(row);
+            auto* accumulatedWeight = weightSum.ptr<float>(row);
+            for (int col = 0; col < width; ++col) {
+                const float value = sourceWeight[col];
+                accumulated[col][0] += static_cast<float>(source[col][0]) * value;
+                accumulated[col][1] += static_cast<float>(source[col][1]) * value;
+                accumulated[col][2] += static_cast<float>(source[col][2]) * value;
+                accumulatedWeight[col] += value;
+            }
+        }
     }
 
-    projectedImages[0](cv::Rect(xl, 0, xr - xl, yt)).copyTo(output(cv::Rect(xl, 0, xr - xl, yt)));
-    projectedImages[1](cv::Rect(0, yt, xl, yb - yt)).copyTo(output(cv::Rect(0, yt, xl, yb - yt)));
-    projectedImages[3](cv::Rect(0, yt, xl, yb - yt)).copyTo(output(cv::Rect(xr, yt, totalW - xr, yb - yt)));
-    projectedImages[2](cv::Rect(xl, 0, xr - xl, yt)).copyTo(output(cv::Rect(xl, yb, xr - xl, yt)));
+    output = cv::Mat(height, width, CV_8UC3, cv::Scalar::all(0));
+    cv::Mat validMask;
+    cv::compare(weightSum, 1e-5, validMask, cv::CMP_GT);
+    for (int row = 0; row < height; ++row) {
+        const auto* accumulated = accumulator.ptr<cv::Vec3f>(row);
+        const auto* accumulatedWeight = weightSum.ptr<float>(row);
+        const auto* valid = validMask.ptr<uint8_t>(row);
+        auto* destination = output.ptr<cv::Vec3b>(row);
+        for (int col = 0; col < width; ++col) {
+            if (valid[col] == 0) {
+                continue;
+            }
+            const float inverseWeight = 1.0F / accumulatedWeight[col];
+            for (int channel = 0; channel < 3; ++channel) {
+                destination[col][channel] = cv::saturate_cast<uint8_t>(
+                    accumulated[col][channel] * inverseWeight);
+            }
+        }
+    }
 
-    cv::Rect roi(0, 0, xl, yt);
-    mergeImage(projectedImages[0](roi), projectedImages[1](roi), m_weights[2], output(roi));
+    if (m_config.fillUncovered && cv::countNonZero(validMask) < width * height) {
+        cv::Mat invalidMask;
+        cv::Mat inpainted;
+        cv::bitwise_not(validMask, invalidMask);
+        cv::inpaint(output, invalidMask, inpainted, m_config.inpaintRadius, cv::INPAINT_TELEA);
+        output = std::move(inpainted);
+    }
 
-    roi = cv::Rect(xr, 0, xl, yt);
-    mergeImage(projectedImages[0](roi), projectedImages[3](cv::Rect(0, 0, xl, yt)), m_weights[1],
-               output(cv::Rect(xr, 0, xl, yt)));
-
-    roi = cv::Rect(0, yb, xl, yt);
-    mergeImage(projectedImages[2](cv::Rect(0, 0, xl, yt)), projectedImages[1](roi), m_weights[0], output(roi));
-
-    roi = cv::Rect(xr, 0, xl, yt);
-    mergeImage(projectedImages[2](roi), projectedImages[3](cv::Rect(0, yb, xl, yt)), m_weights[3],
-               output(cv::Rect(xr, yb, xl, yt)));
-
+    drawVehicle(output);
     return true;
 }
 
 void SvsBlender::reset()
 {
     m_vehicleImage.release();
-    for (auto& weight : m_weights) {
-        weight.release();
-    }
-    m_hasVehicleImage = false;
     m_ready = false;
 }
 
-bool SvsBlender::loadWeights(const std::string& path)
+cv::Point SvsBlender::vehicleToBev(double x, double y) const
 {
-    cv::Mat weights = cv::imread(path, cv::IMREAD_UNCHANGED);
-    if (weights.empty() || weights.channels() != static_cast<int>(kCameraCount)) {
-        return false;
-    }
+    const double bevX = (y + m_config.groundExtent.left) /
+                        (m_config.groundExtent.left + m_config.groundExtent.right) *
+                        static_cast<double>(m_config.outputWidth - 1);
+    const double bevY = (m_config.groundExtent.front - x) /
+                        (m_config.groundExtent.front + m_config.groundExtent.rear) *
+                        static_cast<double>(m_config.outputHeight - 1);
+    return {
+        static_cast<int>(std::lround(bevX)),
+        static_cast<int>(std::lround(bevY)),
+    };
+}
 
-    for (auto& weight : m_weights) {
-        weight = cv::Mat(weights.size(), CV_32FC1, cv::Scalar(0.0f));
-    }
+void SvsBlender::drawVehicle(cv::Mat& image) const
+{
+    std::array<cv::Point, 4> corners = {
+        vehicleToBev(m_config.vehicleSize.length / 2.0, -m_config.vehicleSize.width / 2.0),
+        vehicleToBev(m_config.vehicleSize.length / 2.0, m_config.vehicleSize.width / 2.0),
+        vehicleToBev(-m_config.vehicleSize.length / 2.0, m_config.vehicleSize.width / 2.0),
+        vehicleToBev(-m_config.vehicleSize.length / 2.0, -m_config.vehicleSize.width / 2.0),
+    };
 
-    for (int row = 0; row < weights.rows; ++row) {
-        const auto* src = weights.ptr<uint8_t>(row);
-        auto* w0 = m_weights[0].ptr<float>(row);
-        auto* w1 = m_weights[1].ptr<float>(row);
-        auto* w2 = m_weights[2].ptr<float>(row);
-        auto* w3 = m_weights[3].ptr<float>(row);
-        for (int col = 0; col < weights.cols; ++col) {
-            w0[col] = static_cast<float>(src[0]) / 255.0f;
-            w1[col] = static_cast<float>(src[1]) / 255.0f;
-            w2[col] = static_cast<float>(src[2]) / 255.0f;
-            w3[col] = static_cast<float>(src[3]) / 255.0f;
-            src += 4;
+    if (!m_vehicleImage.empty()) {
+        const cv::Rect imageBounds(0, 0, image.cols, image.rows);
+        const cv::Rect vehicleBounds = cv::boundingRect(corners) & imageBounds;
+        if (vehicleBounds.empty()) {
+            return;
         }
-    }
 
-    return true;
-}
-
-bool SvsBlender::loadVehicleImage(const std::string& path)
-{
-    cv::Mat vehicle = cv::imread(path, cv::IMREAD_COLOR);
-    if (vehicle.empty()) {
-        return false;
-    }
-
-    cv::resize(vehicle, m_vehicleImage,
-               cv::Size(m_layout.vehicleRight() - m_layout.vehicleLeft(),
-                        m_layout.vehicleBottom() - m_layout.vehicleTop()));
-    return !m_vehicleImage.empty();
-}
-
-void SvsBlender::mergeImage(const cv::Mat& src1, const cv::Mat& src2, const cv::Mat& weight, cv::Mat out) const
-{
-    if (src1.empty() || src2.empty() || weight.empty() || out.empty() ||
-        src1.size() != src2.size() || src1.size() != out.size() ||
-        weight.rows < src1.rows || weight.cols < src1.cols) {
+        cv::Mat overlay;
+        cv::resize(m_vehicleImage, overlay, vehicleBounds.size(), 0.0, 0.0, cv::INTER_AREA);
+        cv::Mat target = image(vehicleBounds);
+        if (overlay.channels() == 4) {
+            for (int row = 0; row < overlay.rows; ++row) {
+                const auto* source = overlay.ptr<cv::Vec4b>(row);
+                auto* destination = target.ptr<cv::Vec3b>(row);
+                for (int col = 0; col < overlay.cols; ++col) {
+                    const float alpha = static_cast<float>(source[col][3]) / 255.0F;
+                    for (int channel = 0; channel < 3; ++channel) {
+                        destination[col][channel] = cv::saturate_cast<uint8_t>(
+                            static_cast<float>(source[col][channel]) * alpha +
+                            static_cast<float>(destination[col][channel]) * (1.0F - alpha));
+                    }
+                }
+            }
+        } else {
+            overlay.copyTo(target);
+        }
         return;
     }
 
-    for (int row = 0; row < src1.rows; ++row) {
-        const auto* p1 = src1.ptr<uint8_t>(row);
-        const auto* p2 = src2.ptr<uint8_t>(row);
-        const auto* w = weight.ptr<float>(row);
-        auto* dst = out.ptr<uint8_t>(row);
-        for (int col = 0; col < src1.cols; ++col) {
-            dst[0] = clipToByte(static_cast<float>(p1[0]) * w[col] + static_cast<float>(p2[0]) * (1.0f - w[col]));
-            dst[1] = clipToByte(static_cast<float>(p1[1]) * w[col] + static_cast<float>(p2[1]) * (1.0f - w[col]));
-            dst[2] = clipToByte(static_cast<float>(p1[2]) * w[col] + static_cast<float>(p2[2]) * (1.0f - w[col]));
-            p1 += 3;
-            p2 += 3;
-            dst += 3;
-        }
-    }
+    cv::fillConvexPoly(image, corners.data(), static_cast<int>(corners.size()), cv::Scalar(35, 35, 35));
+    const cv::Point* polygon[] = {corners.data()};
+    const int pointCount[] = {static_cast<int>(corners.size())};
+    cv::polylines(image, polygon, pointCount, 1, true, cv::Scalar(220, 220, 220), 2);
+
+    const std::array<cv::Point, 3> marker = {
+        vehicleToBev(m_config.vehicleSize.length * 0.38, 0.0),
+        vehicleToBev(0.0, -m_config.vehicleSize.width * 0.28),
+        vehicleToBev(0.0, m_config.vehicleSize.width * 0.28),
+    };
+    cv::fillConvexPoly(image, marker.data(), static_cast<int>(marker.size()), cv::Scalar(80, 180, 255));
 }
 
 } // namespace svs

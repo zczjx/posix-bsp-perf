@@ -223,6 +223,36 @@ void VideoFrameWidget::setupVideoGrid(const json& gui_ipc)
             }
         }
     }
+
+    if (gui_ipc.contains("svs") && gui_ipc["svs"].is_array())
+    {
+        for (const auto& svs_node: gui_ipc["svs"])
+        {
+            if (svs_node.value("status", std::string("enabled")) != "enabled")
+            {
+                continue;
+            }
+
+            const std::string svsName = svs_node.value("name", std::string());
+            if (svsName.empty() || !svs_node.contains("display_position"))
+            {
+                continue;
+            }
+
+            const auto& displayPosition = svs_node["display_position"];
+            if (!displayPosition.is_array() || displayPosition.size() < 2)
+            {
+                continue;
+            }
+
+            const int row = displayPosition[0].get<int>();
+            const int column = displayPosition[1].get<int>();
+            if (row >= 0 && row < rows && column >= 0 && column < columns)
+            {
+                m_frameWidgetMap[svsName] = m_frameWidgets[row * columns + column];
+            }
+        }
+    }
 }
 
 QImage VideoFrameWidget::grabCompositeFrame()

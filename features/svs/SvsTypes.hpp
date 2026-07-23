@@ -2,11 +2,10 @@
 #define __SVS_TYPES_HPP__
 
 #include <array>
+#include <bsp_image/ImageBuffer.hpp>
 #include <cstddef>
 #include <cstdint>
-#include <bsp_image/ImageBuffer.hpp>
 #include <string>
-#include <vector>
 
 namespace bsp_perf
 {
@@ -15,74 +14,58 @@ namespace svs
 
 constexpr size_t kCameraCount = 4;
 
-struct Matrix
+struct CameraPose
 {
-    uint32_t rows{0};
-    uint32_t cols{0};
-    std::vector<double> values{};
-
-    bool empty() const { return rows == 0 || cols == 0 || values.empty(); }
-};
-
-struct CameraParameters
-{
-    std::string name;
-    Matrix distCoeffs;
-    Matrix cameraMatrix;
-    Matrix projectMatrix;
-    Matrix transMatrix;
-    bsp_perf::bsp_image::ImageSize size;
-    Matrix scaleXY;
-    Matrix shiftXY;
+    double x{0.0};
+    double y{0.0};
+    double z{0.0};
+    double roll{0.0};
+    double pitch{0.0};
+    double yaw{0.0};
 };
 
 struct CameraConfig
 {
     std::string name;
-    std::string calibPath;
-    std::string flipMode{"n"}; // "n", "r+", "r-", "m"
+    CameraPose pose;
+    double fov{90.0};
 };
 
-struct ProjectionLayout
+struct GroundExtent
 {
-    int shiftWidth{300};
-    int shiftHeight{300};
-    int calibrationMapWidth{600};
-    int calibrationMapHeight{1000};
-    int innerShiftWidth{20};
-    int innerShiftHeight{50};
-    int vehicleOffsetWidth{180};
-    int vehicleOffsetHeight{200};
+    double front{9.0};
+    double rear{9.0};
+    double left{16.0};
+    double right{16.0};
+};
 
-    int totalWidth() const { return calibrationMapWidth + 2 * shiftWidth; }
-    int totalHeight() const { return calibrationMapHeight + 2 * shiftHeight; }
-    int vehicleLeft() const { return shiftWidth + vehicleOffsetWidth + innerShiftWidth; }
-    int vehicleRight() const { return totalWidth() - vehicleLeft(); }
-    int vehicleTop() const { return shiftHeight + vehicleOffsetHeight + innerShiftHeight; }
-    int vehicleBottom() const { return totalHeight() - vehicleTop(); }
-    bsp_perf::bsp_image::ImageSize outputSize() const
-    {
-        return {
-            static_cast<uint32_t>(totalWidth()),
-            static_cast<uint32_t>(totalHeight()),
-        };
-    }
+struct VehicleSize
+{
+    double length{4.7};
+    double width{1.9};
+};
+
+struct ProjectionRegion
+{
+    double nearDistance{3.0};
+    double nearHalfWidth{1.5};
+    double farDistance{12.0};
+    double farHalfWidth{6.0};
 };
 
 struct SurroundViewConfig
 {
-    std::string dataRoot;
-    std::string weightImagePath;
-    std::string carImagePath;
-    ProjectionLayout layout;
-    std::array<CameraConfig, kCameraCount> cameras{{
-        {"front", "", "n"},
-        {"left", "", "r-"},
-        {"back", "", "m"},
-        {"right", "", "r+"},
-    }};
-    bool enableAwb{true};
-    bool enableLuminanceBalance{true};
+    uint32_t outputWidth{640};
+    uint32_t outputHeight{360};
+    double groundZ{0.0};
+    GroundExtent groundExtent;
+    VehicleSize vehicleSize;
+    ProjectionRegion projectionRegion;
+    std::array<CameraConfig, kCameraCount> cameras;
+    double featherPower{0.5};
+    bool fillUncovered{true};
+    double inpaintRadius{5.0};
+    std::string vehicleImagePath;
 };
 
 struct FrameSet

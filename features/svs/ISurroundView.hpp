@@ -13,10 +13,6 @@ namespace svs
 class ISurroundView
 {
 public:
-    /**
-     * @brief Create a surround view implementation.
-     * @param backend Currently supported: "opencv".
-     */
     static std::unique_ptr<ISurroundView> create(const std::string& backend);
 
     virtual int setup(const SurroundViewConfig& config) = 0;

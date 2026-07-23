@@ -42,3 +42,4 @@ install(TARGETS ${PROJECT_NAME}
 
 add_subdirectory(ui)
 add_subdirectory(obj_detector)
+add_subdirectory(svs)

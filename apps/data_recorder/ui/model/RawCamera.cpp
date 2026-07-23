@@ -38,10 +38,30 @@ void RawCamera::setupCameraConsumer(const json& gui_ipc)
         m_input_shmem_ports[sensor["name"]] = std::make_pair(sensor_type, std::make_shared<SharedMemSubscriber>(publisher["topic"], publisher["shmem"], publisher["shmem_slots"], publisher["shmem_single_buffer_size"]));
     }
 
+    if (gui_ipc.contains("svs") && gui_ipc["svs"].is_array())
+    {
+        for (const auto& svs_node: gui_ipc["svs"])
+        {
+            if (svs_node.value("status", std::string("enabled")) != "enabled")
+            {
+                continue;
+            }
+
+            const json& publisher = svs_node["publisher"];
+            m_input_shmem_ports[svs_node["name"]] = std::make_pair(
+                std::string("svs"),
+                std::make_shared<SharedMemSubscriber>(
+                    publisher["topic"],
+                    publisher["shmem"],
+                    publisher["shmem_slots"],
+                    publisher["shmem_single_buffer_size"]));
+        }
+    }
+
     for (const auto& input_pair: m_input_shmem_ports)
     {
         std::string sensor_type = input_pair.second.first;
-        if (sensor_type.compare("camera") == 0)
+        if (sensor_type.compare("camera") == 0 || sensor_type.compare("svs") == 0)
         {
             m_input_shmem_threads.push_back(std::thread([this, input_pair]() {
                 CameraConsumerLoop(input_pair.first, input_pair.second.second);
