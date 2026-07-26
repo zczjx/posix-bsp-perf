@@ -205,7 +205,7 @@
         {
             "name": "yolov5_detector",
             "type": "object_detector",
-            "status": "enabled",
+            "status": "disabled",
             "image_size_x": 1280,
             "image_size_y": 720,
             "fov": 90.0,

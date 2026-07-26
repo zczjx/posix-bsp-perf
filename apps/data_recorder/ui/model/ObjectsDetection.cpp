@@ -34,6 +34,11 @@ void ObjectsDetection::setupObjectDetectionConsumer(const json& gui_ipc)
 {
     for (const auto& sensor: gui_ipc["object_detector"])
     {
+        if (sensor.value("status", std::string("enabled")) != "enabled")
+        {
+            continue;
+        }
+
         std::string sensor_type = sensor["type"];
         const json& publisher = sensor["publisher"];
         m_input_shmem_ports[sensor["name"]] = std::make_pair(sensor_type, std::make_shared<SharedMemSubscriber>(publisher["topic"], publisher["shmem"], publisher["shmem_slots"], publisher["shmem_single_buffer_size"]));
