@@ -1,3 +1,5 @@
+
+
 [![Ask DeepWiki](https://deepwiki.com/badge.svg)](https://deepwiki.com/zczjx/posix-bsp-perf)
 # posix-bsp-perf
 
@@ -28,7 +30,7 @@ the local native build env if required(or you don't like to use docker)
 
 ## BSP Trace Event Visualization
 
-upload the *.perfetto profiler file to [perfetto](https://ui.perfetto.dev/) to analysis the perf data at local web browser
+upload the *.perfetto profiler file to [perfetto](https://ui.perfetto.dev/) to analyze the perf data at local web browser
 
 - BspTrace visualization demo
 
