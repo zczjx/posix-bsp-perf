@@ -33,8 +33,13 @@ Recorder::Recorder(int argc, char *argv[])
         std::cout << "arg: " << argv[i] << std::endl;
     }
     ArgParser parser("Recorder");
-    parser.addOption("--encoder", std::string("rkmpp"), "decoder type: rkmpp");
+#ifdef BUILD_PLATFORM_JETSON
+    parser.addOption("--encoder", std::string("nvenc"), "encoder platform type: nvenc");
+    parser.addOption("--g2d", std::string("nvvic"), "graphics 2d platform type: nvvic");
+#else
+    parser.addOption("--encoder", std::string("rkmpp"), "encoder platform type: rkmpp");
     parser.addOption("--g2d", std::string("rkrga"), "graphics 2d platform type: rkrga");
+#endif
     parser.addOption("--muxer", std::string("FFmpegMuxer"), "Muxer Impl: FFmpegMuxer");
     parser.parseArgs(argc, argv);
 

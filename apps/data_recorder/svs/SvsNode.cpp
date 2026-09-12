@@ -85,14 +85,15 @@ void SvsNode::setup(const json& node,
     m_name = node.value("name", std::string("svs"));
     m_backend = node.value("backend", std::string("geometry_bev"));
     m_outputPixelFormat = node.value("output_pixel_format", std::string("RGB888"));
-    if (m_outputPixelFormat != "RGB888") {
-        throw std::runtime_error("svs output_pixel_format must be RGB888");
+    if (m_outputPixelFormat != "RGB888" && m_outputPixelFormat != "RGBA8888") {
+        throw std::runtime_error("svs output_pixel_format must be RGB888 or RGBA8888");
     }
 
     setupIpc(node, nodesIpc);
     const auto config = loadAlgorithmConfig(node, vehicleRig, dataRoot);
     const size_t outputSize = static_cast<size_t>(config.outputWidth) *
-                              static_cast<size_t>(config.outputHeight) * 3U;
+                              static_cast<size_t>(config.outputHeight) *
+                              bytesPerPixel(m_outputPixelFormat);
     if (outputSize > m_outputPublisher->getSingleBufferMaxSize()) {
         throw std::runtime_error("svs publisher shared-memory buffer is smaller than configured output");
     }
@@ -157,6 +158,7 @@ bsp_perf::svs::SurroundViewConfig SvsNode::loadAlgorithmConfig(
         config.outputWidth = node["output_size"][0].get<uint32_t>();
         config.outputHeight = node["output_size"][1].get<uint32_t>();
     }
+    config.outputPixelFormat = m_outputPixelFormat;
     config.groundZ = node.value("ground_z", config.groundZ);
     config.featherPower = node.value("feather_power", config.featherPower);
     config.fillUncovered = node.value("fill_uncovered", config.fillUncovered);

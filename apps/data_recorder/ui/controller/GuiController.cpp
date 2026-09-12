@@ -46,9 +46,11 @@ int GuiController::updateFrameRecord()
         return -1;
     }
 
+    const bool isRgba = (compositeFrame.format() == QImage::Format_RGBA8888);
+    const char* pixelFormat = isRgba ? "RGBA8888" : "RGB888";
     const int width = compositeFrame.width();
     const int height = compositeFrame.height();
-    const int packedLineSize = width * 3;
+    const int packedLineSize = width * (isRgba ? 4 : 3);
     uint8_t* frameData = compositeFrame.bits();
     std::vector<uint8_t> packedFrame;
 
@@ -63,7 +65,7 @@ int GuiController::updateFrameRecord()
         frameData = packedFrame.data();
     }
 
-    int ret = m_recorder->writeRecordFrame(frameData, width, height, "RGB888");
+    int ret = m_recorder->writeRecordFrame(frameData, width, height, pixelFormat);
     m_record_frame_timer.restart();
     return ret;
 }

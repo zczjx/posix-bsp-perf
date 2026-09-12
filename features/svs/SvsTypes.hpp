@@ -57,6 +57,7 @@ struct SurroundViewConfig
 {
     uint32_t outputWidth{640};
     uint32_t outputHeight{360};
+    std::string outputPixelFormat{"RGB888"};
     double groundZ{0.0};
     GroundExtent groundExtent;
     VehicleSize vehicleSize;

@@ -267,7 +267,12 @@ QImage VideoFrameWidget::grabCompositeFrame()
     {
         image = image.scaled(1280, 720, Qt::IgnoreAspectRatio, Qt::SmoothTransformation);
     }
+#ifdef BUILD_PLATFORM_JETSON
+    // Jetson VIC 不支持 24-bit RGB，录制链路使用 RGBA8888
+    image = image.convertToFormat(QImage::Format_RGBA8888);
+#else
     image = image.convertToFormat(QImage::Format_RGB888);
+#endif
     const int evenWidth = image.width() & ~1;
     const int evenHeight = image.height() & ~1;
     if (evenWidth <= 0 || evenHeight <= 0)

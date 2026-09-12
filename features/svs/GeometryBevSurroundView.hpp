@@ -20,6 +20,7 @@ public:
 private:
     SvsProjector m_projector;
     SvsBlender m_blender;
+    SurroundViewConfig m_config;
     bool m_ready{false};
 };
 

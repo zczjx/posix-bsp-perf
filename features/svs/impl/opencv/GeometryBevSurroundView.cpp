@@ -11,11 +11,15 @@ namespace svs
 int GeometryBevSurroundView::setup(const SurroundViewConfig& config)
 {
     tearDown();
+    if (config.outputPixelFormat != "RGB888" && config.outputPixelFormat != "RGBA8888") {
+        return -1;
+    }
     if (!m_projector.setup(config) || !m_blender.setup(config)) {
         tearDown();
         return -1;
     }
 
+    m_config = config;
     m_ready = true;
     return 0;
 }
@@ -41,8 +45,14 @@ int GeometryBevSurroundView::process(const FrameSet& input, OutputFrame& output)
         return -1;
     }
 
+    if (m_config.outputPixelFormat == "RGBA8888") {
+        cv::Mat rgba;
+        cv::cvtColor(blended, rgba, cv::COLOR_RGB2RGBA);
+        blended = std::move(rgba);
+    }
+
     return bsp_perf::bsp_image::OpenCvImageAdapter::fromMat(
-               blended, "RGB888", output.image)
+               blended, m_config.outputPixelFormat, output.image)
                ? 0
                : -1;
 }
