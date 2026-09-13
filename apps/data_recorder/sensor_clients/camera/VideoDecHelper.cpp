@@ -22,16 +22,19 @@ int VideoDecHelper::setupAndStartDecoder(DecodeConfig& cfg)
 {
     auto decoderCallback = [this](std::any userdata, std::shared_ptr<bsp_perf::bsp_image::ImageBuffer> frame)
     {
-        std::lock_guard<std::mutex> lock(m_decoded_frame_queue_mutex);
-        std::cout << "VideoDecHelper::decoderCallback() frame width: " << frame->view.desc.width << " frame height: " << frame->view.desc.height << std::endl;
-        std::cout << "VideoDecHelper::decoderCallback() frame format: " << frame->view.desc.format << std::endl;
-        m_decoded_frame_queue.push(frame);
-
-        while (m_decoded_frame_queue.size() > m_reserved_frame_num)
         {
-            std::cerr << "VideoDecHelper::decoderCallback() drop the oldest frame" << std::endl;
-            m_decoded_frame_queue.pop();
+            std::lock_guard<std::mutex> lock(m_decoded_frame_queue_mutex);
+            std::cout << "VideoDecHelper::decoderCallback() frame width: " << frame->view.desc.width << " frame height: " << frame->view.desc.height << std::endl;
+            std::cout << "VideoDecHelper::decoderCallback() frame format: " << frame->view.desc.format << std::endl;
+            m_decoded_frame_queue.push(frame);
+
+            while (m_decoded_frame_queue.size() > m_reserved_frame_num)
+            {
+                std::cerr << "VideoDecHelper::decoderCallback() drop the oldest frame" << std::endl;
+                m_decoded_frame_queue.pop();
+            }
         }
+        m_decoded_frame_queue_cv.notify_one();
     };
 
     m_decoder->setup(cfg);
@@ -57,13 +60,18 @@ void VideoDecHelper::decoderLoop()
     {
         std::shared_ptr<RtpBuffer> rtp_pkt{nullptr};
 
-        if (m_encode_pkt_queue.empty())
         {
-            continue;
-        }
+            std::unique_lock<std::mutex> lock(m_encode_pkt_queue_mutex);
+            // 队列为空时挂起睡眠，直到 sendToDecoder() 推入数据或 stop() 被调用
+            m_encode_pkt_queue_cv.wait(lock, [this]() {
+                return !m_encode_pkt_queue.empty() || m_stopSignal.load();
+            });
 
-        {
-            std::lock_guard<std::mutex> lock(m_encode_pkt_queue_mutex);
+            if (m_stopSignal.load())
+            {
+                break;
+            }
+
             rtp_pkt = m_encode_pkt_queue.front();
             m_encode_pkt_queue.pop();
         }
@@ -85,17 +93,20 @@ void VideoDecHelper::decoderLoop()
 
 int VideoDecHelper::sendToDecoder(std::shared_ptr<VideoDecHelper::RtpBuffer> rtp_pkt)
 {
-    std::lock_guard<std::mutex> lock(m_encode_pkt_queue_mutex);
-    m_encode_pkt_queue.push(rtp_pkt);
-
-    while (m_encode_pkt_queue.size() > m_reserved_encode_pkt_num)
     {
-        std::cerr << "VideoDecHelper::sendToDecoder() drop the oldest rtp packet" << std::endl;
-        auto oldest_pkt = m_encode_pkt_queue.front();
-        releaseRtpVideoBuffer(oldest_pkt);
-        m_encode_pkt_queue.pop();
-        oldest_pkt.reset();
+        std::lock_guard<std::mutex> lock(m_encode_pkt_queue_mutex);
+        m_encode_pkt_queue.push(rtp_pkt);
+
+        while (m_encode_pkt_queue.size() > m_reserved_encode_pkt_num)
+        {
+            std::cerr << "VideoDecHelper::sendToDecoder() drop the oldest rtp packet" << std::endl;
+            auto oldest_pkt = m_encode_pkt_queue.front();
+            releaseRtpVideoBuffer(oldest_pkt);
+            m_encode_pkt_queue.pop();
+            oldest_pkt.reset();
+        }
     }
+    m_encode_pkt_queue_cv.notify_one();
     return 0;
 }
 
@@ -116,14 +127,22 @@ std::shared_ptr<bsp_perf::bsp_image::ImageBuffer> VideoDecHelper::convertPixelFo
 
 std::shared_ptr<bsp_perf::bsp_image::ImageBuffer> VideoDecHelper::getDecodedFrame()
 {
-    std::lock_guard<std::mutex> lock(m_decoded_frame_queue_mutex);
-
-    if (m_decoded_frame_queue.empty())
+    std::shared_ptr<bsp_perf::bsp_image::ImageBuffer> frame{nullptr};
     {
-        return nullptr;
+        std::unique_lock<std::mutex> lock(m_decoded_frame_queue_mutex);
+        // 没有已解码帧时挂起睡眠，直到 decoderCallback 推入新帧或 stop() 被调用
+        m_decoded_frame_queue_cv.wait(lock, [this]() {
+            return !m_decoded_frame_queue.empty() || m_stopSignal.load();
+        });
+
+        if (m_decoded_frame_queue.empty())
+        {
+            // stop() 唤醒且队列已空，返回 nullptr 让调用方退出
+            return nullptr;
+        }
+        frame = m_decoded_frame_queue.front();
+        m_decoded_frame_queue.pop();
     }
-    auto frame = m_decoded_frame_queue.front();
-    m_decoded_frame_queue.pop();
 
     if (needPixelConverter(frame->view.desc.format))
     {
@@ -199,11 +218,19 @@ int VideoDecHelper::releaseRtpVideoBuffer(std::shared_ptr<RtpBuffer> buffer)
     return 0;
 }
 
+void VideoDecHelper::stop()
+{
+    m_stopSignal.store(true);
+    // 唤醒所有阻塞在条件变量上的线程，让它们看到 stop 标志后退出
+    m_encode_pkt_queue_cv.notify_all();
+    m_decoded_frame_queue_cv.notify_all();
+}
+
 VideoDecHelper::~VideoDecHelper()
 {
-    if (m_dec_thread->joinable())
+    stop();
+    if (m_dec_thread && m_dec_thread->joinable())
     {
-        m_stopSignal.store(true);
         m_dec_thread->join();
     }
     m_decoder.reset();

@@ -55,10 +55,18 @@ void CameraClient::setupOutputConfig(const json& node_ipc)
 
 CameraClient::~CameraClient()
 {
-    if (m_main_thread->joinable() || m_consumer_thread->joinable())
+    m_stopSignal.store(true);
+    if (m_video_dec_helper)
     {
-        m_stopSignal.store(true);
+        // 唤醒可能阻塞在 getDecodedFrame() 中的 consumerLoop，让它看到 stop 标志退出
+        m_video_dec_helper->stop();
+    }
+    if (m_consumer_thread && m_consumer_thread->joinable())
+    {
         m_consumer_thread->join();
+    }
+    if (m_main_thread && m_main_thread->joinable())
+    {
         m_main_thread->join();
     }
 }

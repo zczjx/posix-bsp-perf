@@ -8,6 +8,7 @@
 #include <thread>
 #include <atomic>
 #include <mutex>
+#include <condition_variable>
 #include <queue>
 
 using namespace bsp_codec;
@@ -43,6 +44,9 @@ public:
 
     std::shared_ptr<bsp_perf::bsp_image::ImageBuffer> getDecodedFrame();
 
+    // 停止解码线程并唤醒所有阻塞等待的线程（幂等，析构时会自动调用）
+    void stop();
+
     ~VideoDecHelper();
 
 private:
@@ -66,10 +70,12 @@ private:
 
     std::queue<std::shared_ptr<bsp_perf::bsp_image::ImageBuffer>> m_decoded_frame_queue;
     std::mutex m_decoded_frame_queue_mutex;
+    std::condition_variable m_decoded_frame_queue_cv;
     const size_t m_reserved_frame_num{30};
 
     std::queue<std::shared_ptr<RtpBuffer>> m_encode_pkt_queue;
     std::mutex m_encode_pkt_queue_mutex;
+    std::condition_variable m_encode_pkt_queue_cv;
     const size_t m_reserved_encode_pkt_num{30};
 
     std::unique_ptr<IGraphics2D> m_g2d{nullptr};

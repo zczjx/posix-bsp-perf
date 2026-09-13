@@ -47,9 +47,11 @@ ObjDetector::ObjDetector(ArgParser&& args, const json& nodes_ipc)
 
 ObjDetector::~ObjDetector()
 {
-    if (m_inference_thread->joinable())
+    m_stopSignal.store(true);
+    // 唤醒可能阻塞在队列等待中的 inferenceLoop，让它看到 stop 标志退出
+    m_inference_frames_queue_cv.notify_all();
+    if (m_inference_thread && m_inference_thread->joinable())
     {
-        m_stopSignal.store(true);
         m_inference_thread->join();
     }
     m_dnnObjDetector.reset();
@@ -157,52 +159,57 @@ void ObjDetector::publishObjDetectResults(const std::vector<bsp_dnn::ObjDetectOu
 
 void ObjDetector::inferenceLoop()
 {
-    std::shared_ptr<bsp_perf::bsp_image::ImageBuffer> inference_frame{nullptr};
-
     size_t frame_count = 0;
     auto start_time = std::chrono::steady_clock::now();
 
     while (!m_stopSignal.load())
     {
+        std::shared_ptr<bsp_perf::bsp_image::ImageBuffer> inference_frame{nullptr};
         {
-            std::lock_guard<std::mutex> lock(m_inference_frames_queue_mutex);
-            if (!m_inference_frames_queue.empty())
+            std::unique_lock<std::mutex> lock(m_inference_frames_queue_mutex);
+            // 队列为空时挂起睡眠，直到 runLoop() 推入新帧或析构时 stop 被置位
+            m_inference_frames_queue_cv.wait(lock, [this]() {
+                return !m_inference_frames_queue.empty() || m_stopSignal.load();
+            });
+
+            if (m_stopSignal.load())
             {
-                inference_frame = m_inference_frames_queue.front();
-                m_inference_frames_queue.pop();
+                break;
             }
+
+            inference_frame = m_inference_frames_queue.front();
+            m_inference_frames_queue.pop();
         }
 
         if (inference_frame == nullptr || inference_frame->view.data() == nullptr)
         {
-            std::this_thread::sleep_for(std::chrono::milliseconds(1));
             continue;
         }
-        else
-        {
-            std::cout << "ObjDetector::inferenceLoop() runDnnInference format: " << inference_frame->view.desc.format << std::endl;
-            std::vector<bsp_dnn::ObjDetectOutputBox> output_boxes = runDnnInference(inference_frame);
-            for (const auto& output_box : output_boxes)
-            {
-                std::cout << "ObjDetector::inferenceLoop() output_box: " << output_box.label << std::endl;
-            }
-            publishObjDetectResults(output_boxes, inference_frame);
 
+        std::cout << "ObjDetector::inferenceLoop() runDnnInference format: " << inference_frame->view.desc.format << std::endl;
+        std::vector<bsp_dnn::ObjDetectOutputBox> output_boxes = runDnnInference(inference_frame);
+        for (const auto& output_box : output_boxes)
+        {
+            std::cout << "ObjDetector::inferenceLoop() output_box: " << output_box.label << std::endl;
+        }
+        publishObjDetectResults(output_boxes, inference_frame);
+
+        {
             std::lock_guard<std::mutex> lock(m_free_frames_queue_mutex);
             if (m_free_frames_queue.size() < m_free_frames_queue_size)
             {
                 m_free_frames_queue.push(inference_frame);
             }
-            inference_frame.reset();
-            frame_count++;
-            auto now = std::chrono::steady_clock::now();
-            auto elapsed = std::chrono::duration_cast<std::chrono::seconds>(now - start_time).count();
-            if (elapsed >= 1)
-            {
-                std::cout << "ObjDetector::inferenceLoop() FPS: " << frame_count / elapsed << std::endl;
-                frame_count = 0;
-                start_time = now;
-            }
+        }
+        inference_frame.reset();
+        frame_count++;
+        auto now = std::chrono::steady_clock::now();
+        auto elapsed = std::chrono::duration_cast<std::chrono::seconds>(now - start_time).count();
+        if (elapsed >= 1)
+        {
+            std::cout << "ObjDetector::inferenceLoop() FPS: " << frame_count / elapsed << std::endl;
+            frame_count = 0;
+            start_time = now;
         }
     }
 }
@@ -238,7 +245,16 @@ void ObjDetector::runLoop()
             msgpack::unpacked result = msgpack::unpack(reinterpret_cast<const char*>(msg_buffer.get()), msg_size);
             CameraSensorMsg shmem_msg = result.get().as<CameraSensorMsg>();
 
-        if(m_free_frames_queue.empty())
+        {
+            // 检查队列和取出帧必须在同一把锁内完成，否则与 inferenceLoop 的 push 构成数据竞争
+            std::lock_guard<std::mutex> lock(m_free_frames_queue_mutex);
+            if (!m_free_frames_queue.empty())
+            {
+                inference_frame = m_free_frames_queue.front();
+                m_free_frames_queue.pop();
+            }
+        }
+        if (inference_frame == nullptr)
         {
             inference_frame = std::make_shared<bsp_perf::bsp_image::ImageBuffer>();
             inference_frame->owner = std::shared_ptr<uint8_t>(
@@ -254,12 +270,6 @@ void ObjDetector::runLoop()
             inference_frame->view = bsp_perf::bsp_image::makeHostImageView(
                 static_cast<uint8_t*>(inference_frame->owner.get()), frameDesc, shmem_msg.width);
         }
-        else
-        {
-            std::lock_guard<std::mutex> lock(m_free_frames_queue_mutex);
-            inference_frame = m_free_frames_queue.front();
-            m_free_frames_queue.pop();
-        }
 
         m_input_shmem_port->receiveSharedMemData(inference_frame->view.data(), shmem_msg.data_size, shmem_msg.slot_index);
 
@@ -268,6 +278,7 @@ void ObjDetector::runLoop()
             m_inference_frames_queue.push(inference_frame);
             inference_frame.reset();
         }
+        m_inference_frames_queue_cv.notify_one();
 
         {
             std::lock_guard<std::mutex> lock(m_free_frames_queue_mutex);

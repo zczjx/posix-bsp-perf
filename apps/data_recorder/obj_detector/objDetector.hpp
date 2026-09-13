@@ -11,6 +11,7 @@
 #include <bsp_image/ImageBuffer.hpp>
 #include <atomic>
 #include <mutex>
+#include <condition_variable>
 #include <queue>
 
 using json = nlohmann::json;
@@ -53,6 +54,7 @@ private:
 
     std::queue<std::shared_ptr<bsp_perf::bsp_image::ImageBuffer>> m_inference_frames_queue;
     std::mutex m_inference_frames_queue_mutex;
+    std::condition_variable m_inference_frames_queue_cv;
     const size_t m_inference_frames_queue_size{50};
 
     std::atomic<bool> m_stopSignal{false};
