@@ -22,6 +22,11 @@ ZmqSubscriber::~ZmqSubscriber()
     m_context->close();
 }
 
+void ZmqSubscriber::setReceiveTimeout(int timeout_ms)
+{
+    m_socket->set(zmq::sockopt::rcvtimeo, timeout_ms);
+}
+
 int ZmqSubscriber::receiveData(std::vector<uint8_t>& data)
 {
     zmq::message_t message;
@@ -74,9 +79,18 @@ int ZmqSubscriber::receiveDataMore(std::vector<uint8_t>& data)
 size_t ZmqSubscriber::receiveData(uint8_t* buffer, size_t bytes)
 {
     zmq::message_t message;
-    m_socket->recv(&message);
+    // Returns false when a receive timeout set via setReceiveTimeout() expires.
+    if (!m_socket->recv(&message))
+    {
+        return 0;
+    }
+
     size_t actual_bytes = std::min(message.size(), bytes);
-    std::memcpy(buffer, message.data(), actual_bytes);
+    if (actual_bytes > 0)
+    {
+        std::memcpy(buffer, message.data(), actual_bytes);
+    }
+
     return actual_bytes;
 }
 

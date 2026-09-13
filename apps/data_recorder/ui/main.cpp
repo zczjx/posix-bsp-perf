@@ -1,37 +1,95 @@
-#include <iostream>
-#include <fstream>
-#include <string>
-#include <shared/ArgParser.hpp>
-#include <nlohmann/json.hpp>
+#include "AppOptions.hpp"
+#include "config/UiConfig.hpp"
 #include "controller/GuiController.hpp"
+#include "core/Frame.hpp"
+#include "core/Logging.hpp"
+#include "model/FrameHub.hpp"
+#include "model/Recorder.hpp"
+#include "view/RecorderWindow.hpp"
+
+#include <nlohmann/json.hpp>
+
+#include <QApplication>
+
+#include <exception>
+#include <fstream>
 
 using namespace apps::data_recorder::ui;
-using namespace bsp_perf::shared;
-using json = nlohmann::json;
 
-int main(int argc, char *argv[])
+namespace
 {
-    ArgParser parser("DataRecorderUI");
-    parser.addOption("--nodes_ipc", "nodes_ipc.json", "path to the sensor ipc file");
-    parser.addOption("--encoder, --encoderType", std::string("rkmpp"), "decoder type: rkmpp");
-    parser.addOption("--g2d, --graphics2D", std::string("rkrga"), "graphics 2d platform type: rkrga");
-    parser.parseArgs(argc, argv);
 
-    std::string nodes_ipc_file;
-    parser.getOptionVal("--nodes_ipc", nodes_ipc_file);
-    json nodes_ipc{};
+bool loadConfig(const std::string& path, UiConfig& config)
+{
+    std::ifstream stream(path);
+    if (!stream.is_open())
+    {
+        qCCritical(uiLog, "Cannot open node ipc file '%s'", path.c_str());
+        return false;
+    }
+
     try
     {
-        nodes_ipc = json::parse(std::ifstream(nodes_ipc_file));
+        config = UiConfig::fromJson(nlohmann::json::parse(stream));
     }
-    catch (const json::parse_error& e)
+    catch (const std::exception& error)
     {
-        std::cerr << "Failed to parse nodes ipc file: " << e.what() << std::endl;
-        return -1;
+        qCCritical(uiLog, "Invalid node ipc file '%s': %s", path.c_str(), error.what());
+        return false;
     }
 
-    GuiController gui_controller(argc, argv, nodes_ipc);
-    gui_controller.runLoop();
+    return true;
+}
 
-    return 0;
+} // namespace
+
+int main(int argc, char* argv[])
+{
+    AppOptions options;
+    if (!AppOptions::parse(argc, argv, options))
+    {
+        return 1;
+    }
+
+    UiConfig config;
+    if (!loadConfig(options.nodesIpcFile, config))
+    {
+        return 1;
+    }
+
+    QApplication application(argc, argv);
+
+    // Frames cross from the capture threads to the GUI thread through queued
+    // connections, which requires the type to be known to the meta-object system.
+    qRegisterMetaType<FramePtr>();
+    qRegisterMetaType<DataSource>();
+
+    RecorderConfig recorderConfig;
+    recorderConfig.encoderType = options.encoderType;
+    recorderConfig.g2dType = options.g2dType;
+    recorderConfig.muxerType = options.muxerType;
+    recorderConfig.outputDir = options.outputDir;
+    recorderConfig.fps = config.recordFps;
+
+    try
+    {
+        RecorderWindow window(config);
+        FrameHub hub(config);
+        Recorder recorder(recorderConfig);
+        GuiController controller(config, window, hub, recorder);
+
+        window.show();
+        hub.start();
+
+        const int result = application.exec();
+
+        // Stop the capture threads before the window and models unwind.
+        hub.stop();
+        return result;
+    }
+    catch (const std::exception& error)
+    {
+        qCCritical(uiLog, "Fatal error: %s", error.what());
+        return 1;
+    }
 }

@@ -60,6 +60,16 @@ public:
 
     const std::string& getSharedMemoryName() const { return m_shm_name; }
 
+    /**
+     * @brief Bound how long receiveMsg() blocks; see ZmqSubscriber::setReceiveTimeout.
+     *
+     * @param timeout_ms milliseconds to wait, or -1 to block indefinitely (the default).
+     */
+    void setReceiveTimeout(int timeout_ms)
+    {
+        m_zmq_msg_sub->setReceiveTimeout(timeout_ms);
+    }
+
     int replySync(const std::string& sync_topic)
     {
         return m_zmq_msg_sub->replySync(sync_topic);

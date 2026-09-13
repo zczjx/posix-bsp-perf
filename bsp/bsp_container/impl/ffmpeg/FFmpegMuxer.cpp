@@ -16,7 +16,6 @@ FFmpegMuxer::~FFmpegMuxer()
 
 int FFmpegMuxer::openContainerMux(const std::string& path, MuxConfig& config)
 {
-    int ret = 0;
     AVFormatContext* format_Ctx = nullptr;
     avformat_alloc_output_context2(&format_Ctx, nullptr, nullptr, path.c_str());
     if (format_Ctx == nullptr)
@@ -29,6 +28,13 @@ int FFmpegMuxer::openContainerMux(const std::string& path, MuxConfig& config)
     m_path = path;
     m_mux_cfg.ts_recreate = config.ts_recreate;
     m_mux_cfg.video_fps = config.video_fps;
+
+    // Per-file state, so a second recording in the same session starts its
+    // timestamps from zero instead of continuing the previous frame count.
+    m_header_written = false;
+    m_stream_frames_count_map.clear();
+
+    return 0;
 }
 
 void FFmpegMuxer::closeContainerMux()
@@ -267,9 +273,16 @@ int FFmpegMuxer::endStreamMux()
         return -1;
     }
 
+    // Nothing was ever written, so there is no trailer to close out.
+    if (!m_header_written)
+    {
+        return 0;
+    }
+
     av_write_trailer(m_format_Ctx.get());
     m_packet.reset();
     m_header_written = false;
+    return 0;
 }
 
 } // namespace bsp_container

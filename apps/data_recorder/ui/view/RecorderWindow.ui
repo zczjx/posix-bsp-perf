@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <ui version="4.0">
- <class>VideoFrameWidget</class>
- <widget class="QWidget" name="VideoFrameWidget">
+ <class>RecorderWindow</class>
+ <widget class="QWidget" name="RecorderWindow">
   <property name="geometry">
    <rect>
     <x>0</x>
@@ -11,11 +11,11 @@
    </rect>
   </property>
   <property name="windowTitle">
-   <string>RGB888 视频帧显示</string>
+   <string>Data Recorder</string>
   </property>
   <layout class="QVBoxLayout" name="verticalLayout">
    <item>
-    <layout class="QHBoxLayout" name="horizontalLayout">
+    <layout class="QHBoxLayout" name="toolbarLayout">
      <item>
       <widget class="QLabel" name="dataSourceLabel">
        <property name="text">
@@ -31,22 +31,12 @@
          <height>0</height>
         </size>
        </property>
-       <item>
-        <property name="text">
-         <string>Raw Camera</string>
-        </property>
-       </item>
-       <item>
-        <property name="text">
-         <string>Objects Detection</string>
-        </property>
-       </item>
       </widget>
      </item>
      <item>
-      <widget class="QPushButton" name="toggleBtn">
+      <widget class="QPushButton" name="recordButton">
        <property name="styleSheet">
-        <string notr="true">QPushButton#toggleBtn {
+        <string notr="true">QPushButton#recordButton {
     min-width: 60px;
     padding: 6px 12px;
     border: 2px outset #999;
@@ -55,11 +45,11 @@
     background: #d9534f;
     font-weight: bold;
 }
-QPushButton#toggleBtn:pressed {
+QPushButton#recordButton:pressed {
     border-style: inset;
     padding-top: 8px;
 }
-QPushButton#toggleBtn:checked {
+QPushButton#recordButton:checked {
     background: #5cb85c;
 }</string>
        </property>
@@ -72,9 +62,16 @@ QPushButton#toggleBtn:checked {
       </widget>
      </item>
      <item>
-      <spacer name="horizontalSpacer">
+      <widget class="QLabel" name="statusLabel">
+       <property name="text">
+        <string/>
+       </property>
+      </widget>
+     </item>
+     <item>
+      <spacer name="toolbarSpacer">
        <property name="orientation">
-        <enum>Qt::Orientation::Horizontal</enum>
+        <enum>Qt::Horizontal</enum>
        </property>
        <property name="sizeHint" stdset="0">
         <size>
@@ -87,42 +84,22 @@ QPushButton#toggleBtn:checked {
     </layout>
    </item>
    <item>
-    <widget class="QWidget" name="videoGridContainer" native="true">
+    <widget class="apps::data_recorder::ui::FrameGridView" name="frameGrid" native="true">
      <property name="minimumSize">
       <size>
        <width>320</width>
        <height>240</height>
       </size>
      </property>
-     <property name="styleSheet">
-      <string notr="true">background-color: black;</string>
-     </property>
-     <layout class="QGridLayout" name="videoGridLayout">
-      <property name="leftMargin">
-       <number>0</number>
-      </property>
-      <property name="topMargin">
-       <number>0</number>
-      </property>
-      <property name="rightMargin">
-       <number>0</number>
-      </property>
-      <property name="bottomMargin">
-       <number>0</number>
-      </property>
-      <property name="spacing">
-       <number>2</number>
-      </property>
-     </layout>
     </widget>
    </item>
   </layout>
  </widget>
  <customwidgets>
   <customwidget>
-   <class>FrameWidget</class>
+   <class>apps::data_recorder::ui::FrameGridView</class>
    <extends>QWidget</extends>
-   <header>FrameWidget.h</header>
+   <header>view/FrameGridView.hpp</header>
    <container>1</container>
   </customwidget>
  </customwidgets>

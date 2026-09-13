@@ -1,170 +1,217 @@
-#include "Recorder.hpp"
-#include <shared/ArgParser.hpp>
-#include <filesystem>
-#include <shared/BspTimeUtils.hpp>
-#include <cstring>
+#include "model/Recorder.hpp"
 
-using namespace bsp_perf::shared;
-namespace apps
-{
-namespace data_recorder
-{
-namespace ui
+#include "core/Logging.hpp"
+
+#include <shared/BspTimeUtils.hpp>
+
+#include <algorithm>
+#include <filesystem>
+#include <utility>
+
+namespace apps::data_recorder::ui
 {
 
 namespace
 {
 
-int bytesPerPixel(const std::string& format)
+constexpr const char* kEncodingType = "h264";
+constexpr const char* kEncoderFrameFormat = "YUV420SP";
+constexpr int64_t kBitRate = 1000000;
+
+} // namespace
+
+Recorder::Recorder(RecorderConfig config)
+    : m_config(std::move(config))
 {
-    if (format == "RGBA8888" || format == "ARGB8888" || format == "BGRA8888")
+    m_encoder = bsp_codec::IEncoder::create(m_config.encoderType);
+    m_g2d = bsp_g2d::IGraphics2D::create(m_config.g2dType);
+    m_muxer = bsp_container::IMuxer::create(m_config.muxerType);
+
+    if (m_config.outputDir.empty())
     {
-        return 4;
+        m_config.outputDir = std::filesystem::current_path().string();
     }
-    return 3;
-}
-
-}
-
-Recorder::Recorder(int argc, char *argv[])
-{
-    for (int i = 0; i < argc; i++)
-    {
-        std::cout << "arg: " << argv[i] << std::endl;
-    }
-    ArgParser parser("Recorder");
-#ifdef BUILD_PLATFORM_JETSON
-    parser.addOption("--encoder", std::string("nvenc"), "encoder platform type: nvenc");
-    parser.addOption("--g2d", std::string("nvvic"), "graphics 2d platform type: nvvic");
-#else
-    parser.addOption("--encoder", std::string("rkmpp"), "encoder platform type: rkmpp");
-    parser.addOption("--g2d", std::string("rkrga"), "graphics 2d platform type: rkrga");
-#endif
-    parser.addOption("--muxer", std::string("FFmpegMuxer"), "Muxer Impl: FFmpegMuxer");
-    parser.parseArgs(argc, argv);
-
-    std::string encoderType;
-    std::string g2dType;
-    std::string muxerType;
-    parser.getOptionVal("--encoder", encoderType);
-    parser.getOptionVal("--g2d", g2dType);
-    parser.getOptionVal("--muxer", muxerType);
-
-    m_encoder = IEncoder::create(encoderType);
-    m_g2d = IGraphics2D::create(g2dType);
-    m_muxer = IMuxer::create(muxerType);
-    m_record_dir = std::filesystem::current_path().string();
 }
 
 Recorder::~Recorder()
 {
-    m_encoder.reset();
-    m_g2d.reset();
+    stop();
 }
 
-int Recorder::startNewRecord()
+bool Recorder::start()
 {
-    std::cout << "Recorder::startNewRecord()" << std::endl;
-    m_current_filename = "record_" + BspTimeUtils::getCurrentTimeString() + ".mp4";
-    IMuxer::MuxConfig muxConfig{true, 30};
-    m_muxer->openContainerMux(m_current_filename, muxConfig);
-    m_muxer_first_frame = true;
-    return 0;
+    if (m_recording)
+    {
+        return true;
+    }
+
+    const std::string filename =
+        "record_" + bsp_perf::shared::BspTimeUtils::getCurrentTimeString() + ".mp4";
+    const std::string path = (std::filesystem::path(m_config.outputDir) / filename).string();
+
+    bsp_container::IMuxer::MuxConfig muxConfig{};
+    muxConfig.ts_recreate = true;
+    muxConfig.video_fps = static_cast<float>(m_config.fps);
+
+    if (m_muxer->openContainerMux(path, muxConfig) != 0)
+    {
+        qCWarning(uiLog, "Cannot open '%s' for recording", path.c_str());
+        return false;
+    }
+
+    m_currentPath = path;
+    m_recording = true;
+    m_streamConfigured = false;
+
+    qCInfo(uiLog, "Recording to %s", m_currentPath.c_str());
+    return true;
 }
 
-int Recorder::stopAndSaveRecord()
+void Recorder::stop()
 {
-    m_encoder->tearDown();
+    if (!m_recording)
+    {
+        return;
+    }
+
+    // Only tear the encoder down if a frame ever configured it.
+    if (m_streamConfigured)
+    {
+        m_encoder->tearDown();
+    }
+
     m_muxer->endStreamMux();
     m_muxer->closeContainerMux();
-    m_muxer_first_frame = true;
-    std::cerr << "Recorder::stopAndSaveRecord() record path: " << m_current_filename << std::endl;
-    return 0;
+
+    m_recording = false;
+    m_streamConfigured = false;
+
+    qCInfo(uiLog, "Recording saved to %s", m_currentPath.c_str());
 }
 
-int Recorder::setupEncoder(int width, int height)
+bool Recorder::configureStream(const Frame& frame)
 {
-    EncodeConfig enc_cfg = {
-        .encodingType = "h264",
-        .frameFormat = "YUV420SP",
-        .fps = 30,
-        .width = width,
-        .height = height,
-        .hor_stride = width,
-        .ver_stride = height,
-    };
+    bsp_codec::EncodeConfig encodeConfig{};
+    encodeConfig.encodingType = kEncodingType;
+    encodeConfig.frameFormat = kEncoderFrameFormat;
+    encodeConfig.fps = m_config.fps;
+    encodeConfig.width = static_cast<uint32_t>(frame.width());
+    encodeConfig.height = static_cast<uint32_t>(frame.height());
+    encodeConfig.hor_stride = static_cast<uint32_t>(frame.width());
+    encodeConfig.ver_stride = static_cast<uint32_t>(frame.height());
 
-    return m_encoder->setup(enc_cfg);
-}
+    if (m_encoder->setup(encodeConfig) != 0)
+    {
+        qCWarning(uiLog, "Encoder setup failed for %dx%d", frame.width(), frame.height());
+        return false;
+    }
 
-int Recorder::addVideoStream(int width, int height)
-{
-    StreamInfo streamInfo;
+    bsp_container::StreamInfo streamInfo{};
     streamInfo.codec_params.codec_type = "video";
-    streamInfo.codec_params.codec_name = "h264";
-    streamInfo.codec_params.bit_rate = 1000000;
-    streamInfo.codec_params.sample_aspect_ratio = 1.0;
-    streamInfo.codec_params.frame_rate = 30;
-    streamInfo.codec_params.width = width;
-    streamInfo.codec_params.height = height;
-    m_stream_packet.stream_index = m_muxer->addStream(streamInfo);
-    return 0;
-}
+    streamInfo.codec_params.codec_name = kEncodingType;
+    streamInfo.codec_params.bit_rate = kBitRate;
+    streamInfo.codec_params.sample_aspect_ratio = 1.0F;
+    streamInfo.codec_params.frame_rate = m_config.fps;
+    streamInfo.codec_params.width = frame.width();
+    streamInfo.codec_params.height = frame.height();
 
-int Recorder::convertImageFormat(uint8_t* input_data, int width, int height, std::string input_format,
-    std::shared_ptr<bsp_perf::bsp_image::ImageBuffer> output_buf, std::string out_format)
-{
-    bsp_perf::bsp_image::ImageDesc inputDesc{};
-    inputDesc.width = static_cast<uint32_t>(width);
-    inputDesc.height = static_cast<uint32_t>(height);
-    inputDesc.widthStride = static_cast<uint32_t>(width);
-    inputDesc.heightStride = static_cast<uint32_t>(height);
-    inputDesc.format = input_format;
-    inputDesc.dataSize = static_cast<size_t>(width) * height * bytesPerPixel(input_format);
-    auto inputImage = bsp_perf::bsp_image::makeHostImageView(input_data, inputDesc, static_cast<uint32_t>(width));
-
-    output_buf->view.desc.format = out_format;
-    return m_g2d->imageCvtColorToHost(inputImage, output_buf->view);
-}
-
-
-int Recorder::muxerWriteStreamPacket(EncodePacket& enc_pkt)
-{
-    m_stream_packet.useful_pkt_size = enc_pkt.pkt_len;
-    if (m_stream_packet.pkt_data.size() < m_stream_packet.useful_pkt_size)
+    const int streamIndex = m_muxer->addStream(streamInfo);
+    if (streamIndex < 0)
     {
-        m_stream_packet.pkt_data.resize(m_stream_packet.useful_pkt_size);
-    }
-    std::copy(enc_pkt.encode_pkt.begin(), enc_pkt.encode_pkt.begin() + m_stream_packet.useful_pkt_size,
-        m_stream_packet.pkt_data.begin());
-    return m_muxer->writeStreamPacket(m_stream_packet);
-}
-
-int Recorder::writeRecordFrame(uint8_t* data, int width, int height, std::string format)
-{
-    if (m_muxer_first_frame == true)
-    {
-        setupEncoder(width, height);
-        m_enc_in_buf = m_encoder->getInputBuffer();
-        addVideoStream(width, height);
-        m_muxer_first_frame = false;
+        qCWarning(uiLog, "Cannot add a video stream to the container");
+        return false;
     }
 
-    if (convertImageFormat(data, width, height, format, m_enc_in_buf, "YUV420SP") != 0)
+    m_streamPacket.stream_index = streamIndex;
+    return true;
+}
+
+bool Recorder::convertToEncoderInput(const Frame& frame, bsp_perf::bsp_image::ImageBuffer& target)
+{
+    bsp_perf::bsp_image::ImageDesc sourceDesc{};
+    sourceDesc.width = static_cast<uint32_t>(frame.width());
+    sourceDesc.height = static_cast<uint32_t>(frame.height());
+    sourceDesc.widthStride = static_cast<uint32_t>(frame.width());
+    sourceDesc.heightStride = static_cast<uint32_t>(frame.height());
+    sourceDesc.format = toString(frame.format());
+    sourceDesc.dataSize = frame.sizeBytes();
+
+    // The g2d interface takes a writable view; the source is only ever read.
+    const auto sourceView = bsp_perf::bsp_image::makeHostImageView(
+        const_cast<uint8_t*>(frame.data()), sourceDesc, static_cast<uint32_t>(frame.width()),
+        bsp_perf::bsp_image::ImageAccess::ReadOnly);
+
+    target.view.desc.format = kEncoderFrameFormat;
+    return m_g2d->imageCvtColorToHost(sourceView, target.view) == 0;
+}
+
+bool Recorder::writePacket(const bsp_codec::EncodePacket& packet)
+{
+    m_streamPacket.useful_pkt_size = packet.pkt_len;
+    if (m_streamPacket.pkt_data.size() < packet.pkt_len)
     {
-        std::cerr << "Recorder::writeRecordFrame() convert image format failed" << std::endl;
-        return -1;
+        m_streamPacket.pkt_data.resize(packet.pkt_len);
     }
 
-    EncodePacket enc_pkt = {
-        .max_size = m_encoder->getFrameSize(),
-        .pkt_eos = 0,
-        .pkt_len = 0,
-    };
-    enc_pkt.encode_pkt.resize(enc_pkt.max_size);
-    auto encode_len = m_encoder->encode(*m_enc_in_buf, enc_pkt);
-    return muxerWriteStreamPacket(enc_pkt);
+    std::copy(packet.encode_pkt.begin(), packet.encode_pkt.begin() + packet.pkt_len,
+        m_streamPacket.pkt_data.begin());
+
+    return m_muxer->writeStreamPacket(m_streamPacket) == 0;
 }
+
+bool Recorder::writeFrame(const Frame& frame)
+{
+    if (!m_recording || frame.empty())
+    {
+        return false;
+    }
+
+    if (!m_streamConfigured)
+    {
+        if (!configureStream(frame))
+        {
+            return false;
+        }
+
+        m_streamConfigured = true;
+    }
+
+    // Acquired per frame: the encoder returns the buffer to its pool inside encode().
+    auto inputBuffer = m_encoder->getInputBuffer();
+    if (!inputBuffer)
+    {
+        qCWarning(uiLog, "Dropping frame: encoder input pool exhausted");
+        return false;
+    }
+
+    if (!convertToEncoderInput(frame, *inputBuffer))
+    {
+        qCWarning(uiLog, "Dropping frame: %s to %s conversion failed",
+            toString(frame.format()), kEncoderFrameFormat);
+        return false;
+    }
+
+    bsp_codec::EncodePacket packet{};
+    packet.max_size = m_encoder->getFrameSize();
+    packet.pkt_eos = 0;
+    packet.pkt_len = 0;
+    packet.encode_pkt.resize(packet.max_size);
+
+    // Only negative means failure: nvenc returns 0 on success while rkmpp
+    // returns the encoded byte count.
+    if (m_encoder->encode(*inputBuffer, packet) < 0)
+    {
+        qCWarning(uiLog, "Dropping frame: encode failed");
+        return false;
+    }
+
+    if (packet.pkt_len == 0)
+    {
+        // Expected while a hardware encoder fills its pipeline.
+        return true;
+    }
+
+    return writePacket(packet);
 }
-}
-}
+
+} // namespace apps::data_recorder::ui

@@ -1,67 +1,75 @@
-#ifndef RECORDER_HPP
-#define RECORDER_HPP
+#ifndef APPS_DATA_RECORDER_UI_MODEL_RECORDER_HPP
+#define APPS_DATA_RECORDER_UI_MODEL_RECORDER_HPP
 
-#include <string>
-#include <vector>
-#include <thread>
-#include <atomic>
+#include "core/Frame.hpp"
+
 #include <bsp_codec/IEncoder.hpp>
-#include <bsp_g2d/IGraphics2D.hpp>
 #include <bsp_container/IMuxer.hpp>
+#include <bsp_g2d/IGraphics2D.hpp>
 
-using namespace bsp_codec;
-using namespace bsp_g2d;
-using namespace bsp_container;
+#include <memory>
+#include <string>
 
-namespace apps
-{
-namespace data_recorder
-{
-namespace ui
+namespace apps::data_recorder::ui
 {
 
+struct RecorderConfig
+{
+    std::string encoderType;
+    std::string g2dType;
+    std::string muxerType;
+    std::string outputDir;
+    int fps{30};
+};
+
+/**
+ * @brief Encodes submitted frames into an mp4 container.
+ *
+ * The recorder is deliberately passive: it converts, encodes and muxes whatever
+ * frame it is given and never decides when to capture. Encoding happens on the
+ * calling thread, which today is the GUI thread.
+ */
 class Recorder
 {
 public:
-    Recorder(int argc, char *argv[]);
+    explicit Recorder(RecorderConfig config);
     ~Recorder();
 
-    int startNewRecord();
+    Recorder(const Recorder&) = delete;
+    Recorder& operator=(const Recorder&) = delete;
 
-    int stopAndSaveRecord();
+    /// Opens a new output file. Returns false and stays idle on failure.
+    bool start();
 
-    int writeRecordFrame(uint8_t* data, int width, int height, std::string format = "RGB888");
+    /// Flushes and closes the current file. Safe to call when idle.
+    void stop();
 
-    std::string getRecordPath() const
-    {
-        return m_record_dir + "/" + m_current_filename;
-    }
+    bool isRecording() const { return m_recording; }
 
+    /// Absolute path of the file opened by the most recent start().
+    const std::string& currentPath() const { return m_currentPath; }
 
-private:
-    int setupEncoder(int width, int height);
-
-    int addVideoStream(int width, int height);
-
-    int convertImageFormat(uint8_t* input_data, int width, int height, std::string input_format,
-            std::shared_ptr<bsp_perf::bsp_image::ImageBuffer> output_buf, std::string out_format);
-
-    int muxerWriteStreamPacket(EncodePacket& enc_pkt);
-
+    /// Encodes one frame. Returns false if the frame was dropped.
+    bool writeFrame(const Frame& frame);
 
 private:
-    std::string m_record_dir;;
-    std::string m_current_filename;
-    std::unique_ptr<IEncoder> m_encoder{nullptr};
-    std::shared_ptr<bsp_perf::bsp_image::ImageBuffer> m_enc_in_buf{nullptr};
-    std::unique_ptr<IGraphics2D> m_g2d{nullptr};
-    std::unique_ptr<IMuxer> m_muxer{nullptr};
-    StreamPacket m_stream_packet{};
-    std::atomic<bool> m_muxer_first_frame{true};
+    /// Configures the encoder and the output stream from the first frame's geometry.
+    bool configureStream(const Frame& frame);
 
+    bool convertToEncoderInput(const Frame& frame, bsp_perf::bsp_image::ImageBuffer& target);
+
+    bool writePacket(const bsp_codec::EncodePacket& packet);
+
+    RecorderConfig m_config;
+    std::unique_ptr<bsp_codec::IEncoder> m_encoder;
+    std::unique_ptr<bsp_g2d::IGraphics2D> m_g2d;
+    std::unique_ptr<bsp_container::IMuxer> m_muxer;
+    bsp_container::StreamPacket m_streamPacket{};
+    std::string m_currentPath;
+    bool m_recording{false};
+    bool m_streamConfigured{false};
 };
 
-} // namespace ui
-} // namespace data_recorder
-} // namespace apps
-#endif // RECORDER_HPP
+} // namespace apps::data_recorder::ui
+
+#endif // APPS_DATA_RECORDER_UI_MODEL_RECORDER_HPP

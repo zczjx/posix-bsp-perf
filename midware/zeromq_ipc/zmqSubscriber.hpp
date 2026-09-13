@@ -77,6 +77,17 @@ public:
         return m_topic;
     }
 
+    /**
+     * @brief Bound how long a receive call blocks.
+     *
+     * Without a timeout a receive blocks forever, which leaves a consumer thread
+     * with no chance to notice a shutdown request. With one, receive returns
+     * zero bytes when nothing arrives in time.
+     *
+     * @param timeout_ms milliseconds to wait, or -1 to block indefinitely (the default).
+     */
+    void setReceiveTimeout(int timeout_ms);
+
     int replySync(const std::string& sync_topic);
 
 private:

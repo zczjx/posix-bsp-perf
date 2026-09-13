@@ -1,73 +1,56 @@
-#ifndef __GUI_CONTROLLER_HPP__
-#define __GUI_CONTROLLER_HPP__
+#ifndef APPS_DATA_RECORDER_UI_CONTROLLER_GUICONTROLLER_HPP
+#define APPS_DATA_RECORDER_UI_CONTROLLER_GUICONTROLLER_HPP
 
-#include <QApplication>
-#include <QElapsedTimer>
+#include "config/UiConfig.hpp"
+#include "core/Frame.hpp"
+#include "model/FrameHub.hpp"
+#include "model/Recorder.hpp"
+#include "view/RecorderWindow.hpp"
+
 #include <QObject>
-#include <QImage>
+#include <QString>
+#include <QTimer>
 
-#include <ui/view/VideoFrameWidget.h>
-#include <ui/model/RawCamera.hpp>
-#include <ui/model/ObjectsDetection.hpp>
-#include <ui/model/Recorder.hpp>
-
-#include <nlohmann/json.hpp>
-#include <string>
-#include <vector>
 #include <memory>
-#include <unordered_map>
-#include <thread>
-#include <atomic>
 
-using json = nlohmann::json;
-
-namespace apps
-{
-namespace data_recorder
-{
-namespace ui
+namespace apps::data_recorder::ui
 {
 
+/**
+ * @brief Wires the streams, the window and the recorder together.
+ *
+ * This is the only place that holds application state: which data source is
+ * selected and whether recording is on. Both live on the GUI thread and need no
+ * locking, because frames reach this object through queued connections.
+ *
+ * Recording is driven by a timer rather than by frame arrival, so the output
+ * frame rate does not depend on which camera happens to deliver first.
+ */
 class GuiController : public QObject
 {
     Q_OBJECT
+
 public:
-    GuiController(int argc, char *argv[], const json& gui_ipc);
-
-    ~GuiController();
-
-    void runLoop();
-
-private:
-    void setupConnections();
-
-    int updateFrameRecord();
+    GuiController(const UiConfig& config, RecorderWindow& window, FrameHub& hub,
+        Recorder& recorder, QObject* parent = nullptr);
 
 private slots:
-    void onRawCameraFrameUpdated(const QString& sensorName, uint8_t* data, int width, int height, const QString& format);
-
-    void onObjectsDetectionFrameUpdated(const QString& detectorName, uint8_t* data, int width, int height, const QString& format);
-
-    void onRecordStatusChanged(bool on);
+    void onFrameReady(const QString& sourceName, apps::data_recorder::ui::DataSource source,
+        apps::data_recorder::ui::FramePtr frame);
+    void onDataSourceSelected(apps::data_recorder::ui::DataSource source);
+    void onRecordToggled(bool enabled);
+    void onRecordTick();
 
 private:
-    // view
-    std::unique_ptr<QApplication> m_app;
-    std::unique_ptr<VideoFrameWidget> m_video_frame_widget;
+    const UiConfig& m_config;
+    RecorderWindow& m_window;
+    FrameHub& m_hub;
+    Recorder& m_recorder;
 
-    // model
-    std::unique_ptr<RawCamera> m_raw_camera;
-    std::unique_ptr<ObjectsDetection> m_objects_detection;
-    std::unique_ptr<Recorder> m_recorder;
-
-    bool m_record_enabled{false};
-    std::mutex m_record_enabled_mutex;
-    QElapsedTimer m_record_frame_timer;
-    int m_record_interval_ms{33};
-
+    QTimer m_recordTimer;
+    DataSource m_activeSource{DataSource::RawCamera};
 };
 
-} // namespace ui
-} // namespace data_recorder
-} // namespace apps
-#endif // __GUI_CONTROLLER_HPP__
+} // namespace apps::data_recorder::ui
+
+#endif // APPS_DATA_RECORDER_UI_CONTROLLER_GUICONTROLLER_HPP
