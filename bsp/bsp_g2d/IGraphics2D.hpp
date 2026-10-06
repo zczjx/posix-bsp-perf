@@ -1,13 +1,17 @@
 #ifndef __IGRAPHICS2D_HPP__
 #define __IGRAPHICS2D_HPP__
 
+#include <cstdint>
 #include <memory>
 #include <string>
 #include <any>
+#include <utility>
 #include <bsp_image/ImageBuffer.hpp>
 
 namespace bsp_g2d
 {
+
+class IGraphics2DJob;
 
 class IGraphics2D
 {
@@ -63,6 +67,48 @@ public:
         int y;        /* upper-left y */
         int width;    /* width */
         int height;   /* height */
+    };
+
+    enum class Interpolation
+    {
+        Default,
+        Linear,
+        Cubic,
+        Average
+    };
+
+    enum class Rotation
+    {
+        Rotate0 = 0,
+        Rotate90 = 90,
+        Rotate180 = 180,
+        Rotate270 = 270
+    };
+
+    enum class FlipMode
+    {
+        None,
+        Horizontal,
+        Vertical,
+        Both
+    };
+
+    enum class BlendMode
+    {
+        SrcOver,
+        Src,
+        Dst,
+        DstOver
+    };
+
+    struct TransformParams
+    {
+        // width/height <= 0 means the full source or destination image.
+        ImageRect srcRect{0, 0, 0, 0};
+        ImageRect dstRect{0, 0, 0, 0};
+        Interpolation interpolation{Interpolation::Default};
+        Rotation rotation{Rotation::Rotate0};
+        FlipMode flip{FlipMode::None};
     };
 
     // ========== Buffer Management (New Interface) ==========
@@ -173,6 +219,46 @@ public:
     virtual int imageResize(
         std::shared_ptr<bsp_perf::bsp_image::ImageBuffer> src,
         std::shared_ptr<bsp_perf::bsp_image::ImageBuffer> dst) = 0;
+
+    virtual int imageBlit(
+        std::shared_ptr<bsp_perf::bsp_image::ImageBuffer> src,
+        std::shared_ptr<bsp_perf::bsp_image::ImageBuffer> dst,
+        const TransformParams& params)
+    {
+        (void)src;
+        (void)dst;
+        (void)params;
+        return -1;
+    }
+
+    int imageBlit(const bsp_perf::bsp_image::ImageView& src,
+                  const bsp_perf::bsp_image::ImageView& dst,
+                  const TransformParams& params,
+                  BufferType type = BufferType::Mapped)
+    {
+        auto srcBuffer = createBuffer(type, src);
+        auto dstBuffer = createBuffer(type, dst);
+        if (!srcBuffer || !dstBuffer) {
+            releaseBuffer(srcBuffer);
+            releaseBuffer(dstBuffer);
+            return -1;
+        }
+
+        const int ret = imageBlit(srcBuffer, dstBuffer, params);
+        releaseBuffer(srcBuffer);
+        releaseBuffer(dstBuffer);
+        return ret;
+    }
+
+    virtual int imageCrop(
+        std::shared_ptr<bsp_perf::bsp_image::ImageBuffer> src,
+        std::shared_ptr<bsp_perf::bsp_image::ImageBuffer> dst,
+        const ImageRect& srcRect)
+    {
+        TransformParams params{};
+        params.srcRect = srcRect;
+        return imageBlit(std::move(src), std::move(dst), params);
+    }
 
     int imageResize(const bsp_perf::bsp_image::ImageView& src,
                     const bsp_perf::bsp_image::ImageView& dst,
@@ -295,6 +381,30 @@ public:
         ImageRect& rect,
         uint32_t color,
         int thickness) = 0;
+
+    virtual int imageFill(
+        std::shared_ptr<bsp_perf::bsp_image::ImageBuffer> dst,
+        const ImageRect& rect,
+        uint32_t color)
+    {
+        (void)dst;
+        (void)rect;
+        (void)color;
+        return -1;
+    }
+
+    virtual int imageBlend(
+        std::shared_ptr<bsp_perf::bsp_image::ImageBuffer> src,
+        std::shared_ptr<bsp_perf::bsp_image::ImageBuffer> dst,
+        BlendMode mode = BlendMode::SrcOver)
+    {
+        (void)src;
+        (void)dst;
+        (void)mode;
+        return -1;
+    }
+
+    virtual std::shared_ptr<IGraphics2DJob> createJob() { return nullptr; }
 
     virtual ~IGraphics2D() = default;
 

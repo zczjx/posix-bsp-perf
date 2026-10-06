@@ -33,7 +33,9 @@ public:
     static bool toMat(const ImageView& view, cv::Mat& mat)
     {
         const int cvType = cvTypeForFormat(view.desc.format);
-        if (view.empty() || cvType < 0 || view.memoryType != ImageMemoryType::Host) {
+        const bool cpuAccessible = view.memoryType == ImageMemoryType::Host ||
+            view.memoryType == ImageMemoryType::DmaBuf;
+        if (view.empty() || cvType < 0 || !cpuAccessible) {
             return false;
         }
 

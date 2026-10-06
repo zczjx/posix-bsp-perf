@@ -1,6 +1,7 @@
 #ifndef __RK_RGA_HPP__
 #define __RK_RGA_HPP__
 #include <bsp_g2d/IGraphics2D.hpp>
+#include <bsp_g2d/IGraphics2DJob.hpp>
 #include <bsp_g2d/impl/G2DBufferInternal.hpp>
 #include <rga/im2d.h>
 #include <rga/rga.h>
@@ -8,6 +9,7 @@
 #include <string>
 #include <vector>
 #include <unordered_map>
+#include <map>
 #include <mutex>
 
 namespace bsp_g2d
@@ -25,6 +27,17 @@ public:
     {
         std::lock_guard<std::mutex> lock(m_mutex);
         return strToRgaPixFormatMap.at(str);
+    }
+
+    bool tryStrToRgaPixFormat(const std::string& str, RgaSURF_FORMAT& format)
+    {
+        std::lock_guard<std::mutex> lock(m_mutex);
+        auto it = strToRgaPixFormatMap.find(str);
+        if (it == strToRgaPixFormatMap.end()) {
+            return false;
+        }
+        format = it->second;
+        return true;
     }
 
 private:
@@ -130,10 +143,46 @@ public:
 
     int imageResize(std::shared_ptr<bsp_perf::bsp_image::ImageBuffer> src, std::shared_ptr<bsp_perf::bsp_image::ImageBuffer> dst) override;
 
+    int imageBlit(
+        std::shared_ptr<bsp_perf::bsp_image::ImageBuffer> src,
+        std::shared_ptr<bsp_perf::bsp_image::ImageBuffer> dst,
+        const TransformParams& params) override;
+
+    int imageCrop(
+        std::shared_ptr<bsp_perf::bsp_image::ImageBuffer> src,
+        std::shared_ptr<bsp_perf::bsp_image::ImageBuffer> dst,
+        const ImageRect& srcRect) override;
+
     int imageDrawRectangle(std::shared_ptr<bsp_perf::bsp_image::ImageBuffer> dst, ImageRect& rect, uint32_t color, int thickness) override;
+
+    int imageFill(
+        std::shared_ptr<bsp_perf::bsp_image::ImageBuffer> dst,
+        const ImageRect& rect,
+        uint32_t color) override;
+
+    int imageBlend(
+        std::shared_ptr<bsp_perf::bsp_image::ImageBuffer> src,
+        std::shared_ptr<bsp_perf::bsp_image::ImageBuffer> dst,
+        BlendMode mode = BlendMode::SrcOver) override;
 
     int imageCvtColor(std::shared_ptr<bsp_perf::bsp_image::ImageBuffer> src, std::shared_ptr<bsp_perf::bsp_image::ImageBuffer> dst,
                     const std::string& src_format, const std::string& dst_format) override;
+
+    std::shared_ptr<IGraphics2DJob> createJob() override;
+
+private:
+    struct ImportedBufferResource;
+
+    std::shared_ptr<ImportedBufferResource> importBuffer(
+        BufferType type,
+        const bsp_perf::bsp_image::ImageView& image,
+        RgaSURF_FORMAT format,
+        uint32_t widthStride,
+        uint32_t heightStride);
+
+private:
+    std::mutex m_importMutex;
+    std::map<std::string, std::weak_ptr<ImportedBufferResource>> m_importCache;
 };
 
 } // namespace bsp_g2d

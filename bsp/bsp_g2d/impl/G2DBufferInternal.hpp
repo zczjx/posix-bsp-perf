@@ -20,7 +20,7 @@ struct G2DBufferInternal
     std::any g2dBufferHandle{};
     uint8_t* hostPtr{nullptr};
     size_t bufferSize{0};
-    void* platformData{nullptr};
+    std::shared_ptr<void> platformData{};
 };
 
 inline std::shared_ptr<G2DBufferInternal> getG2DBufferInternal(

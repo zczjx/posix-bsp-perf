@@ -18,6 +18,7 @@ if(BUILD_PLATFORM_RK35XX)
   add_compile_definitions(BUILD_PLATFORM_RK35XX)
   list(APPEND SOURCES
     impl/rk_rga/rkrga.cpp
+    impl/rk_rga/RgaJob.cpp
   )
 endif()
 
