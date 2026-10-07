@@ -5,31 +5,33 @@
 #include <bsp_g2d/impl/G2DBufferInternal.hpp>
 #include "nvbufsurface.h"
 #include "nvbufsurftransform.h"
-#include <map>
-#include <mutex>
 
 namespace bsp_g2d
 {
 
 /**
- * @brief NV VIC implementation of IGraphics2D interface.
- * 
- * This class provides hardware-accelerated 2D graphics operations using
- * NVIDIA VIC (Video Image Compositor) engine. It supports:
- * - Color format conversion (YUV formats and 32-bit RGB formats)
- * - Image scaling/resizing
- * - Image copying
- * 
- * ⚠️ IMPORTANT FORMAT LIMITATIONS:
- * - VIC hardware does NOT support 24-bit RGB/BGR formats (RGB888/BGR888)
- * - Only 32-bit RGB formats are supported (RGBA8888, BGRA8888, ARGB8888, etc.)
- * - If you need RGB888/BGR888, use RGBA8888 instead or use GPU-based transformation
- * 
- * Supported color format conversions:
- * - YUV formats: YUV420SP (NV12), YUV420P, YUV422, YUV444, etc.
- * - 32-bit RGB: RGBA8888, BGRA8888, ARGB8888, ABGR8888
- * - YUV ↔ 32-bit RGB conversions
- * 
+ * @brief NV VIC implementation of IGraphics2D interface (Jetson Orin NX).
+ *
+ * Operations executed on the VIC hardware (NvBufSurfTransform):
+ * - imageResize / imageCrop / imageBlit (scale, crop, dst rect, rotate 90/180/270, flip)
+ * - imageCvtColor (YUV <-> 32-bit RGB)
+ * - imageCopy (NvBufSurfaceCopy)
+ *
+ * Operations executed on the CPU (VIC has no such primitive). They work on the
+ * mapped NvBufSurface, so they obey the same sync rules as VIC operations:
+ * - imageFill / imageDrawRectangle (RGBA8888 / BGRA8888 only)
+ * - imageBlend (Porter-Duff, straight alpha, RGBA8888 / BGRA8888 only)
+ *
+ * Jobs (createJob) are not supported: VIC has no job list, createJob() returns nullptr.
+ *
+ * Colors passed to imageFill / imageDrawRectangle are 0xAARRGGBB.
+ *
+ * ⚠️ FORMAT LIMITATIONS:
+ * - VIC does NOT support 24-bit RGB/BGR (RGB888/BGR888); use RGBA8888 / BGRA8888.
+ *
+ * Buffers are owned by their ImageBuffer: the NvBufSurface is destroyed when the
+ * last reference to the ImageBuffer goes away (or releaseBuffer() is called).
+ *
  * Based on the nvbufsurface and nvbufsurftransform APIs.
  */
 class NvVicGraphics2D : public IGraphics2D
@@ -38,7 +40,7 @@ public:
     NvVicGraphics2D();
     virtual ~NvVicGraphics2D();
 
-    // ========== New Interface ==========
+    // ========== Buffer Management ==========
 
     std::shared_ptr<bsp_perf::bsp_image::ImageBuffer> createBuffer(
         BufferType type,
@@ -64,56 +66,30 @@ public:
 
     int imageResize(std::shared_ptr<bsp_perf::bsp_image::ImageBuffer> src, std::shared_ptr<bsp_perf::bsp_image::ImageBuffer> dst) override;
 
+    int imageBlit(
+        std::shared_ptr<bsp_perf::bsp_image::ImageBuffer> src,
+        std::shared_ptr<bsp_perf::bsp_image::ImageBuffer> dst,
+        const TransformParams& params) override;
+
     int imageCopy(std::shared_ptr<bsp_perf::bsp_image::ImageBuffer> src, std::shared_ptr<bsp_perf::bsp_image::ImageBuffer> dst) override;
 
     int imageDrawRectangle(std::shared_ptr<bsp_perf::bsp_image::ImageBuffer> dst, ImageRect& rect,
             uint32_t color, int thickness) override;
 
+    int imageFill(
+        std::shared_ptr<bsp_perf::bsp_image::ImageBuffer> dst,
+        const ImageRect& rect,
+        uint32_t color) override;
+
+    int imageBlend(
+        std::shared_ptr<bsp_perf::bsp_image::ImageBuffer> src,
+        std::shared_ptr<bsp_perf::bsp_image::ImageBuffer> dst,
+        BlendMode mode = BlendMode::SrcOver) override;
+
     int imageCvtColor(std::shared_ptr<bsp_perf::bsp_image::ImageBuffer> src, std::shared_ptr<bsp_perf::bsp_image::ImageBuffer> dst,
             const std::string& src_format, const std::string& dst_format) override;
 
 private:
-    /**
-     * @brief Maps format string to NvBufSurfaceColorFormat.
-     */
-    NvBufSurfaceColorFormat mapFormatStringToNvFormat(const std::string& format);
-
-    /**
-     * @brief Gets NvBufSurface from ImageBuffer.
-     */
-    NvBufSurface* getNvBufSurface(std::shared_ptr<bsp_perf::bsp_image::ImageBuffer> imageBuffer);
-
-    /**
-     * @brief Performs NV VIC transformation.
-     */
-    int performTransform(NvBufSurface* src, NvBufSurface* dst, NvBufSurfTransformParams& transform_params);
-
-    /**
-     * @brief Fills bytes per pixel array for a given format.
-     */
-    void fillBytesPerPixel(NvBufSurfaceColorFormat pixel_format, int* bytes_per_pixel);
-
-    /**
-     * @brief Copy data from host pointer to NvBufSurface.
-     */
-    int copyHostToNvBufSurface(void* host_ptr, size_t buffer_size, NvBufSurface* surf);
-
-    /**
-     * @brief Copy data from NvBufSurface to host pointer.
-     */
-    int copyNvBufSurfaceToHost(NvBufSurface* surf, void* host_ptr, size_t buffer_size);
-
-    // Store NvBufSurface pointers for each ImageBuffer
-    std::map<void*, NvBufSurface*> m_bufferMap;
-    std::mutex m_mapMutex;
-    
-    // Store map state for Hardware buffers
-    struct MapInfo {
-        void* mapped_addr;
-        bool is_mapped;
-    };
-    std::map<void*, MapInfo> m_mapInfo;
-    
     // VIC session initialized flag
     bool m_sessionInitialized;
 };

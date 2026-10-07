@@ -368,7 +368,7 @@ public:
      * 
      * 平台支持：
      * - RGA: ✅ 支持（imrectangle）
-     * - VIC: ❌ 不支持（返回 -1）
+     * - VIC: ⚠️ 无硬件原语，CPU 在映射内存上绘制（仅 RGBA8888/BGRA8888）
      * 
      * @param dst 目标缓冲区
      * @param rect 矩形区域
@@ -382,6 +382,12 @@ public:
         uint32_t color,
         int thickness) = 0;
 
+    /**
+     * @brief 填充矩形区域（rect 宽高 <= 0 表示整幅图像）
+     * @param color 颜色值（0xAARRGGBB）
+     *
+     * 平台支持：RGA（RGA2 核心）；VIC 由 CPU 在映射内存上完成（仅 RGBA8888/BGRA8888）
+     */
     virtual int imageFill(
         std::shared_ptr<bsp_perf::bsp_image::ImageBuffer> dst,
         const ImageRect& rect,

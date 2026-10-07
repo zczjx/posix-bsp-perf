@@ -9,6 +9,7 @@
 
 #include <cmath>
 #include <cstring>
+#include <exception>
 #include <filesystem>
 #include <fstream>
 #include <iostream>
@@ -274,7 +275,12 @@ int main(int argc, char* argv[])
     bsp_perf::shared::ArgParser parser("G2D single image API sample");
     parser.addOption("--image", std::string(""), "Path to input image");
     parser.addOption("--output-dir", std::string("./g2d_image_ops_out"), "Output directory");
-    parser.addOption("--g2d", std::string("rkrga"), "G2D backend: rkrga or nvvic");
+#if defined(BUILD_PLATFORM_JETSON)
+    const std::string defaultG2d = "nvvic";
+#else
+    const std::string defaultG2d = "rkrga";
+#endif
+    parser.addOption("--g2d", defaultG2d, "G2D backend: rkrga (RK3588) or nvvic (Jetson)");
     parser.addOption("--psnr-threshold", double(20.0), "PSNR pass threshold");
     parser.parseArgs(argc, argv);
 
@@ -304,7 +310,13 @@ int main(int argc, char* argv[])
     cv::cvtColor(inputRgba, inputBgra, cv::COLOR_RGBA2BGRA);
     cv::imwrite((outputDir / "input.png").string(), inputBgra);
 
-    auto g2d = IGraphics2D::create(g2dName);
+    std::unique_ptr<IGraphics2D> g2d;
+    try {
+        g2d = IGraphics2D::create(g2dName);
+    } catch (const std::exception& e) {
+        std::cerr << "failed to create g2d backend '" << g2dName << "': " << e.what() << std::endl;
+        return 2;
+    }
     auto inputHost = bufferFromRgbaMat(inputRgba);
     auto input = createG2dBuffer(*g2d, inputHost);
     if (!input) {
@@ -471,7 +483,9 @@ int main(int argc, char* argv[])
         OpenCvImageAdapter::toMat(out->view, actual);
         cv::imwrite((outputDir / "cvtcolor_bgra.png").string(), actual);
         OpResult result{"cvtcolor_bgra", ret == 0 ? "PASS" : "FAIL", ret == 0 ? computePsnr(actual, ref) : 0.0, ""};
-        if (result.psnr < 60.0) {
+        // RGA is bit exact (100 dB); VIC rounds by +-1 LSB (~59.8 dB). 50 dB still
+        // catches a swapped channel order or a wrong format.
+        if (result.psnr < 50.0) {
             result.status = "FAIL";
         }
         results.push_back(result);
