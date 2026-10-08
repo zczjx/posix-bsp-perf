@@ -11,7 +11,10 @@ endif()
 
 find_package(OpenCV REQUIRED)
 
-add_executable(${PROJECT_NAME} main.cpp)
+add_executable(${PROJECT_NAME}
+  main.cpp
+  OpenCVUtils.cpp
+)
 
 if(BUILD_PLATFORM_RK35XX)
   target_compile_definitions(${PROJECT_NAME} PRIVATE BUILD_PLATFORM_RK35XX)
