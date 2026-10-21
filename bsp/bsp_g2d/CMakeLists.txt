@@ -70,6 +70,15 @@ if(BUILD_PLATFORM_JETSON)
     target_link_libraries(${PROJECT_NAME} PUBLIC nvbufsurftransform)
   endif()
 
+  # libnvbufsurface.so 依赖 libEGL.so.1 (位于 ${BSP_LIB_PATH})，交叉编译时 ld 需要
+  # -rpath-link 才能解析间接依赖；PUBLIC 使下游可执行文件/库自动继承
+  if(DEFINED BSP_LIB_PATH)
+    target_link_options(${PROJECT_NAME} PUBLIC
+        "-Wl,-rpath-link,${BSP_LIB_PATH}"
+        "-Wl,-rpath-link,${BSP_LIB_PATH}/nvidia"
+    )
+  endif()
+
   # Add Jetson multimedia API include paths
   target_include_directories(${PROJECT_NAME} PRIVATE
     $<BUILD_INTERFACE:${CMAKE_SOURCE_DIR}/jetson_multimedia_api/include>

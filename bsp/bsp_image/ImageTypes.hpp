@@ -25,6 +25,37 @@ enum class ImageAccess
     ReadWrite
 };
 
+/**
+ * 缓冲的预期使用者（参考 Android BufferUsage）。分配器据此选 heap、对齐和缓存策略。
+ * 位掩码，可用 | 组合。
+ */
+enum class ImageUsage : uint32_t
+{
+    None     = 0,
+    CpuRead  = 1u << 0,
+    CpuWrite = 1u << 1,
+    G2d      = 1u << 2, // RGA / VIC
+    Codec    = 1u << 3, // MPP / NVDEC / NVENC
+    Dnn      = 1u << 4, // RKNN / TensorRT 输入
+    Display  = 1u << 5  // VOP / DRM scanout
+};
+
+constexpr ImageUsage operator|(ImageUsage a, ImageUsage b)
+{
+    return static_cast<ImageUsage>(static_cast<uint32_t>(a) | static_cast<uint32_t>(b));
+}
+
+constexpr bool hasUsage(ImageUsage set, ImageUsage flag)
+{
+    return (static_cast<uint32_t>(set) & static_cast<uint32_t>(flag)) != 0;
+}
+
+/// 需要 IP 做 DMA 的用途
+constexpr bool needsDeviceDma(ImageUsage usage)
+{
+    return hasUsage(usage, ImageUsage::G2d | ImageUsage::Codec | ImageUsage::Display);
+}
+
 struct ImageSize
 {
     uint32_t width{0};

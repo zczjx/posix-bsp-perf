@@ -8,6 +8,7 @@ if(BUILD_BSP_SAMPLE_COMMON)
     add_subdirectory(ddr_bandwidth)
     add_subdirectory(asyncio_sockets)
     add_subdirectory(demux_mux)
+    add_subdirectory(image_buffer_pool)
 endif()
 
 if(BUILD_PLATFORM_RK35XX)
