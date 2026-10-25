@@ -16,6 +16,11 @@ PERFETTO_DEFINE_CATEGORIES(
 #define BSP_TRACE_EVENT_END() \
     TRACE_EVENT_END(BSP_CATEGORY_NAME)
 
+// RAII 作用域 tag：离开作用域（含 return / 异常）时自动结束，不会出现 BEGIN/END 不配对。
+// tag_name 必须是字符串字面量；同一作用域内每行最多用一次。
+#define BSP_TRACE_SCOPE(tag_name) \
+    TRACE_EVENT(BSP_CATEGORY_NAME, tag_name)
+
 namespace bsp_perf {
 namespace common {
 

@@ -18,7 +18,7 @@ set(SOURCES
 # Add the library target
 add_library(${PROJECT_NAME} SHARED ${SOURCES})
 target_compile_options(${PROJECT_NAME} PRIVATE -fPIC)
-target_link_libraries(${PROJECT_NAME} PRIVATE bsp_shared perfetto)
+target_link_libraries(${PROJECT_NAME} PUBLIC bsp_shared PRIVATE perfetto)
 
 target_include_directories(${PROJECT_NAME} PRIVATE
     $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/..>
