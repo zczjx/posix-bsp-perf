@@ -1,0 +1,94 @@
+# Template for NVIDIA Jetson Orin (NX / Nano / AGX, JetPack 6.x, Ubuntu 22.04 aarch64).
+# Copy this file to your project, for example `aarch64-libs-jetson.yaml`, then edit
+# every value marked with `# EDIT`.
+#
+# Usage (always dry-run first):
+#   python scripts/sync_aarch64_libs.py --config configs/config.jetson-orin.yaml \
+#     --libs eigen3 --target both --staging /tmp/jetson-aarch64-sync --dry-run
+#
+# Notes:
+# - Use a staging dir different from the RK3588 one, since staging is wiped on each run.
+# - Do not commit real hosts/passwords. Prefer SSH keys; for password login use
+#   `auth.method: password_env` below and `read -s` + `export` at runtime.
+
+board:
+  host: 192.168.2.101                # EDIT: Jetson IP or hostname
+  user: nvidia                      # EDIT: login user on the Jetson
+  port: 22
+  identity_file: ~/.ssh/id_rsa      # EDIT: key authorized on the Jetson (key login)
+  # Password login instead of a key: remove `identity_file` above and use
+  #   auth:
+  #     method: password_env
+  #     password_env: JETSON_SSH_PASSWORD
+  # then: read -s JETSON_SSH_PASSWORD; export JETSON_SSH_PASSWORD
+
+docker:
+  container: vibrant_jennings   # EDIT: run `docker ps` to get the current name
+  prefix: /opt/cross_env/nvidia/install
+  libdir: /opt/cross_env/nvidia/install/lib
+  includedir: /opt/cross_env/nvidia/install/include
+  pkgconfig_dirs:
+    - /opt/cross_env/nvidia/install/lib/pkgconfig
+    - /opt/cross_env/nvidia/install/share/pkgconfig
+
+local:
+  prefix: /build/opt/cross_env/nvidia/install
+  libdir: /build/opt/cross_env/nvidia/install/lib
+  includedir: /build/opt/cross_env/nvidia/install/include
+  metadata: raw
+
+libraries:
+  # Header-only (package arch=all, same content as on RK3588):
+  #   /usr/include/eigen3 -> <prefix>/include/eigen3
+  #   /usr/share/eigen3/cmake -> <prefix>/share/eigen3/cmake
+  # Install on the board first if missing: sudo apt install libeigen3-dev
+  - name: eigen3
+    pkgconfig_names:
+      - eigen3
+    board_paths:
+      - /usr/include/eigen3
+      - /usr/share/eigen3/cmake
+      - /usr/share/pkgconfig/eigen3.pc
+
+  # JetPack OpenCV (built with CUDA). Its dependency libs are NOT included here;
+  # the Docker prefix usually already has them, so sync only if you need to refresh.
+  - name: opencv4
+    pkgconfig_names:
+      - opencv4
+    board_paths:
+      - /usr/lib/aarch64-linux-gnu/libopencv*.so*
+      - /usr/include/opencv4
+      - /usr/lib/aarch64-linux-gnu/pkgconfig/opencv4.pc
+      - /usr/lib/aarch64-linux-gnu/cmake/opencv4
+
+  # ---------------------------------------------------------------------------
+  # Optional, heavier entries. Uncomment and adjust only when needed.
+  # ---------------------------------------------------------------------------
+
+  # Tegra / NVIDIA userspace libs (nvbufsurface, nvv4l2, nvargus, libcuda, ...).
+  # The directory is copied as a whole, so it lands in <prefix>/lib/nvidia/, which is
+  # what the project expects via ${BSP_LIB_PATH}/nvidia. Verify the path on your
+  # board first: ls /usr/lib/aarch64-linux-gnu/nvidia /usr/lib/aarch64-linux-gnu/tegra
+  # Do NOT use --clean-old with this entry (the directory is not a lib pattern).
+  # - name: tegra
+  #   board_paths:
+  #     - /usr/lib/aarch64-linux-gnu/nvidia
+
+  # TensorRT headers/libs. Versions must match the JetPack on the board
+  # (JetPack 6.1 / CUDA 12.6 -> TensorRT 10.3).
+  # - name: tensorrt
+  #   board_paths:
+  #     - /usr/lib/aarch64-linux-gnu/libnvinfer*.so*
+  #     - /usr/lib/aarch64-linux-gnu/libnvonnxparser*.so*
+  #     - /usr/include/aarch64-linux-gnu/NvInfer*.h
+  #     - /usr/include/aarch64-linux-gnu/NvOnnx*.h
+
+  # CUDA toolkit (large, several GB) is intentionally not listed. In the Docker
+  # prefix it lives at <prefix>/cuda-12.6 and is passed as -DBSP_CUDA_PATH.
+  # Sync it manually with rsync, not with this script, e.g.:
+  #   rsync -a user@jetson:/usr/local/cuda-12.6/targets/aarch64-linux/ \
+  #     /opt/cross_env/nvidia/install/cuda-12.6/targets/aarch64-linux/
+
+  # Jetson multimedia API headers (NvBufSurface.h, NvVideoEncoder.h, ...) live under
+  # /usr/src/jetson_multimedia_api/include on the board, which this script does not
+  # map to <prefix>/include automatically. Copy them manually if needed.
