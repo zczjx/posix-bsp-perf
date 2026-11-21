@@ -1,4 +1,4 @@
-// GNSS+IMU EKF 回放 sample: 读 record_csv.py 录的 CSV, 调用 IGnssImuLocalizer,
+// GNSS+IMU EKF 回放 sample: 读 record_csv.py 录的 CSV, 调用 GnssImuLocalizer,
 // 输出结果 CSV (列与 ekf_offline.py 一致) 和 PNG。
 //   fusion_replay <prefix> [--out <prefix>] [--gnss-std v] [--gyro-std v] [--accel-std v]
 //                 [--bias-walk-std v] [--gnss-every n] [--skip-imu n] [--outage s e]
@@ -15,7 +15,7 @@
 #include "TrajectoryPlot.hpp"
 #include "fusion/core/Angle.hpp"
 #include "fusion/geo/GeoConverter.hpp"
-#include "fusion/localization/IGnssImuLocalizer.hpp"
+#include "fusion/localization/GnssImuLocalizer.hpp"
 
 using namespace bsp_perf::fusion;
 
@@ -136,7 +136,7 @@ int main(int argc, char** argv)
     // 初始航向取真值 (与 ekf_offline.py 一致): 以第一帧可用 IMU 时刻的真值为准
     const size_t first = std::min<size_t>(cfg.skip_imu, imu.size() - 1);
     cfg.initial_yaw = truth.interp(truth.yaw, imu[first].t);
-    auto loc = IGnssImuLocalizer::create(cfg);
+    GnssImuLocalizer loc(cfg);
     GeoConverter geo(cfg.origin_lat, cfg.origin_lon);
 
     std::ofstream csv(out + ".csv");
@@ -160,15 +160,15 @@ int main(int argc, char** argv)
             g.lat = gnss[gi].a;
             g.lon = gnss[gi].b;
             g.valid = !(outage_s >= 0.0 && t >= outage_s && t <= outage_e);
-            loc->feedGnss(g);
+            loc.feedGnss(g);
             geo.toLocal(g.lat, g.lon, gx, gy);
             have_gnss = true;
             ++gi;
         }
-        const Status st = loc->feedImu({t, imu[k].a, imu[k].b});
-        const Pose2D p = loc->pose();
+        const Status st = loc.feedImu({t, imu[k].a, imu[k].b});
+        const Pose2D p = loc.pose();
         // 只在真正做过一次预测后才输出 (初始化那一帧不输出, 与 ekf_offline.py 一致)
-        const long used = loc->diagnostics().imu_used;
+        const long used = loc.diagnostics().imu_used;
         const bool predicted = used > last_used;
         last_used = used;
         if (st != Status::Ok || !p.valid || !have_gnss || !predicted)
@@ -178,7 +178,7 @@ int main(int argc, char** argv)
 
         const double tx = truth.interp(truth.x, t), ty = truth.interp(truth.y, t);
         const double tyaw = truth.interp(truth.yaw, t), tv = truth.interp(truth.v, t);
-        const Diagnostics d = loc->diagnostics();
+        const Diagnostics d = loc.diagnostics();
         std::snprintf(buf, sizeof(buf), "%.6f,%.6f,%.6f,%.6f,%.6f,%.6f,%.6f,%.6f,%.6f,%.6f,%.6f,%.6f,%.6f,%.6f,%.6f\n",
                       t, tx, ty, tyaw, tv, gx, gy, p.x, p.y, p.yaw, p.v, p.bg, p.ba, p.pos_sigma, d.last_nis);
         csv << buf;
@@ -198,11 +198,11 @@ int main(int argc, char** argv)
         return 2;
     }
     const double kRad2Deg = 180.0 / kPi;
-    const Diagnostics d = loc->diagnostics();
+    const Diagnostics d = loc.diagnostics();
     std::printf("已保存 %s.csv (%zu 行)\n", out.c_str(), n);
     std::printf("位置 RMSE  EKF %.3f m | 纯 GNSS %.3f m\n", std::sqrt(sp / n), std::sqrt(sg / n));
     std::printf("航向 RMSE  %.2f deg\n", std::sqrt(sy / n) * kRad2Deg);
-    std::printf("速度 RMSE  %.3f m/s | 末尾陀螺零偏估计 %.4f rad/s\n", std::sqrt(sv / n), loc->pose().bg);
+    std::printf("速度 RMSE  %.3f m/s | 末尾陀螺零偏估计 %.4f rad/s\n", std::sqrt(sv / n), loc.pose().bg);
     std::printf("GNSS 更新 接受 %ld / 拒绝 %ld | 平均 NIS %.2f\n", d.gnss_accepted, d.gnss_rejected, d.mean_nis);
 
     char title[128];

@@ -1,4 +1,4 @@
-#include "IGnssImuLocalizer.hpp"
+#include "GnssImuLocalizer.hpp"
 
 #include "core/ExtendedKalmanFilter.hpp"
 #include "geo/GeoConverter.hpp"
@@ -10,13 +10,9 @@ namespace bsp_perf
 namespace fusion
 {
 
-namespace
+struct GnssImuLocalizer::Impl
 {
-
-class GnssImuLocalizer : public IGnssImuLocalizer
-{
-public:
-    explicit GnssImuLocalizer(const LocalizerConfig& cfg)
+    explicit Impl(const LocalizerConfig& cfg)
         : cfg_(cfg),
           motion_(ImuNoise{cfg.gyro_std, cfg.accel_std, cfg.gyro_bias_walk_std,
                            cfg.accel_bias_walk_std, 0.02}),
@@ -29,7 +25,7 @@ public:
         }
     }
 
-    Status feedGnss(const GnssSample& s) override
+    Status feedGnss(const GnssSample& s)
     {
         ++diag_.gnss_received;
         if (!origin_ready_)
@@ -63,7 +59,7 @@ public:
         return Status::Skipped;
     }
 
-    Status feedImu(const ImuSample& s) override
+    Status feedImu(const ImuSample& s)
     {
         // 开头几帧 IMU 带异常值, 直接丢弃 (按到达序号计)
         if (imu_seen_++ < cfg_.skip_imu)
@@ -113,7 +109,7 @@ public:
         return Status::Ok;
     }
 
-    Pose2D pose() const override
+    Pose2D pose() const
     {
         Pose2D p;
         if (!inited_)
@@ -134,7 +130,7 @@ public:
         return p;
     }
 
-    Diagnostics diagnostics() const override
+    Diagnostics diagnostics() const
     {
         Diagnostics d = diag_;
         d.last_nis = ekf_.stats().last_nis;
@@ -142,7 +138,6 @@ public:
         return d;
     }
 
-private:
     LocalizerConfig cfg_;
     ImuPlanarMotion motion_;
     GnssPositionMeas gnss_meas_;
@@ -160,12 +155,17 @@ private:
     double t_ = 0.0;
 };
 
-} // namespace
+// ---- 公共接口: 转发到 Impl ----
 
-std::unique_ptr<IGnssImuLocalizer> IGnssImuLocalizer::create(const LocalizerConfig& config)
-{
-    return std::unique_ptr<IGnssImuLocalizer>(new GnssImuLocalizer(config));
-}
+GnssImuLocalizer::GnssImuLocalizer(const LocalizerConfig& config) : impl_(new Impl(config)) {}
+GnssImuLocalizer::~GnssImuLocalizer() = default;
+GnssImuLocalizer::GnssImuLocalizer(GnssImuLocalizer&&) noexcept = default;
+GnssImuLocalizer& GnssImuLocalizer::operator=(GnssImuLocalizer&&) noexcept = default;
+
+Status GnssImuLocalizer::feedGnss(const GnssSample& s) { return impl_->feedGnss(s); }
+Status GnssImuLocalizer::feedImu(const ImuSample& s) { return impl_->feedImu(s); }
+Pose2D GnssImuLocalizer::pose() const { return impl_->pose(); }
+Diagnostics GnssImuLocalizer::diagnostics() const { return impl_->diagnostics(); }
 
 } // namespace fusion
 } // namespace bsp_perf

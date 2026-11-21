@@ -1,5 +1,5 @@
-#ifndef __I_GNSS_IMU_LOCALIZER_HPP__
-#define __I_GNSS_IMU_LOCALIZER_HPP__
+#ifndef __GNSS_IMU_LOCALIZER_HPP__
+#define __GNSS_IMU_LOCALIZER_HPP__
 
 #include <memory>
 
@@ -82,26 +82,33 @@ enum class Status
     BadTimestamp    // 时间戳乱序或重复
 };
 
-class IGnssImuLocalizer
+// GNSS + IMU 平面定位器。
+// 具体类 + Pimpl: Eigen 与 EKF 内核只出现在 .cpp 里, 使用方的头文件不依赖 Eigen。
+// 不可拷贝, 可移动。
+class GnssImuLocalizer
 {
 public:
-    static std::unique_ptr<IGnssImuLocalizer> create(const LocalizerConfig& config);
+    explicit GnssImuLocalizer(const LocalizerConfig& config);
+    ~GnssImuLocalizer(); // 在 .cpp 中定义 (Impl 在此处是不完整类型)
+
+    GnssImuLocalizer(const GnssImuLocalizer&) = delete;
+    GnssImuLocalizer& operator=(const GnssImuLocalizer&) = delete;
+    GnssImuLocalizer(GnssImuLocalizer&&) noexcept;
+    GnssImuLocalizer& operator=(GnssImuLocalizer&&) noexcept;
 
     // 按时间顺序喂数据。GNSS 先于同时刻 IMU 处理, 与 ekf_offline.py 一致
-    virtual Status feedGnss(const GnssSample& s) = 0;
-    virtual Status feedImu(const ImuSample& s) = 0;
+    Status feedGnss(const GnssSample& s);
+    Status feedImu(const ImuSample& s);
 
-    virtual Pose2D pose() const = 0;
-    virtual Diagnostics diagnostics() const = 0;
-    virtual ~IGnssImuLocalizer() = default;
+    Pose2D pose() const;
+    Diagnostics diagnostics() const;
 
-protected:
-    IGnssImuLocalizer() = default;
-    IGnssImuLocalizer(const IGnssImuLocalizer&) = delete;
-    IGnssImuLocalizer& operator=(const IGnssImuLocalizer&) = delete;
+private:
+    struct Impl;
+    std::unique_ptr<Impl> impl_;
 };
 
 } // namespace fusion
 } // namespace bsp_perf
 
-#endif // __I_GNSS_IMU_LOCALIZER_HPP__
+#endif // __GNSS_IMU_LOCALIZER_HPP__
