@@ -6,6 +6,7 @@
 #include <cstring>
 #include <iostream>
 #include <msgpack.hpp>
+#include <profiler/BspTrace.hpp>
 #include <stdexcept>
 
 namespace apps
@@ -219,6 +220,7 @@ void SvsNode::cameraReceiveLoop(size_t cameraIndex)
             continue;
         }
 
+        BSP_TRACE_SCOPE("svs.recv.frame");
         try {
             msgpack::unpacked unpacked = msgpack::unpack(
                 reinterpret_cast<const char*>(metadata.get()), metadataSize);
@@ -234,11 +236,16 @@ void SvsNode::cameraReceiveLoop(size_t cameraIndex)
             }
 
             if (!storage || storageCapacity < message.data_size || storage.use_count() > 1) {
+                BSP_TRACE_SCOPE("svs.recv.alloc");
                 storage = std::shared_ptr<uint8_t[]>(new uint8_t[message.data_size]);
                 storageCapacity = message.data_size;
             }
-            const int received = input.subscriber->receiveSharedMemData(
-                storage.get(), message.data_size, message.slot_index);
+            int received = 0;
+            {
+                BSP_TRACE_SCOPE("svs.recv.shm_copy");
+                received = input.subscriber->receiveSharedMemData(
+                    storage.get(), message.data_size, message.slot_index);
+            }
             if (received < 0 || static_cast<size_t>(received) != message.data_size) {
                 continue;
             }
@@ -282,21 +289,27 @@ void SvsNode::processLoop()
     while (!m_stopSignal.load()) {
         bool ready = true;
         std::array<uint64_t, bsp_perf::svs::kCameraCount> sequences{};
-        for (size_t i = 0; i < bsp_perf::svs::kCameraCount; ++i) {
-            std::lock_guard<std::mutex> lock(m_cameraInputs[i].frameMutex);
-            if (!m_cameraInputs[i].latestFrame ||
-                m_cameraInputs[i].sequence == m_lastProcessedSequence[i]) {
-                ready = false;
-                break;
+        {
+            BSP_TRACE_SCOPE("svs.loop.poll_inputs");
+            for (size_t i = 0; i < bsp_perf::svs::kCameraCount; ++i) {
+                std::lock_guard<std::mutex> lock(m_cameraInputs[i].frameMutex);
+                if (!m_cameraInputs[i].latestFrame ||
+                    m_cameraInputs[i].sequence == m_lastProcessedSequence[i]) {
+                    ready = false;
+                    break;
+                }
+                snapshots[i] = m_cameraInputs[i].latestFrame;
+                sequences[i] = m_cameraInputs[i].sequence;
             }
-            snapshots[i] = m_cameraInputs[i].latestFrame;
-            sequences[i] = m_cameraInputs[i].sequence;
         }
 
         if (!ready) {
+            // 单独成 slice：占比高说明瓶颈在上游相机/IPC，而不是 SVS 算法
+            BSP_TRACE_SCOPE("svs.loop.wait_inputs");
             std::this_thread::sleep_for(std::chrono::milliseconds(1));
             continue;
         }
+        BSP_TRACE_SCOPE("svs.loop.frame");
         for (size_t i = 0; i < bsp_perf::svs::kCameraCount; ++i) {
             inputFrames.cameras[i] = snapshots[i]->view;
         }
@@ -337,6 +350,7 @@ void SvsNode::publishFrame(const bsp_perf::bsp_image::ImageBuffer& frame)
 
     msgpack::sbuffer metadata;
     msgpack::pack(metadata, message);
+    BSP_TRACE_SCOPE("svs.publish.shm_copy_and_send");
     if (m_outputPublisher->publishData(
             reinterpret_cast<const uint8_t*>(metadata.data()),
             metadata.size(),

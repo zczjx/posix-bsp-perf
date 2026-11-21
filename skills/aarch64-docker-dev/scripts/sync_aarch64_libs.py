@@ -264,6 +264,12 @@ def local_paths(local: dict[str, Any]) -> dict[str, str]:
 
 def staging_dest_for_board_path(board_path: str, staging: Path) -> Path:
     path = board_path.strip()
+    if path.startswith("/usr/share/"):
+        # Keep the layout under share/, e.g.
+        #   /usr/share/eigen3/cmake        -> <staging>/share/eigen3/
+        #   /usr/share/pkgconfig/eigen3.pc -> <staging>/share/pkgconfig/
+        relative_parent = Path(path[len("/usr/share/"):]).parent
+        return staging / "share" / relative_parent
     if "/pkgconfig/" in path:
         return staging / "lib" / "pkgconfig"
     if "/cmake/" in path and (path.startswith("/usr/lib/") or path.startswith("/lib/")):
@@ -272,8 +278,6 @@ def staging_dest_for_board_path(board_path: str, staging: Path) -> Path:
         return staging / "lib"
     if path.startswith("/usr/include/"):
         return staging / "include"
-    if path.startswith("/usr/share/pkgconfig/"):
-        return staging / "share" / "pkgconfig"
     return staging
 
 
@@ -421,7 +425,14 @@ def rewrite_cmake_files_for_paths(
 
     for cmake_file in cmake_files:
         original = cmake_file.read_text(encoding="utf-8")
-        rewritten = rewrite_cmake_text(original, paths, prefix_parent)
+        # The 4->3 parent-walk fix only applies to <prefix>/lib/cmake/<pkg>
+        # (board layout has an extra aarch64-linux-gnu level). Packages under
+        # share/ (e.g. Eigen3) already have the right depth.
+        relative_parts = cmake_file.relative_to(staging).parts
+        under_lib = bool(relative_parts) and relative_parts[0] == "lib"
+        rewritten = rewrite_cmake_text(
+            original, paths, prefix_parent, fix_import_prefix_walk=under_lib
+        )
         if original == rewritten:
             print(f"= {cmake_file} unchanged")
             continue
@@ -438,7 +449,13 @@ def rewrite_cmake_files(config: dict[str, Any], staging: Path, *, dry_run: bool)
     rewrite_cmake_files_for_paths(staging, docker_paths(docker), dry_run=dry_run, label="docker")
 
 
-def rewrite_cmake_text(text: str, paths: dict[str, str], prefix_parent: str) -> str:
+def rewrite_cmake_text(
+    text: str,
+    paths: dict[str, str],
+    prefix_parent: str,
+    *,
+    fix_import_prefix_walk: bool = True,
+) -> str:
     replacements = {
         'get_filename_component(OpenCV_INSTALL_PATH "${OpenCV_CONFIG_PATH}/../../../../" REALPATH)': (
             f'set(OpenCV_INSTALL_PATH "{paths["prefix"]}")'
@@ -457,7 +474,8 @@ def rewrite_cmake_text(text: str, paths: dict[str, str], prefix_parent: str) -> 
     rewritten = text
     for source, target in replacements.items():
         rewritten = rewritten.replace(source, target)
-    rewritten = rewrite_import_prefix_parent_walk(rewritten)
+    if fix_import_prefix_walk:
+        rewritten = rewrite_import_prefix_parent_walk(rewritten)
     return rewritten
 
 

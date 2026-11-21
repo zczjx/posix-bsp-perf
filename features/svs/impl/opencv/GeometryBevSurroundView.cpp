@@ -2,6 +2,7 @@
 
 #include <array>
 #include <bsp_image/OpenCvImageAdapter.hpp>
+#include <profiler/BspTrace.hpp>
 
 namespace bsp_perf
 {
@@ -30,27 +31,41 @@ int GeometryBevSurroundView::process(const FrameSet& input, OutputFrame& output)
         return -1;
     }
 
+    BSP_TRACE_SCOPE("svs.process");
     std::array<cv::Mat, kCameraCount> sourceImages;
     std::array<cv::Mat, kCameraCount> warpedImages;
     std::array<cv::Mat, kCameraCount> weights;
     for (size_t i = 0; i < kCameraCount; ++i) {
-        if (!bsp_perf::bsp_image::OpenCvImageAdapter::toRgbMat(input.cameras[i], sourceImages[i]) ||
-            !m_projector.project(i, sourceImages[i], warpedImages[i], weights[i])) {
-            return -1;
+        {
+            BSP_TRACE_SCOPE("svs.to_rgb");
+            if (!bsp_perf::bsp_image::OpenCvImageAdapter::toRgbMat(input.cameras[i], sourceImages[i])) {
+                return -1;
+            }
+        }
+        {
+            BSP_TRACE_SCOPE("svs.project");
+            if (!m_projector.project(i, sourceImages[i], warpedImages[i], weights[i])) {
+                return -1;
+            }
         }
     }
 
     cv::Mat blended;
-    if (!m_blender.blend(warpedImages, weights, blended)) {
-        return -1;
+    {
+        BSP_TRACE_SCOPE("svs.blend");
+        if (!m_blender.blend(warpedImages, weights, blended)) {
+            return -1;
+        }
     }
 
     if (m_config.outputPixelFormat == "RGBA8888") {
+        BSP_TRACE_SCOPE("svs.to_rgba");
         cv::Mat rgba;
         cv::cvtColor(blended, rgba, cv::COLOR_RGB2RGBA);
         blended = std::move(rgba);
     }
 
+    BSP_TRACE_SCOPE("svs.from_mat");
     return bsp_perf::bsp_image::OpenCvImageAdapter::fromMat(
                blended, m_config.outputPixelFormat, output.image)
                ? 0

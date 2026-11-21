@@ -5,6 +5,7 @@
 #include <opencv2/imgcodecs.hpp>
 #include <opencv2/imgproc.hpp>
 #include <opencv2/photo.hpp>
+#include <profiler/BspTrace.hpp>
 
 namespace bsp_perf
 {
@@ -44,9 +45,16 @@ bool SvsBlender::blend(const std::array<cv::Mat, kCameraCount>& warpedImages,
 
     const int width = static_cast<int>(m_config.outputWidth);
     const int height = static_cast<int>(m_config.outputHeight);
-    cv::Mat accumulator(height, width, CV_32FC3, cv::Scalar::all(0));
-    cv::Mat weightSum(height, width, CV_32FC1, cv::Scalar(0));
+    cv::Mat accumulator;
+    cv::Mat weightSum;
+    {
+        BSP_TRACE_SCOPE("svs.blend.alloc");
+        accumulator = cv::Mat(height, width, CV_32FC3, cv::Scalar::all(0));
+        weightSum = cv::Mat(height, width, CV_32FC1, cv::Scalar(0));
+    }
 
+    {
+    BSP_TRACE_SCOPE("svs.blend.accumulate");
     for (size_t cameraIndex = 0; cameraIndex < kCameraCount; ++cameraIndex) {
         const auto& image = warpedImages[cameraIndex];
         const auto& weight = weights[cameraIndex];
@@ -69,28 +77,33 @@ bool SvsBlender::blend(const std::array<cv::Mat, kCameraCount>& warpedImages,
             }
         }
     }
+    }
 
-    output = cv::Mat(height, width, CV_8UC3, cv::Scalar::all(0));
     cv::Mat validMask;
-    cv::compare(weightSum, 1e-5, validMask, cv::CMP_GT);
-    for (int row = 0; row < height; ++row) {
-        const auto* accumulated = accumulator.ptr<cv::Vec3f>(row);
-        const auto* accumulatedWeight = weightSum.ptr<float>(row);
-        const auto* valid = validMask.ptr<uint8_t>(row);
-        auto* destination = output.ptr<cv::Vec3b>(row);
-        for (int col = 0; col < width; ++col) {
-            if (valid[col] == 0) {
-                continue;
-            }
-            const float inverseWeight = 1.0F / accumulatedWeight[col];
-            for (int channel = 0; channel < 3; ++channel) {
-                destination[col][channel] = cv::saturate_cast<uint8_t>(
-                    accumulated[col][channel] * inverseWeight);
+    {
+        BSP_TRACE_SCOPE("svs.blend.normalize");
+        output = cv::Mat(height, width, CV_8UC3, cv::Scalar::all(0));
+        cv::compare(weightSum, 1e-5, validMask, cv::CMP_GT);
+        for (int row = 0; row < height; ++row) {
+            const auto* accumulated = accumulator.ptr<cv::Vec3f>(row);
+            const auto* accumulatedWeight = weightSum.ptr<float>(row);
+            const auto* valid = validMask.ptr<uint8_t>(row);
+            auto* destination = output.ptr<cv::Vec3b>(row);
+            for (int col = 0; col < width; ++col) {
+                if (valid[col] == 0) {
+                    continue;
+                }
+                const float inverseWeight = 1.0F / accumulatedWeight[col];
+                for (int channel = 0; channel < 3; ++channel) {
+                    destination[col][channel] = cv::saturate_cast<uint8_t>(
+                        accumulated[col][channel] * inverseWeight);
+                }
             }
         }
     }
 
     if (m_config.fillUncovered && cv::countNonZero(validMask) < width * height) {
+        BSP_TRACE_SCOPE("svs.blend.inpaint");
         cv::Mat invalidMask;
         cv::Mat inpainted;
         cv::bitwise_not(validMask, invalidMask);
@@ -98,7 +111,10 @@ bool SvsBlender::blend(const std::array<cv::Mat, kCameraCount>& warpedImages,
         output = std::move(inpainted);
     }
 
-    drawVehicle(output);
+    {
+        BSP_TRACE_SCOPE("svs.blend.draw_vehicle");
+        drawVehicle(output);
+    }
     return true;
 }
 

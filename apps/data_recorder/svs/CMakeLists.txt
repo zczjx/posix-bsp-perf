@@ -24,6 +24,7 @@ target_link_libraries(${PROJECT_NAME} PRIVATE
     zeromq_ipc
     bsp_shared
     bsp_image
+    bsp_profiler
     feature_svs
     ${PC_MSGPACK_LDFLAGS}
 )

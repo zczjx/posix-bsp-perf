@@ -32,6 +32,7 @@ target_link_libraries(${PROJECT_NAME}
         bsp_image
     PRIVATE
         ${OpenCV_LIBS}
+        bsp_profiler
 )
 
 set_target_properties(${PROJECT_NAME} PROPERTIES

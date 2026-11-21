@@ -2,6 +2,7 @@
 
 #include <cmath>
 #include <opencv2/imgproc.hpp>
+#include <profiler/BspTrace.hpp>
 
 namespace bsp_perf
 {
@@ -76,11 +77,13 @@ bool SvsProjector::project(size_t cameraIndex,
     auto& cache = m_cache[cameraIndex];
     if (cache.homography.empty() || cache.sourceWidth != source.cols ||
         cache.sourceHeight != source.rows) {
+        BSP_TRACE_SCOPE("svs.project.build_warp");
         if (!buildWarp(cameraIndex, source.cols, source.rows, cache)) {
             return false;
         }
     }
 
+    BSP_TRACE_SCOPE("svs.project.warp_perspective");
     cv::warpPerspective(
         source,
         warped,

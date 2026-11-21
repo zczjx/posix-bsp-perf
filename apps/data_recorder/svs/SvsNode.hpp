@@ -28,6 +28,8 @@ public:
     ~SvsNode();
 
     void runLoop();
+    /// 线程/信号安全：请求 runLoop() 退出，使 main 能正常析构（flush perfetto trace）
+    void stop() { m_stopSignal.store(true); }
 
 private:
     struct CameraInput
